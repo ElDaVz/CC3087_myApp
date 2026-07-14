@@ -31,5 +31,8 @@ La aplicación permite crear formularios web y compartirlos con los clientes med
 
 ## Compilar
 
-```bash
+```macOS/Linux
 ./gradlew assembleDebug
+
+```Windows
+gradlew.bat assembleDebug
