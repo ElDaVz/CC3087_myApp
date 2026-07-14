@@ -30,9 +30,7 @@ La aplicación permite crear formularios web y compartirlos con los clientes med
 - Android SDK actualizado.
 
 ## Compilar
-
-```macOS/Linux
-./gradlew assembleDebug
-
-```Windows
-gradlew.bat assembleDebug
+| Sistema Operativo | Comando |
+|-------------------|----------|
+| macOS / Linux | `./gradlew assembleDebug` |
+| Windows | `gradlew.bat assembleDebug` |
