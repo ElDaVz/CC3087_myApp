@@ -8,7 +8,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
-import com.uvg.cc3087.myapp.ui.screens.FormsScreen
+import com.uvg.cc3087.myapp.ui.screens.Forms
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 
 private enum class AppDestination {
@@ -34,7 +34,7 @@ fun FormLinkApp() {
 
     when (currentDestination) {
         AppDestination.FORMS -> {
-            FormsScreen(
+            Forms(
                 onNewFormClick = {
                     currentDestination = AppDestination.CHOOSE_TEMPLATE
                 }

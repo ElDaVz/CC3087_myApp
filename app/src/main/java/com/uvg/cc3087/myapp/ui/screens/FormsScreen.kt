@@ -58,7 +58,7 @@ private enum class FormFilter(val label: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormsScreen(
+fun Forms(
     modifier: Modifier = Modifier,
     forms: List<FormSummary> = FormSampleData.forms,
     onNewFormClick: () -> Unit = {},
@@ -246,8 +246,8 @@ private fun FormsBottomBar(onMessage: (String) -> Unit) {
     heightDp = 844
 )
 @Composable
-private fun FormsScreenPreview() {
+private fun FormsPreview() {
     MyappTheme(dynamicColor = false) {
-        FormsScreen()
+        Forms()
     }
 }
