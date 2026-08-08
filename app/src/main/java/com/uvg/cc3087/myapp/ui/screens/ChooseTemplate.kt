@@ -30,7 +30,9 @@ private val templates = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChooseTemplate() {
+fun ChooseTemplate(
+    onBackClick: () -> Unit = {}
+) {
 
     Scaffold(
 
@@ -44,11 +46,12 @@ fun ChooseTemplate() {
 
                 navigationIcon = {
 
-                    IconButton(onClick = {}) {
+                    // esta acción la decide el host para no acoplar la pantalla a la navegación
+                    IconButton(onClick = onBackClick) {
 
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = null
+                            contentDescription = "Go back"
                         )
                     }
                 },
@@ -72,7 +75,7 @@ fun ChooseTemplate() {
 
                 NavigationBarItem(
                     selected = true,
-                    onClick = {},
+                    onClick = onBackClick,
                     icon = { Icon(Icons.Outlined.AccountBox, null) },
                     label = { Text("Forms") }
                 )
