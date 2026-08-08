@@ -3,6 +3,7 @@ package com.uvg.cc3087.myapp.data
 import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 
+// datos locales para practicar la lista antes de conectarla a una fuente real :D
 object FormSampleData {
     val forms = listOf(
         FormSummary(

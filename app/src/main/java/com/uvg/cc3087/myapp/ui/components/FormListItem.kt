@@ -38,6 +38,7 @@ import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 
+// los eventos llegan como callbacks para poder reutilizar la tarjeta en otras pantallas
 @Composable
 fun FormListItem(
     form: FormSummary,
@@ -58,6 +59,7 @@ fun FormListItem(
         ) {
             val placeholderColor = MaterialTheme.colorScheme.surfaceVariant
 
+            // coil carga la miniatura y deja un color suave mientras espera
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(form.imageUrl)
@@ -124,6 +126,8 @@ fun FormListItem(
 @Composable
 private fun StatusLabel(status: FormStatus) {
     val isActive = status == FormStatus.ACTIVE
+
+    // el color permite reconocer el estado sin agregar lógica visual a la pantalla
     val containerColor = if (isActive) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -174,6 +178,7 @@ private val previewForm = FormSummary(
     imageUrl = "https://picsum.photos/seed/bakery-custom-order/160/160"
 )
 
+// estas previews nos ayudan a revisar la tarjeta en modo claro y oscuro :D
 @Preview(name = "Form item - Light", showBackground = true)
 @Preview(
     name = "Form item - Dark",

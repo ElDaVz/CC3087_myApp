@@ -49,6 +49,7 @@ import com.uvg.cc3087.myapp.ui.components.FormListItem
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
+// los filtros viven aquí porque forman parte del estado visual de esta pantalla
 private enum class FormFilter(val label: String) {
     ALL("All"),
     ACTIVE("Active"),
@@ -67,12 +68,14 @@ fun FormsScreen(
     val coroutineScope = rememberCoroutineScope()
     var selectedFilter by remember { mutableStateOf(FormFilter.ALL) }
 
+    // mantenemos la lista original intacta y solo cambiamos lo que se muestra
     val visibleForms = when (selectedFilter) {
         FormFilter.ALL -> forms
         FormFilter.ACTIVE -> forms.filter { it.status == FormStatus.ACTIVE }
         FormFilter.DRAFT -> forms.filter { it.status == FormStatus.DRAFT }
     }
 
+    // el snackbar hace visible cada interacción mientras conectamos la navegación
     fun showMessage(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -127,6 +130,7 @@ fun FormsScreen(
                 )
             }
 
+            // usamos el id real para que compose identifique cada elemento correctamente
             items(
                 items = visibleForms,
                 key = { form -> form.id }
@@ -146,6 +150,7 @@ fun FormsScreen(
     }
 }
 
+// dejamos los controles separados para que la pantalla principal sea fácil de leer
 @Composable
 private fun FormsControls(
     selectedFilter: FormFilter,
@@ -194,6 +199,7 @@ private fun FormsControls(
     }
 }
 
+// la barra inferior también queda aislada para poder ajustarla sin tocar la lista
 @Composable
 private fun FormsBottomBar(onMessage: (String) -> Unit) {
     NavigationBar {
