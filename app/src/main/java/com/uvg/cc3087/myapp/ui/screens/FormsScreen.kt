@@ -33,11 +33,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,8 +46,8 @@ import com.uvg.cc3087.myapp.ui.components.FormListItem
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
-// los filtros viven aquí porque forman parte del estado visual de esta pantalla
-private enum class FormFilter(val label: String) {
+// estas opciones describen los filtros disponibles para la pantalla
+enum class FormFilter(val label: String) {
     ALL("Todos"),
     ACTIVE("Activos"),
     DRAFT("Borradores")
@@ -61,12 +58,13 @@ private enum class FormFilter(val label: String) {
 fun Forms(
     modifier: Modifier = Modifier,
     forms: List<FormSummary> = FormSampleData.forms,
+    selectedFilter: FormFilter = FormFilter.ALL,
+    onFilterSelected: (FormFilter) -> Unit = {},
     onNewFormClick: () -> Unit = {},
     onFormClick: (FormSummary) -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    var selectedFilter by remember { mutableStateOf(FormFilter.ALL) }
 
     // mantenemos la lista original intacta y solo cambiamos lo que se muestra
     val visibleForms = when (selectedFilter) {
@@ -122,7 +120,7 @@ fun Forms(
             item(key = "forms-controls") {
                 FormsControls(
                     selectedFilter = selectedFilter,
-                    onFilterSelected = { selectedFilter = it },
+                    onFilterSelected = onFilterSelected,
                     onNewFormClick = {
                         onNewFormClick()
                         showMessage("Nuevo formulario")
