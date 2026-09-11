@@ -22,10 +22,10 @@ data class Template(
 )
 
 private val templates = listOf(
-    Template("Job Application", "Standard candidate intake"),
-    Template("Order Form", "Product requests"),
-    Template("Event RSVP", "Manage attendees"),
-    Template("Feedback", "Customer surveys")
+    Template("Solicitud de empleo", "Datos del candidato"),
+    Template("Formulario de pedido", "Solicitudes de productos"),
+    Template("Confirmación de asistencia", "Gestión de invitados"),
+    Template("Comentarios", "Encuesta para clientes")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +41,7 @@ fun ChooseTemplate(
             TopAppBar(
 
                 title = {
-                    Text("New Form")
+                    Text("Nuevo formulario")
                 },
 
                 navigationIcon = {
@@ -51,7 +51,7 @@ fun ChooseTemplate(
 
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Go back"
+                            contentDescription = "Volver"
                         )
                     }
                 },
@@ -77,21 +77,21 @@ fun ChooseTemplate(
                     selected = true,
                     onClick = onBackClick,
                     icon = { Icon(Icons.Outlined.AccountBox, null) },
-                    label = { Text("Forms") }
+                    label = { Text("Formularios") }
                 )
 
                 NavigationBarItem(
                     selected = false,
                     onClick = {},
                     icon = { Icon(Icons.AutoMirrored.Outlined.List, null) },
-                    label = { Text("Responses") }
+                    label = { Text("Respuestas") }
                 )
 
                 NavigationBarItem(
                     selected = false,
                     onClick = {},
                     icon = { Icon(Icons.Outlined.Settings, null) },
-                    label = { Text("Settings") }
+                    label = { Text("Ajustes") }
                 )
             }
         }
@@ -108,7 +108,7 @@ fun ChooseTemplate(
         ) {
 
             Text(
-                "Start from Scratch",
+                "Empezar desde cero",
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -140,7 +140,7 @@ fun ChooseTemplate(
 
                         Spacer(Modifier.height(8.dp))
 
-                        Text("Blank Form")
+                        Text("Formulario en blanco")
                     }
                 }
             }
@@ -148,7 +148,7 @@ fun ChooseTemplate(
             Spacer(Modifier.height(24.dp))
 
             Text(
-                "Recommended Templates",
+                "Plantillas recomendadas",
                 style = MaterialTheme.typography.titleMedium
             )
 

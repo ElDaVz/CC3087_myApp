@@ -51,9 +51,9 @@ import kotlinx.coroutines.launch
 
 // los filtros viven aquí porque forman parte del estado visual de esta pantalla
 private enum class FormFilter(val label: String) {
-    ALL("All"),
-    ACTIVE("Active"),
-    DRAFT("Draft")
+    ALL("Todos"),
+    ACTIVE("Activos"),
+    DRAFT("Borradores")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,16 +89,16 @@ fun Forms(
             TopAppBar(
                 title = { Text(text = "FormLink") },
                 actions = {
-                    IconButton(onClick = { showMessage("Search selected") }) {
+                    IconButton(onClick = { showMessage("Buscar formularios") }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search forms"
+                            contentDescription = "Buscar formularios"
                         )
                     }
-                    IconButton(onClick = { showMessage("More options selected") }) {
+                    IconButton(onClick = { showMessage("Más opciones") }) {
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "More options"
+                            contentDescription = "Más opciones"
                         )
                     }
                 }
@@ -125,7 +125,7 @@ fun Forms(
                     onFilterSelected = { selectedFilter = it },
                     onNewFormClick = {
                         onNewFormClick()
-                        showMessage("New Form selected")
+                        showMessage("Nuevo formulario")
                     }
                 )
             }
@@ -139,11 +139,11 @@ fun Forms(
                     form = form,
                     onClick = {
                         onFormClick(form)
-                        showMessage("${form.title} selected")
+                        showMessage("${form.title} seleccionado")
                     },
-                    onShareClick = { showMessage("Share ${form.title}") },
-                    onEditClick = { showMessage("Edit ${form.title}") },
-                    onViewClick = { showMessage("View ${form.title}") }
+                    onShareClick = { showMessage("Compartir: ${form.title}") },
+                    onEditClick = { showMessage("Editar: ${form.title}") },
+                    onViewClick = { showMessage("Ver: ${form.title}") }
                 )
             }
         }
@@ -169,7 +169,7 @@ private fun FormsControls(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "My Forms",
+                text = "Mis formularios",
                 style = MaterialTheme.typography.headlineSmall
             )
 
@@ -183,7 +183,7 @@ private fun FormsControls(
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "New Form")
+                Text(text = "Nuevo formulario")
             }
         }
 
@@ -205,36 +205,36 @@ private fun FormsBottomBar(onMessage: (String) -> Unit) {
     NavigationBar {
         NavigationBarItem(
             selected = true,
-            onClick = { onMessage("Forms selected") },
+            onClick = { onMessage("Formularios seleccionados") },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Description,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Forms") }
+            label = { Text(text = "Formularios") }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { onMessage("Responses selected") },
+            onClick = { onMessage("Respuestas seleccionadas") },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.ChatBubbleOutline,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Responses") }
+            label = { Text(text = "Respuestas") }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { onMessage("Settings selected") },
+            onClick = { onMessage("Ajustes seleccionados") },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Settings,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Settings") }
+            label = { Text(text = "Ajustes") }
         )
     }
 }
