@@ -1,6 +1,9 @@
 package com.uvg.cc3087.myapp.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -13,10 +16,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
-import com.uvg.cc3087.myapp.data.local.FullFormDraft
+import com.uvg.cc3087.myapp.data.model.AuthState
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
-import com.uvg.cc3087.myapp.data.model.FormStatus
+import com.uvg.cc3087.myapp.data.repository.LocalAuthRepository
 import com.uvg.cc3087.myapp.data.repository.LocalFormRepository
+import com.uvg.cc3087.myapp.ui.screens.AuthScreen
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
 import com.uvg.cc3087.myapp.ui.screens.EditForm
 import com.uvg.cc3087.myapp.ui.screens.FormFilter
@@ -34,9 +38,13 @@ private enum class AppDestination {
 fun FormLinkApp() {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val repository = remember { LocalFormRepository(context) }
+    val formRepository = remember { LocalFormRepository(context) }
+    val authRepository = remember { LocalAuthRepository(context) }
 
-    val forms by repository.observeForms().collectAsState(initial = emptyList())
+    val authState by authRepository.observeAuthState().collectAsState(initial = AuthState.Unauthenticated)
+    val forms by formRepository.observeForms().collectAsState(initial = emptyList())
+
+    var showProfileDialog by remember { mutableStateOf(false) }
 
     var currentDestination by rememberSaveable {
         mutableStateOf(AppDestination.FORMS)
@@ -71,69 +79,111 @@ fun FormLinkApp() {
         selectedTemplateTitle = title
         currentFormFields = fields
         coroutineScope.launch {
-            repository.setLastEditedFormId(formId)
+            formRepository.setLastEditedFormId(formId)
         }
         currentDestination = AppDestination.EDIT_FORM
     }
 
-    BackHandler(enabled = currentDestination != AppDestination.FORMS) {
-        when (currentDestination) {
-            AppDestination.CHOOSE_TEMPLATE -> showForms()
-            AppDestination.EDIT_FORM -> showTemplates()
-            AppDestination.FORMS -> Unit
+    when (val state = authState) {
+        is AuthState.Unauthenticated -> {
+            AuthScreen(
+                authRepository = authRepository,
+                onAuthSuccess = {
+                    showForms()
+                }
+            )
         }
-    }
 
-    when (currentDestination) {
-        AppDestination.FORMS -> {
-            Forms(
-                forms = forms,
-                selectedFilter = selectedFilter,
-                onFilterSelected = { selectedFilter = it },
-                onNewFormClick = {
-                    currentDestination = AppDestination.CHOOSE_TEMPLATE
-                },
-                onFormClick = { summary ->
-                    coroutineScope.launch {
-                        val draft = repository.getForm(summary.id)
-                        openFormEditor(
-                            summary.id,
-                            summary.title,
-                            draft?.fields ?: FormEditorSampleData.templateFields
+        is AuthState.Authenticated -> {
+            val session = state.session
+
+            if (showProfileDialog) {
+                AlertDialog(
+                    onDismissRequest = { showProfileDialog = false },
+                    title = { Text(text = "Sesión de usuario") },
+                    text = {
+                        Text(
+                            text = "Usuario: ${session.displayName}\nEmail: ${session.email}\nTipo: ${if (session.isGuest) "Invitado" else "Registrado"}"
                         )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showProfileDialog = false
+                            coroutineScope.launch { authRepository.signOut() }
+                        }) {
+                            Text("Cerrar sesión")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showProfileDialog = false }) {
+                            Text("Cerrar")
+                        }
                     }
-                }
-            )
-        }
+                )
+            }
 
-        AppDestination.CHOOSE_TEMPLATE -> {
-            ChooseTemplate(
-                onBackClick = showForms,
-                onBlankFormClick = {
-                    val newId = java.util.UUID.randomUUID().toString()
-                    openFormEditor(newId, context.getString(R.string.untitled_form), emptyList())
-                },
-                onTemplateClick = { template ->
-                    val newId = java.util.UUID.randomUUID().toString()
-                    val title = context.getString(template.titleResId)
-                    openFormEditor(newId, title, FormEditorSampleData.templateFields)
+            BackHandler(enabled = currentDestination != AppDestination.FORMS) {
+                when (currentDestination) {
+                    AppDestination.CHOOSE_TEMPLATE -> showForms()
+                    AppDestination.EDIT_FORM -> showTemplates()
+                    AppDestination.FORMS -> Unit
                 }
-            )
-        }
+            }
 
-        AppDestination.EDIT_FORM -> {
-            val activeFormId = selectedFormId ?: remember { java.util.UUID.randomUUID().toString() }
-            EditForm(
-                formId = activeFormId,
-                initialTitle = selectedTemplateTitle ?: context.getString(R.string.untitled_form),
-                initialFields = currentFormFields,
-                onBackClick = showForms,
-                onSaveForm = { draft ->
-                    coroutineScope.launch {
-                        repository.saveForm(draft)
-                    }
+            when (currentDestination) {
+                AppDestination.FORMS -> {
+                    Forms(
+                        forms = forms,
+                        selectedFilter = selectedFilter,
+                        userSession = session,
+                        onSignOutClick = { showProfileDialog = true },
+                        onFilterSelected = { selectedFilter = it },
+                        onNewFormClick = {
+                            currentDestination = AppDestination.CHOOSE_TEMPLATE
+                        },
+                        onFormClick = { summary ->
+                            coroutineScope.launch {
+                                val draft = formRepository.getForm(summary.id)
+                                openFormEditor(
+                                    summary.id,
+                                    summary.title,
+                                    draft?.fields ?: FormEditorSampleData.templateFields
+                                )
+                            }
+                        }
+                    )
                 }
-            )
+
+                AppDestination.CHOOSE_TEMPLATE -> {
+                    ChooseTemplate(
+                        onBackClick = showForms,
+                        onBlankFormClick = {
+                            val newId = java.util.UUID.randomUUID().toString()
+                            openFormEditor(newId, context.getString(R.string.untitled_form), emptyList())
+                        },
+                        onTemplateClick = { template ->
+                            val newId = java.util.UUID.randomUUID().toString()
+                            val title = context.getString(template.titleResId)
+                            openFormEditor(newId, title, FormEditorSampleData.templateFields)
+                        }
+                    )
+                }
+
+                AppDestination.EDIT_FORM -> {
+                    val activeFormId = selectedFormId ?: remember { java.util.UUID.randomUUID().toString() }
+                    EditForm(
+                        formId = activeFormId,
+                        initialTitle = selectedTemplateTitle ?: context.getString(R.string.untitled_form),
+                        initialFields = currentFormFields,
+                        onBackClick = showForms,
+                        onSaveForm = { draft ->
+                            coroutineScope.launch {
+                                formRepository.saveForm(draft.copy(ownerId = session.userId))
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 }

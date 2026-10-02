@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import com.uvg.cc3087.myapp.data.model.UserSession
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -63,6 +65,8 @@ fun Forms(
     modifier: Modifier = Modifier,
     forms: List<FormSummary> = FormSampleData.forms,
     selectedFilter: FormFilter = FormFilter.ALL,
+    userSession: UserSession? = null,
+    onSignOutClick: () -> Unit = {},
     onFilterSelected: (FormFilter) -> Unit = {},
     onNewFormClick: () -> Unit = {},
     onFormClick: (FormSummary) -> Unit = {}
@@ -92,6 +96,14 @@ fun Forms(
             TopAppBar(
                 title = { Text(text = stringResource(R.string.formlink)) },
                 actions = {
+                    if (userSession != null) {
+                        IconButton(onClick = onSignOutClick) {
+                            Icon(
+                                imageVector = Icons.Outlined.AccountCircle,
+                                contentDescription = "Perfil (${userSession.displayName})"
+                            )
+                        }
+                    }
                     IconButton(onClick = { showMessage(R.string.search_selected) }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
