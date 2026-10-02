@@ -41,8 +41,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
+import com.uvg.cc3087.myapp.data.local.FullFormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.hasValidOptions
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
 import com.uvg.cc3087.myapp.ui.components.AddFieldBottomSheet
@@ -55,6 +57,8 @@ fun EditForm(
     initialTitle: String,
     initialFields: List<FormFieldDraft>,
     onBackClick: () -> Unit,
+    onSaveForm: ((FullFormDraft) -> Unit)? = null,
+    formId: String = remember { java.util.UUID.randomUUID().toString() },
     modifier: Modifier = Modifier
 ) {
     var formTitle by rememberSaveable(initialTitle) {
@@ -163,13 +167,27 @@ fun EditForm(
         }
     }
 
+    val saveDraft = {
+        val draft = FullFormDraft(
+            id = formId,
+            title = formTitle.ifBlank { "Formulario sin título" },
+            status = FormStatus.DRAFT,
+            ownerId = "guest_user",
+            fields = fields
+        )
+        onSaveForm?.invoke(draft)
+    }
+
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("Editar formulario") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        saveDraft()
+                        onBackClick()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Volver a plantillas"
@@ -177,6 +195,12 @@ fun EditForm(
                     }
                 },
                 actions = {
+                    TextButton(onClick = {
+                        saveDraft()
+                        showMessage("Borrador guardado localmente")
+                    }) {
+                        Text("Guardar")
+                    }
                     TextButton(onClick = ::validateForm) {
                         Text("Validar")
                     }
