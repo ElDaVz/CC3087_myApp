@@ -8,81 +8,81 @@ object FormSampleData {
     val forms = listOf(
         FormSummary(
             id = "bakery-custom-order",
-            title = "Bakery Custom Order",
+            title = "Pedido personalizado de pastelería",
             responseCount = 12,
-            updatedDate = "Jul 18",
+            updatedDate = "18 jul",
             status = FormStatus.ACTIVE,
             imageUrl = "https://picsum.photos/seed/bakery-custom-order/160/160"
         ),
         FormSummary(
             id = "birthday-cake-request",
-            title = "Birthday Cake Request",
+            title = "Solicitud de pastel de cumpleaños",
             responseCount = 5,
-            updatedDate = "Jul 14",
+            updatedDate = "14 jul",
             status = FormStatus.ACTIVE,
             imageUrl = "https://picsum.photos/seed/birthday-cake-request/160/160"
         ),
         FormSummary(
             id = "wholesale-inquiry",
-            title = "Wholesale Inquiry",
+            title = "Consulta de venta mayorista",
             responseCount = 2,
-            updatedDate = "Jun 30",
+            updatedDate = "30 jun",
             status = FormStatus.DRAFT,
             imageUrl = "https://picsum.photos/seed/wholesale-inquiry/160/160"
         ),
         FormSummary(
             id = "wedding-cake-consultation",
-            title = "Wedding Cake Consultation",
+            title = "Consulta para pastel de boda",
             responseCount = 8,
-            updatedDate = "Jun 27",
+            updatedDate = "27 jun",
             status = FormStatus.ACTIVE,
             imageUrl = "https://picsum.photos/seed/wedding-cake-consultation/160/160"
         ),
         FormSummary(
             id = "catering-order",
-            title = "Catering Order",
+            title = "Pedido de catering",
             responseCount = 15,
-            updatedDate = "Jun 22",
+            updatedDate = "22 jun",
             status = FormStatus.ACTIVE,
             imageUrl = "https://picsum.photos/seed/catering-order/160/160"
         ),
         FormSummary(
             id = "seasonal-menu-feedback",
-            title = "Seasonal Menu Feedback",
+            title = "Opinión sobre el menú de temporada",
             responseCount = 21,
-            updatedDate = "Jun 16",
+            updatedDate = "16 jun",
             status = FormStatus.ACTIVE,
             imageUrl = "https://picsum.photos/seed/seasonal-menu-feedback/160/160"
         ),
         FormSummary(
             id = "custom-cupcake-box",
-            title = "Custom Cupcake Box",
+            title = "Caja personalizada de cupcakes",
             responseCount = 4,
-            updatedDate = "Jun 10",
+            updatedDate = "10 jun",
             status = FormStatus.DRAFT,
             imageUrl = "https://picsum.photos/seed/custom-cupcake-box/160/160"
         ),
         FormSummary(
             id = "corporate-event-order",
-            title = "Corporate Event Order",
+            title = "Pedido para evento empresarial",
             responseCount = 9,
-            updatedDate = "Jun 4",
+            updatedDate = "4 jun",
             status = FormStatus.ACTIVE,
             imageUrl = "https://picsum.photos/seed/corporate-event-order/160/160"
         ),
         FormSummary(
             id = "delivery-request",
-            title = "Delivery Request",
+            title = "Solicitud de entrega",
             responseCount = 6,
-            updatedDate = "May 28",
+            updatedDate = "28 may",
             status = FormStatus.DRAFT,
             imageUrl = "https://picsum.photos/seed/delivery-request/160/160"
         ),
         FormSummary(
             id = "customer-satisfaction-survey",
-            title = "Customer Satisfaction Survey",
+            title = "Encuesta de satisfacción",
             responseCount = 18,
-            updatedDate = "May 20",
+            updatedDate = "20 may",
             status = FormStatus.ACTIVE,
             imageUrl = "https://picsum.photos/seed/customer-satisfaction-survey/160/160"
         )

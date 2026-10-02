@@ -48,6 +48,12 @@ fun FormListItem(
     onEditClick: () -> Unit = {},
     onViewClick: () -> Unit = {}
 ) {
+    val responseText = if (form.responseCount == 1) {
+        "1 respuesta"
+    } else {
+        "${form.responseCount} respuestas"
+    }
+
     OutlinedCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -65,7 +71,7 @@ fun FormListItem(
                     .data(form.imageUrl)
                     .crossfade(true)
                     .build(),
-                contentDescription = "Thumbnail for ${form.title}",
+                contentDescription = "Imagen de ${form.title}",
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(12.dp)),
@@ -87,7 +93,7 @@ fun FormListItem(
                 )
 
                 Text(
-                    text = "${form.responseCount} responses • Updated ${form.updatedDate}",
+                    text = "$responseText • Actualizado ${form.updatedDate}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -105,17 +111,17 @@ fun FormListItem(
             horizontalArrangement = Arrangement.End
         ) {
             FormActionButton(
-                label = "Share",
+                label = "Compartir",
                 onClick = onShareClick,
                 icon = Icons.Outlined.Share
             )
             FormActionButton(
-                label = "Edit",
+                label = "Editar",
                 onClick = onEditClick,
                 icon = Icons.Outlined.Edit
             )
             FormActionButton(
-                label = "View",
+                label = "Ver",
                 onClick = onViewClick,
                 icon = Icons.Outlined.Visibility
             )
@@ -145,7 +151,7 @@ private fun StatusLabel(status: FormStatus) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(
-            text = if (isActive) "Active" else "Draft",
+            text = if (isActive) "Activo" else "Borrador",
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall
         )
@@ -171,9 +177,9 @@ private fun FormActionButton(
 
 private val previewForm = FormSummary(
     id = "bakery-custom-order",
-    title = "Bakery Custom Order",
+    title = "Pedido personalizado de pastelería",
     responseCount = 12,
-    updatedDate = "Jul 18",
+    updatedDate = "18 jul",
     status = FormStatus.ACTIVE,
     imageUrl = "https://picsum.photos/seed/bakery-custom-order/160/160"
 )

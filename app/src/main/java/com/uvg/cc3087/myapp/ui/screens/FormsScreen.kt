@@ -33,11 +33,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,11 +46,11 @@ import com.uvg.cc3087.myapp.ui.components.FormListItem
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
-// los filtros viven aquí porque forman parte del estado visual de esta pantalla
-private enum class FormFilter(val label: String) {
-    ALL("All"),
-    ACTIVE("Active"),
-    DRAFT("Draft")
+// estas opciones describen los filtros disponibles para la pantalla
+enum class FormFilter(val label: String) {
+    ALL("Todos"),
+    ACTIVE("Activos"),
+    DRAFT("Borradores")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,12 +58,13 @@ private enum class FormFilter(val label: String) {
 fun Forms(
     modifier: Modifier = Modifier,
     forms: List<FormSummary> = FormSampleData.forms,
+    selectedFilter: FormFilter = FormFilter.ALL,
+    onFilterSelected: (FormFilter) -> Unit = {},
     onNewFormClick: () -> Unit = {},
     onFormClick: (FormSummary) -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    var selectedFilter by remember { mutableStateOf(FormFilter.ALL) }
 
     // mantenemos la lista original intacta y solo cambiamos lo que se muestra
     val visibleForms = when (selectedFilter) {
@@ -89,16 +87,16 @@ fun Forms(
             TopAppBar(
                 title = { Text(text = "FormLink") },
                 actions = {
-                    IconButton(onClick = { showMessage("Search selected") }) {
+                    IconButton(onClick = { showMessage("Buscar formularios") }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search forms"
+                            contentDescription = "Buscar formularios"
                         )
                     }
-                    IconButton(onClick = { showMessage("More options selected") }) {
+                    IconButton(onClick = { showMessage("Más opciones") }) {
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "More options"
+                            contentDescription = "Más opciones"
                         )
                     }
                 }
@@ -122,10 +120,10 @@ fun Forms(
             item(key = "forms-controls") {
                 FormsControls(
                     selectedFilter = selectedFilter,
-                    onFilterSelected = { selectedFilter = it },
+                    onFilterSelected = onFilterSelected,
                     onNewFormClick = {
                         onNewFormClick()
-                        showMessage("New Form selected")
+                        showMessage("Nuevo formulario")
                     }
                 )
             }
@@ -139,11 +137,11 @@ fun Forms(
                     form = form,
                     onClick = {
                         onFormClick(form)
-                        showMessage("${form.title} selected")
+                        showMessage("${form.title} seleccionado")
                     },
-                    onShareClick = { showMessage("Share ${form.title}") },
-                    onEditClick = { showMessage("Edit ${form.title}") },
-                    onViewClick = { showMessage("View ${form.title}") }
+                    onShareClick = { showMessage("Compartir: ${form.title}") },
+                    onEditClick = { showMessage("Editar: ${form.title}") },
+                    onViewClick = { showMessage("Ver: ${form.title}") }
                 )
             }
         }
@@ -169,7 +167,7 @@ private fun FormsControls(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "My Forms",
+                text = "Mis formularios",
                 style = MaterialTheme.typography.headlineSmall
             )
 
@@ -183,7 +181,7 @@ private fun FormsControls(
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "New Form")
+                Text(text = "Nuevo formulario")
             }
         }
 
@@ -205,36 +203,36 @@ private fun FormsBottomBar(onMessage: (String) -> Unit) {
     NavigationBar {
         NavigationBarItem(
             selected = true,
-            onClick = { onMessage("Forms selected") },
+            onClick = { onMessage("Formularios seleccionados") },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Description,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Forms") }
+            label = { Text(text = "Formularios") }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { onMessage("Responses selected") },
+            onClick = { onMessage("Respuestas seleccionadas") },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.ChatBubbleOutline,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Responses") }
+            label = { Text(text = "Respuestas") }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { onMessage("Settings selected") },
+            onClick = { onMessage("Ajustes seleccionados") },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Settings,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Settings") }
+            label = { Text(text = "Ajustes") }
         )
     }
 }

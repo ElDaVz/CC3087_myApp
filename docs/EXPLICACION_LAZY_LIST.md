@@ -37,21 +37,30 @@ LazyColumn(
 
 La composición inicial ocurre cuando Compose ejecuta por primera vez los Composables y construye la descripción de la interfaz. La recomposición sucede cuando cambia un estado que fue leído por un Composable. Compose vuelve a ejecutar las partes que podrían depender del nuevo valor y puede omitir las partes cuyos datos no cambiaron.
 
-En `Forms`, el filtro seleccionado se guarda como estado:
+El filtro seleccionado se guarda en `FormLinkApp`, que es el componente que contiene las dos pantallas:
 
 ```kotlin
-var selectedFilter by remember { mutableStateOf(FormFilter.ALL) }
+var selectedFilter by rememberSaveable {
+    mutableStateOf(FormFilter.ALL)
+}
+
+Forms(
+    selectedFilter = selectedFilter,
+    onFilterSelected = { selectedFilter = it }
+)
 ```
 
-El flujo al presionar un filtro es el siguiente:
+Este manejo se conoce como elevación de estado: `Forms` muestra el filtro que recibe y avisa mediante un callback cuando el usuario selecciona otro. El flujo es el siguiente:
 
-1. El usuario presiona `All`, `Active` o `Draft`
-2. El callback actualiza `selectedFilter`
-3. Como `Forms` lee ese estado, Compose programa su recomposición
+1. El usuario presiona `Todos`, `Activos` o `Borradores`
+2. `Forms` ejecuta el callback `onFilterSelected`
+3. `FormLinkApp` actualiza `selectedFilter`
 4. Se vuelve a calcular `visibleForms` con el filtro seleccionado
 5. `LazyColumn` recibe la colección actualizada y muestra los elementos correspondientes
 
-Esto no significa que Android destruya y reconstruya toda la aplicación. Compose actualiza la composición y puede saltarse los Composables cuyos parámetros siguen iguales. El filtro de diez elementos es una operación pequeña y se prepara antes de entrar al cuerpo de cada tarjeta, por lo que no estamos realizando cálculos pesados dentro de `FormListItem`.
+Como el estado permanece en `FormLinkApp`, no se pierde cuando el usuario entra a la pantalla de plantillas y regresa a Formularios. `rememberSaveable` también permite restaurarlo si Android necesita recrear la actividad. Esto no significa que Android reconstruya toda la aplicación con cada selección: Compose actualiza las partes que dependen del valor y puede omitir los Composables cuyos parámetros siguen iguales.
+
+El filtro de diez elementos es una operación pequeña y se prepara antes de entrar al cuerpo de cada tarjeta, por lo que no estamos realizando cálculos pesados dentro de `FormListItem`.
 
 ## Por qué usamos una key estable
 
@@ -81,11 +90,11 @@ Usar el índice sería menos seguro porque el índice cambia cuando se elimina, 
 
 Cada tarjeta usa Coil mediante `AsyncImage` para cargar una imagen remota. Mientras la imagen se descarga se muestra un `ColorPainter` como placeholder; también existe un color de respaldo si la carga falla. El tamaño de la imagen está limitado a `72.dp` y `ContentScale.Crop` evita que deforme la tarjeta.
 
-El `OutlinedCard` recibe un `onClick`, y las acciones `Share`, `Edit` y `View` reciben callbacks independientes. Por ahora la pantalla muestra un `Snackbar` para que cada interacción produzca un resultado observable. El botón `New Form` además cambia el destino actual y abre `ChooseTemplate`.
+El `OutlinedCard` recibe un `onClick`, y las acciones Compartir, Editar y Ver reciben callbacks independientes. Por ahora la pantalla muestra un `Snackbar` para que cada interacción produzca un resultado observable. El botón Nuevo formulario además cambia el destino actual y abre la pantalla `ChooseTemplate`.
 
 ## Explicación corta
 
-Una `LazyColumn` describe una colección vertical sin mantener compuestos todos sus elementos al mismo tiempo. Cuando cambia `selectedFilter`, Compose detecta el cambio de estado, vuelve a ejecutar las partes dependientes y entrega una nueva colección visible a la lista. La key `form.id` conserva la identidad de cada formulario aunque su posición cambie. `contentPadding` controla el espacio exterior del contenido y `Arrangement.spacedBy` mantiene una separación uniforme entre tarjetas.
+Una `LazyColumn` describe una colección vertical sin mantener compuestos todos sus elementos al mismo tiempo. Cuando cambia `selectedFilter`, `FormLinkApp` conserva el nuevo valor y Compose vuelve a ejecutar las partes dependientes para entregar una nueva colección visible a la lista. La key `form.id` mantiene la identidad de cada formulario aunque su posición cambie. `contentPadding` controla el espacio exterior del contenido y `Arrangement.spacedBy` conserva una separación uniforme entre tarjetas.
 
 ## Fuentes oficiales verificadas
 
