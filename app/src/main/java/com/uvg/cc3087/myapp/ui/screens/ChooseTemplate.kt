@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp.ui.screens
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -12,20 +13,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.ui.components.TemplateCard
 
 data class Template(
-    val title: String,
-    val subtitle: String
+    @param:StringRes val titleResId: Int,
+    @param:StringRes val subtitleResId: Int
 )
 
 private val templates = listOf(
-    Template("Solicitud de empleo", "Datos del candidato"),
-    Template("Formulario de pedido", "Solicitudes de productos"),
-    Template("Confirmación de asistencia", "Gestión de invitados"),
-    Template("Comentarios", "Encuesta para clientes")
+    Template(R.string.template_job_application, R.string.template_job_application_subtitle),
+    Template(R.string.template_order_form, R.string.template_order_form_subtitle),
+    Template(R.string.template_event_rsvp, R.string.template_event_rsvp_subtitle),
+    Template(R.string.template_feedback, R.string.template_feedback_subtitle)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +46,7 @@ fun ChooseTemplate(
             TopAppBar(
 
                 title = {
-                    Text("Nuevo formulario")
+                    Text(stringResource(R.string.new_form))
                 },
 
                 navigationIcon = {
@@ -53,7 +56,7 @@ fun ChooseTemplate(
 
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Volver"
+                            contentDescription = stringResource(R.string.go_back)
                         )
                     }
                 },
@@ -79,21 +82,21 @@ fun ChooseTemplate(
                     selected = true,
                     onClick = onBackClick,
                     icon = { Icon(Icons.Outlined.AccountBox, null) },
-                    label = { Text("Formularios") }
+                    label = { Text(stringResource(R.string.forms)) }
                 )
 
                 NavigationBarItem(
                     selected = false,
                     onClick = {},
                     icon = { Icon(Icons.AutoMirrored.Outlined.List, null) },
-                    label = { Text("Respuestas") }
+                    label = { Text(stringResource(R.string.responses)) }
                 )
 
                 NavigationBarItem(
                     selected = false,
                     onClick = {},
                     icon = { Icon(Icons.Outlined.Settings, null) },
-                    label = { Text("Ajustes") }
+                    label = { Text(stringResource(R.string.settings)) }
                 )
             }
         }
@@ -110,7 +113,7 @@ fun ChooseTemplate(
         ) {
 
             Text(
-                "Empezar desde cero",
+                stringResource(R.string.start_from_scratch),
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -142,7 +145,7 @@ fun ChooseTemplate(
 
                         Spacer(Modifier.height(8.dp))
 
-                        Text("Formulario en blanco")
+                        Text(stringResource(R.string.blank_form))
                     }
                 }
             }
@@ -150,7 +153,7 @@ fun ChooseTemplate(
             Spacer(Modifier.height(24.dp))
 
             Text(
-                "Plantillas recomendadas",
+                stringResource(R.string.recommended_templates),
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -165,12 +168,12 @@ fun ChooseTemplate(
 
                 items(
                     items = templates,
-                    key = { template -> template.title }
+                    key = { template -> template.titleResId }
                 ) { template ->
 
                     TemplateCard(
-                        title = template.title,
-                        subtitle = template.subtitle,
+                        title = stringResource(template.titleResId),
+                        subtitle = stringResource(template.subtitleResId),
                         onClick = { onTemplateClick(template) }
                     )
                 }

@@ -6,7 +6,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
 import com.uvg.cc3087.myapp.ui.screens.EditForm
@@ -22,6 +24,7 @@ private enum class AppDestination {
 
 @Composable
 fun FormLinkApp() {
+    val context = LocalContext.current
     // este estado pequeño es suficiente para conectar las dos pantallas sin otra dependencia :D
     var currentDestination by rememberSaveable {
         mutableStateOf(AppDestination.FORMS)
@@ -73,13 +76,13 @@ fun FormLinkApp() {
             ChooseTemplate(
                 onBackClick = showForms,
                 onBlankFormClick = { showEditor(null) },
-                onTemplateClick = { template -> showEditor(template.title) }
+                onTemplateClick = { template -> showEditor(context.getString(template.titleResId)) }
             )
         }
 
         AppDestination.EDIT_FORM -> {
             EditForm(
-                initialTitle = selectedTemplateTitle ?: "Formulario sin título",
+                initialTitle = selectedTemplateTitle ?: context.getString(R.string.untitled_form),
                 initialFields = if (selectedTemplateTitle == null) {
                     emptyList()
                 } else {
