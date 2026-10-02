@@ -29,11 +29,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
@@ -48,11 +51,11 @@ fun FormListItem(
     onEditClick: () -> Unit = {},
     onViewClick: () -> Unit = {}
 ) {
-    val responseText = if (form.responseCount == 1) {
-        "1 respuesta"
-    } else {
-        "${form.responseCount} respuestas"
-    }
+    val responseText = pluralStringResource(
+        R.plurals.response_count,
+        form.responseCount,
+        form.responseCount
+    )
 
     OutlinedCard(
         onClick = onClick,
@@ -71,7 +74,7 @@ fun FormListItem(
                     .data(form.imageUrl)
                     .crossfade(true)
                     .build(),
-                contentDescription = "Imagen de ${form.title}",
+                contentDescription = stringResource(R.string.thumbnail_for_form, form.title),
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(12.dp)),
@@ -93,7 +96,7 @@ fun FormListItem(
                 )
 
                 Text(
-                    text = "$responseText • Actualizado ${form.updatedDate}",
+                    text = stringResource(R.string.form_response_summary, responseText, form.updatedDate),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -111,17 +114,17 @@ fun FormListItem(
             horizontalArrangement = Arrangement.End
         ) {
             FormActionButton(
-                label = "Compartir",
+                label = stringResource(R.string.share),
                 onClick = onShareClick,
                 icon = Icons.Outlined.Share
             )
             FormActionButton(
-                label = "Editar",
+                label = stringResource(R.string.edit),
                 onClick = onEditClick,
                 icon = Icons.Outlined.Edit
             )
             FormActionButton(
-                label = "Ver",
+                label = stringResource(R.string.view),
                 onClick = onViewClick,
                 icon = Icons.Outlined.Visibility
             )
@@ -151,7 +154,7 @@ private fun StatusLabel(status: FormStatus) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(
-            text = if (isActive) "Activo" else "Borrador",
+            text = stringResource(if (isActive) R.string.active else R.string.draft),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall
         )

@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp.ui.screens
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,8 +38,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
@@ -47,10 +51,10 @@ import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
 // estas opciones describen los filtros disponibles para la pantalla
-enum class FormFilter(val label: String) {
-    ALL("Todos"),
-    ACTIVE("Activos"),
-    DRAFT("Borradores")
+enum class FormFilter(@param:StringRes val labelResId: Int) {
+    ALL(R.string.filter_all),
+    ACTIVE(R.string.filter_active),
+    DRAFT(R.string.filter_draft)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +67,7 @@ fun Forms(
     onNewFormClick: () -> Unit = {},
     onFormClick: (FormSummary) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -74,10 +79,10 @@ fun Forms(
     }
 
     // el snackbar hace visible cada interacción mientras conectamos la navegación
-    fun showMessage(message: String) {
+    fun showMessage(@StringRes messageResId: Int, vararg formatArgs: Any) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(message)
+            snackbarHostState.showSnackbar(context.getString(messageResId, *formatArgs))
         }
     }
 
@@ -85,18 +90,18 @@ fun Forms(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(text = "FormLink") },
+                title = { Text(text = stringResource(R.string.formlink)) },
                 actions = {
-                    IconButton(onClick = { showMessage("Buscar formularios") }) {
+                    IconButton(onClick = { showMessage(R.string.search_selected) }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
-                            contentDescription = "Buscar formularios"
+                            contentDescription = stringResource(R.string.search_forms)
                         )
                     }
-                    IconButton(onClick = { showMessage("Más opciones") }) {
+                    IconButton(onClick = { showMessage(R.string.more_options_selected) }) {
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "Más opciones"
+                            contentDescription = stringResource(R.string.more_options)
                         )
                     }
                 }
@@ -123,7 +128,7 @@ fun Forms(
                     onFilterSelected = onFilterSelected,
                     onNewFormClick = {
                         onNewFormClick()
-                        showMessage("Nuevo formulario")
+                        showMessage(R.string.new_form_selected)
                     }
                 )
             }
@@ -137,11 +142,11 @@ fun Forms(
                     form = form,
                     onClick = {
                         onFormClick(form)
-                        showMessage("${form.title} seleccionado")
+                        showMessage(R.string.form_selected, form.title)
                     },
-                    onShareClick = { showMessage("Compartir: ${form.title}") },
-                    onEditClick = { showMessage("Editar: ${form.title}") },
-                    onViewClick = { showMessage("Ver: ${form.title}") }
+                    onShareClick = { showMessage(R.string.share_form, form.title) },
+                    onEditClick = { showMessage(R.string.edit_form, form.title) },
+                    onViewClick = { showMessage(R.string.view_form, form.title) }
                 )
             }
         }
@@ -167,7 +172,7 @@ private fun FormsControls(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Mis formularios",
+                text = stringResource(R.string.my_forms),
                 style = MaterialTheme.typography.headlineSmall
             )
 
@@ -181,7 +186,7 @@ private fun FormsControls(
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Nuevo formulario")
+                Text(text = stringResource(R.string.new_form))
             }
         }
 
@@ -190,7 +195,7 @@ private fun FormsControls(
                 FilterChip(
                     selected = selectedFilter == filter,
                     onClick = { onFilterSelected(filter) },
-                    label = { Text(text = filter.label) }
+                    label = { Text(text = stringResource(filter.labelResId)) }
                 )
             }
         }
@@ -199,40 +204,40 @@ private fun FormsControls(
 
 // la barra inferior también queda aislada para poder ajustarla sin tocar la lista
 @Composable
-private fun FormsBottomBar(onMessage: (String) -> Unit) {
+private fun FormsBottomBar(onMessage: (Int) -> Unit) {
     NavigationBar {
         NavigationBarItem(
             selected = true,
-            onClick = { onMessage("Formularios seleccionados") },
+            onClick = { onMessage(R.string.forms_selected) },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Description,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Formularios") }
+            label = { Text(text = stringResource(R.string.forms)) }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { onMessage("Respuestas seleccionadas") },
+            onClick = { onMessage(R.string.responses_selected) },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.ChatBubbleOutline,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Respuestas") }
+            label = { Text(text = stringResource(R.string.responses)) }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { onMessage("Ajustes seleccionados") },
+            onClick = { onMessage(R.string.settings_selected) },
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Settings,
                     contentDescription = null
                 )
             },
-            label = { Text(text = "Ajustes") }
+            label = { Text(text = stringResource(R.string.settings)) }
         )
     }
 }
