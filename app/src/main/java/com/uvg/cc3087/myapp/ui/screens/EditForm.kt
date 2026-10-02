@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.model.hasValidOptions
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
 import com.uvg.cc3087.myapp.ui.components.AddFieldBottomSheet
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
@@ -57,11 +58,9 @@ fun EditForm(
     var fields by remember(initialTitle) {
         mutableStateOf(initialFields)
     }
-    var nextFieldNumber by rememberSaveable(initialTitle) {
-        mutableStateOf(initialFields.size + 1)
-    }
     var showFieldCatalog by rememberSaveable { mutableStateOf(false) }
     var focusedFieldId by remember { mutableStateOf<String?>(null) }
+    var pendingFieldId by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -75,21 +74,23 @@ fun EditForm(
     }
 
     fun addField(type: FormFieldType) {
-        val fieldId = "field-$nextFieldNumber"
+        val fieldId = java.util.UUID.randomUUID().toString()
         fields = fields + FormFieldDraft(
             id = fieldId,
             type = type,
             title = type.defaultTitle
         )
-        nextFieldNumber += 1
-        focusedFieldId = fieldId
+        pendingFieldId = fieldId
     }
 
-    LaunchedEffect(focusedFieldId, fields.size) {
-        val fieldId = focusedFieldId ?: return@LaunchedEffect
+    LaunchedEffect(pendingFieldId, showFieldCatalog) {
+        if (showFieldCatalog) return@LaunchedEffect
+        val fieldId = pendingFieldId ?: return@LaunchedEffect
         val fieldIndex = fields.indexOfFirst { field -> field.id == fieldId }
         if (fieldIndex >= 0) {
             listState.animateScrollToItem(fieldIndex + 1)
+            focusedFieldId = fieldId
+            pendingFieldId = null
         }
     }
 
@@ -114,6 +115,8 @@ fun EditForm(
             formTitle.isBlank() -> showMessage("Escribe el título del formulario")
             fields.isEmpty() -> showMessage("Agrega al menos un campo")
             fields.any { it.title.isBlank() } -> showMessage("Completa el nombre de todos los campos")
+            fields.any { !it.hasValidOptions() } ->
+                showMessage("Agrega al menos dos opciones con nombre en cada campo de selección")
             else -> showMessage("Formulario listo para continuar :D")
         }
     }
@@ -152,7 +155,7 @@ fun EditForm(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "form-details") {
@@ -197,6 +200,7 @@ fun EditForm(
                     onRequiredChange = { required ->
                         updateField(field.copy(required = required))
                     },
+                    onOptionsChange = { updateField(field.copy(options = it)) },
                     onMoveUp = { moveField(index, -1) },
                     onMoveDown = { moveField(index, 1) },
                     onDelete = {

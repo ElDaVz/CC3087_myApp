@@ -62,7 +62,13 @@ private val availableFieldTypes = listOf(
         type = FormFieldType.DATE,
         description = "Selector de fecha",
         icon = Icons.Outlined.CalendarToday
-    )
+    ),
+    FieldPaletteItem(FormFieldType.PARAGRAPH, "Respuestas largas", Icons.Outlined.TextFields),
+    FieldPaletteItem(FormFieldType.NUMBER, "Cifras y cantidades", Icons.Outlined.TextFields),
+    FieldPaletteItem(FormFieldType.EMAIL, "Validación de correo", Icons.Outlined.TextFields),
+    FieldPaletteItem(FormFieldType.CHECKBOX, "Sí o no", Icons.Outlined.RadioButtonChecked),
+    FieldPaletteItem(FormFieldType.CHECKBOX_GROUP, "Varias opciones", Icons.Outlined.RadioButtonChecked),
+    FieldPaletteItem(FormFieldType.DROPDOWN, "Lista compacta", Icons.Outlined.RadioButtonChecked)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -158,7 +164,7 @@ private fun FieldPaletteCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(132.dp),
+            .heightIn(min = 150.dp),
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )

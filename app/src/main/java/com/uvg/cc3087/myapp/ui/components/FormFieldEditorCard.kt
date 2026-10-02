@@ -26,6 +26,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
+import com.uvg.cc3087.myapp.data.model.FieldOption
+import com.uvg.cc3087.myapp.data.model.hasOptions
 
 @Composable
 fun FormFieldEditorCard(
@@ -38,6 +40,7 @@ fun FormFieldEditorCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit,
+    onOptionsChange: (List<FieldOption>) -> Unit = {},
     shouldFocusTitle: Boolean = false,
     onTitleFocusRequested: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -95,6 +98,12 @@ fun FormFieldEditorCard(
                     }
                 }
             )
+
+            if (field.type.hasOptions) {
+                FieldOptionsEditor(field.options, onOptionsChange)
+            }
+            Text("Vista previa interactiva", style = MaterialTheme.typography.labelLarge)
+            FieldAnswerPreview(field)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
