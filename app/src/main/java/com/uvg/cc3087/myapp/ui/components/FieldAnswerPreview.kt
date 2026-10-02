@@ -48,7 +48,7 @@ fun FieldOptionsEditor(options: List<FieldOption>, onChange: (List<FieldOption>)
 fun FieldAnswerPreview(field: FormFieldDraft) {
     var text by rememberSaveable(field.id) { mutableStateOf("") }
     var selected by rememberSaveable(field.id) { mutableStateOf<String?>(null) }
-    var checkedIds by rememberSaveable(field.id) { mutableStateOf(listOf<String>()) }
+    var checkedIds by rememberSaveable(field.id, field.allowMultipleAnswers) { mutableStateOf(listOf<String>()) }
     var checked by rememberSaveable(field.id) { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
     when (field.type) {
@@ -81,7 +81,11 @@ fun FieldAnswerPreview(field: FormFieldDraft) {
                         RadioButton(selected == option.id, onClick = { selected = option.id })
                     } else {
                         Checkbox(option.id in checkedIds, onCheckedChange = { value ->
-                            checkedIds = if (value) checkedIds + option.id else checkedIds - option.id
+                            checkedIds = when {
+                                !value -> checkedIds - option.id
+                                field.allowMultipleAnswers -> checkedIds + option.id
+                                else -> listOf(option.id)
+                            }
                         })
                     }
                     Text(option.label)

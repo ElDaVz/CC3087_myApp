@@ -9,7 +9,7 @@ enum class FormFieldType(
     NUMBER("Número", "Cantidad"),
     EMAIL("Correo electrónico", "Correo electrónico"),
     CHECKBOX("Casilla", "Acepto"),
-    CHECKBOX_GROUP("Casillas múltiples", "Selecciona las opciones"),
+    CHECKBOX_GROUP("Casillas de selección", "Selecciona las opciones"),
     DROPDOWN("Menú desplegable", "Selecciona una opción"),
     MULTIPLE_CHOICE("Opción múltiple", "Selecciona una opción"),
     DATE("Fecha y hora", "Selecciona fecha y hora")
@@ -25,6 +25,7 @@ data class FormFieldDraft(
     val type: FormFieldType,
     val title: String,
     val required: Boolean = false,
+    val allowMultipleAnswers: Boolean = true,
     val options: List<FieldOption> = if (type.hasOptions) listOf(
         FieldOption(label = "Opción 1"), FieldOption(label = "Opción 2")
     ) else emptyList()

@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
@@ -65,6 +70,43 @@ fun EditForm(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    var draggedId by remember { mutableStateOf<String?>(null) }
+    var dragY by remember { mutableStateOf(0f) }
+    val handleOffset = with(LocalDensity.current) { 40.dp.toPx() }
+    val edgeSize = with(LocalDensity.current) { 72.dp.toPx() }
+
+    LaunchedEffect(draggedId) {
+        if (draggedId == null) return@LaunchedEffect
+        while (true) {
+            val layout = listState.layoutInfo
+            val scroll = when {
+                dragY < layout.viewportStartOffset + edgeSize -> -18f
+                dragY > layout.viewportEndOffset - edgeSize -> 18f
+                else -> 0f
+            }
+            if (scroll != 0f) listState.scrollBy(scroll)
+            delay(16)
+        }
+    }
+
+    fun finishDrag() {
+        val id = draggedId ?: return
+        val target = listState.layoutInfo.visibleItemsInfo
+            .filter { item -> fields.any { it.id == item.key } }
+            .minByOrNull { item ->
+                when {
+                    dragY < item.offset -> item.offset - dragY
+                    dragY > item.offset + item.size -> dragY - item.offset - item.size
+                    else -> 0f
+                }
+            }
+        val from = fields.indexOfFirst { it.id == id }
+        val to = fields.indexOfFirst { it.id == target?.key }
+        if (from >= 0 && to >= 0 && from != to) {
+            fields = fields.toMutableList().apply { add(to, removeAt(from)) }
+        }
+        draggedId = null
+    }
 
     fun showMessage(message: String) {
         coroutineScope.launch {
@@ -190,6 +232,14 @@ fun EditForm(
                 key = { _, field -> field.id }
             ) { index, field ->
                 FormFieldEditorCard(
+                    modifier = Modifier.zIndex(if (draggedId == field.id) 1f else 0f)
+                        .graphicsLayer {
+                            if (draggedId == field.id) {
+                                val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == field.id }
+                                translationY = dragY - (item?.offset ?: 0) - handleOffset
+                                alpha = 0.85f
+                            }
+                        },
                     field = field,
                     position = index,
                     canMoveUp = index > 0,
@@ -201,6 +251,14 @@ fun EditForm(
                         updateField(field.copy(required = required))
                     },
                     onOptionsChange = { updateField(field.copy(options = it)) },
+                    onMultipleAnswersChange = { updateField(field.copy(allowMultipleAnswers = it)) },
+                    onDragStart = {
+                        draggedId = field.id
+                        dragY = (listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == field.id }?.offset ?: 0) + handleOffset
+                    },
+                    onDrag = { dragY += it },
+                    onDragEnd = ::finishDrag,
+                    onDragCancel = { draggedId = null },
                     onMoveUp = { moveField(index, -1) },
                     onMoveDown = { moveField(index, 1) },
                     onDelete = {
