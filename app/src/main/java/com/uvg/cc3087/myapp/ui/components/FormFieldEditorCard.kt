@@ -17,9 +17,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 
@@ -34,8 +38,19 @@ fun FormFieldEditorCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit,
+    shouldFocusTitle: Boolean = false,
+    onTitleFocusRequested: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val titleFocusRequester = remember(field.id) { FocusRequester() }
+
+    LaunchedEffect(shouldFocusTitle) {
+        if (shouldFocusTitle) {
+            titleFocusRequester.requestFocus()
+            onTitleFocusRequested()
+        }
+    }
+
     OutlinedCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -68,7 +83,9 @@ fun FormFieldEditorCard(
             OutlinedTextField(
                 value = field.title,
                 onValueChange = onTitleChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(titleFocusRequester),
                 label = { Text("Nombre del campo") },
                 singleLine = true,
                 isError = field.title.isBlank(),

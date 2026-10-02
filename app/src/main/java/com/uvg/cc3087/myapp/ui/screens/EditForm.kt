@@ -8,13 +8,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -23,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +39,7 @@ import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
+import com.uvg.cc3087.myapp.ui.components.AddFieldBottomSheet
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
@@ -56,9 +60,12 @@ fun EditForm(
     var nextFieldNumber by rememberSaveable(initialTitle) {
         mutableStateOf(initialFields.size + 1)
     }
+    var showFieldCatalog by rememberSaveable { mutableStateOf(false) }
+    var focusedFieldId by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     fun showMessage(message: String) {
         coroutineScope.launch {
@@ -68,12 +75,22 @@ fun EditForm(
     }
 
     fun addField(type: FormFieldType) {
+        val fieldId = "field-$nextFieldNumber"
         fields = fields + FormFieldDraft(
-            id = "field-$nextFieldNumber",
+            id = fieldId,
             type = type,
             title = type.defaultTitle
         )
         nextFieldNumber += 1
+        focusedFieldId = fieldId
+    }
+
+    LaunchedEffect(focusedFieldId, fields.size) {
+        val fieldId = focusedFieldId ?: return@LaunchedEffect
+        val fieldIndex = fields.indexOfFirst { field -> field.id == fieldId }
+        if (fieldIndex >= 0) {
+            listState.animateScrollToItem(fieldIndex + 1)
+        }
     }
 
     fun updateField(updatedField: FormFieldDraft) {
@@ -121,9 +138,17 @@ fun EditForm(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showFieldCatalog = true },
+                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                text = { Text("Agregar campo") }
+            )
+        }
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -144,24 +169,6 @@ fun EditForm(
                         singleLine = true,
                         isError = formTitle.isBlank()
                     )
-                }
-            }
-
-            item(key = "add-field-controls") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Agregar campo",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    FormFieldType.entries.forEach { type ->
-                        OutlinedButton(
-                            onClick = { addField(type) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Agregar ${type.label.lowercase()}")
-                        }
-                    }
                 }
             }
 
@@ -194,10 +201,24 @@ fun EditForm(
                     onMoveDown = { moveField(index, 1) },
                     onDelete = {
                         fields = fields.filterNot { it.id == field.id }
+                    },
+                    shouldFocusTitle = field.id == focusedFieldId,
+                    onTitleFocusRequested = {
+                        focusedFieldId = null
                     }
                 )
             }
         }
+    }
+
+    if (showFieldCatalog) {
+        AddFieldBottomSheet(
+            onDismissRequest = { showFieldCatalog = false },
+            onFieldSelected = { type ->
+                addField(type)
+                showFieldCatalog = false
+            }
+        )
     }
 }
 
