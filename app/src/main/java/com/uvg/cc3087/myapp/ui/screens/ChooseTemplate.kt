@@ -31,7 +31,9 @@ private val templates = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChooseTemplate(
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onBlankFormClick: () -> Unit = {},
+    onTemplateClick: (Template) -> Unit = {}
 ) {
 
     Scaffold(
@@ -118,7 +120,7 @@ fun ChooseTemplate(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp),
-                onClick = {}
+                onClick = onBlankFormClick
             ) {
 
                 Box(
@@ -130,7 +132,7 @@ fun ChooseTemplate(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        FilledIconButton(onClick = {}) {
+                        FilledIconButton(onClick = onBlankFormClick) {
 
                             Icon(
                                 Icons.Outlined.Add,
@@ -161,11 +163,15 @@ fun ChooseTemplate(
                 modifier = Modifier.fillMaxSize()
             ) {
 
-                items(templates) {
+                items(
+                    items = templates,
+                    key = { template -> template.title }
+                ) { template ->
 
                     TemplateCard(
-                        title = it.title,
-                        subtitle = it.subtitle
+                        title = template.title,
+                        subtitle = template.subtitle,
+                        onClick = { onTemplateClick(template) }
                     )
                 }
             }
