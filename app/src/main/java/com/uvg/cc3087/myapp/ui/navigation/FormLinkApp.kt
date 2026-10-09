@@ -1,4 +1,4 @@
-    package com.uvg.cc3087.myapp.ui.navigation
+package com.uvg.cc3087.myapp.ui.navigation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
@@ -8,13 +8,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
+import com.uvg.cc3087.myapp.data.FormSampleData
+import com.uvg.cc3087.myapp.di.AppContainer
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
 import com.uvg.cc3087.myapp.ui.screens.EditForm
-import com.uvg.cc3087.myapp.ui.screens.FormFilter
 import com.uvg.cc3087.myapp.ui.screens.Forms
+import com.uvg.cc3087.myapp.ui.state.FormFilter
+import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
+import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
 
 private enum class AppDestination {
     FORMS,
@@ -24,15 +30,27 @@ private enum class AppDestination {
 
 @Composable
 fun FormLinkApp() {
+    // este viewmodel vive en la actividad y conserva el filtro al ir a plantillas :D
+    val formsViewModel: FormsViewModel = viewModel(
+        factory = FormsViewModel.factory(AppContainer.formRepository)
+    )
+    val formsUiState by formsViewModel.uiState.collectAsStateWithLifecycle()
+
+    FormLinkContent(
+        formsUiState = formsUiState,
+        onFilterSelected = formsViewModel::selectFilter
+    )
+}
+
+@Composable
+private fun FormLinkContent(
+    formsUiState: FormsUiState,
+    onFilterSelected: (FormFilter) -> Unit
+) {
     val context = LocalContext.current
-    // este estado pequeño es suficiente para conectar las dos pantallas sin otra dependencia :D
+    // la navegación queda en la ui y el estado de formularios queda en su viewmodel
     var currentDestination by rememberSaveable {
         mutableStateOf(AppDestination.FORMS)
-    }
-
-    // guardamos el filtro aquí para que no se pierda al volver de plantillas :D
-    var selectedFilter by rememberSaveable {
-        mutableStateOf(FormFilter.ALL)
     }
 
     var selectedTemplateTitle by rememberSaveable {
@@ -64,8 +82,8 @@ fun FormLinkApp() {
     when (currentDestination) {
         AppDestination.FORMS -> {
             Forms(
-                selectedFilter = selectedFilter,
-                onFilterSelected = { selectedFilter = it },
+                uiState = formsUiState,
+                onFilterSelected = onFilterSelected,
                 onNewFormClick = {
                     currentDestination = AppDestination.CHOOSE_TEMPLATE
                 }
@@ -98,6 +116,10 @@ fun FormLinkApp() {
 @Composable
 private fun FormLinkAppPreview() {
     MyappTheme(dynamicColor = false) {
-        FormLinkApp()
+        // la preview usa un estado de ejemplo y no necesita crear un viewmodel
+        FormLinkContent(
+            formsUiState = FormsUiState(forms = FormSampleData.forms),
+            onFilterSelected = {}
+        )
     }
 }

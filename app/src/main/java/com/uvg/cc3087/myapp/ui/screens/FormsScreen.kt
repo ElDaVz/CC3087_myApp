@@ -44,25 +44,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormSampleData
-import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.ui.components.FormListItem
+import com.uvg.cc3087.myapp.ui.state.FormFilter
+import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
-
-// estas opciones describen los filtros disponibles para la pantalla
-enum class FormFilter(@param:StringRes val labelResId: Int) {
-    ALL(R.string.filter_all),
-    ACTIVE(R.string.filter_active),
-    DRAFT(R.string.filter_draft)
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Forms(
+    uiState: FormsUiState,
     modifier: Modifier = Modifier,
-    forms: List<FormSummary> = FormSampleData.forms,
-    selectedFilter: FormFilter = FormFilter.ALL,
     onFilterSelected: (FormFilter) -> Unit = {},
     onNewFormClick: () -> Unit = {},
     onFormClick: (FormSummary) -> Unit = {}
@@ -70,13 +63,6 @@ fun Forms(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-
-    // mantenemos la lista original intacta y solo cambiamos lo que se muestra
-    val visibleForms = when (selectedFilter) {
-        FormFilter.ALL -> forms
-        FormFilter.ACTIVE -> forms.filter { it.status == FormStatus.ACTIVE }
-        FormFilter.DRAFT -> forms.filter { it.status == FormStatus.DRAFT }
-    }
 
     // el snackbar hace visible cada interacción mientras conectamos la navegación
     fun showMessage(@StringRes messageResId: Int, vararg formatArgs: Any) {
@@ -124,7 +110,7 @@ fun Forms(
         ) {
             item(key = "forms-controls") {
                 FormsControls(
-                    selectedFilter = selectedFilter,
+                    selectedFilter = uiState.selectedFilter,
                     onFilterSelected = onFilterSelected,
                     onNewFormClick = {
                         onNewFormClick()
@@ -135,7 +121,7 @@ fun Forms(
 
             // usamos el id real para que compose identifique cada elemento correctamente
             items(
-                items = visibleForms,
+                items = uiState.forms,
                 key = { form -> form.id }
             ) { form ->
                 FormListItem(
@@ -192,10 +178,15 @@ private fun FormsControls(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FormFilter.entries.forEach { filter ->
+                val labelResId = when (filter) {
+                    FormFilter.ALL -> R.string.filter_all
+                    FormFilter.ACTIVE -> R.string.filter_active
+                    FormFilter.DRAFT -> R.string.filter_draft
+                }
                 FilterChip(
                     selected = selectedFilter == filter,
                     onClick = { onFilterSelected(filter) },
-                    label = { Text(text = stringResource(filter.labelResId)) }
+                    label = { Text(text = stringResource(labelResId)) }
                 )
             }
         }
@@ -251,6 +242,6 @@ private fun FormsBottomBar(onMessage: (Int) -> Unit) {
 @Composable
 private fun FormsPreview() {
     MyappTheme(dynamicColor = false) {
-        Forms()
+        Forms(uiState = FormsUiState(forms = FormSampleData.forms))
     }
 }
