@@ -72,9 +72,17 @@ Volví a ejecutar `:app:compileDebugKotlin`, `:app:testDebugUnitTest` y `:app:as
 
 No agregué dependencias, no cambié `MainActivity` ni implementé Room o Firebase. Los textos del editor siguen como estaban; su localización queda pendiente de una revisión aparte.
 
+## Revisión final en Android
+
+Después de guardar los tres bloques, probé el recorrido en el emulador Pixel 9 Pro. Funcionaron el filtro Draft, New Form, Order Form, Blank Form, las ediciones de campos, el cambio de obligatoriedad, el orden, agregar y eliminar, los avisos de Validar y los botones de regreso.
+
+También giré el editor a horizontal y regresé a vertical: se conservaron el título, el campo editado, el orden y las casillas. Al regresar a Forms, Draft siguió seleccionado. No necesité cambiar el código durante esta revisión.
+
+El detalle de las acciones, los resultados, las capturas y los límites está en [PRUEBAS_MVVM.md](PRUEBAS_MVVM.md). La prueba real de cierre del proceso sigue pendiente; no debe confundirse con la rotación ni con la restauración simulada de las pruebas locales.
+
 ## Lo que queda pendiente
 
-Las tres pantallas actuales ya tienen su estado separado, pero falta comprobar visualmente la navegación, los toques y la rotación en Android antes del PR. `FormRepository` solo cubre `observeForms()`, cuya firma coincide con la lectura que prepara el equipo. Guardar, eliminar, publicar y autenticar se integrarán con el contrato de backend y los repositorios del equipo; estos bloques no implementan persistencia permanente.
+Las tres pantallas actuales ya tienen su estado separado y el recorrido principal se comprobó en el emulador. Quedan las comprobaciones adicionales indicadas en el reporte y la revisión del equipo en el PR. `FormRepository` solo cubre `observeForms()`, cuya firma coincide con la lectura que prepara el equipo. Guardar, eliminar, publicar y autenticar se integrarán con el contrato de backend y los repositorios del equipo; estos bloques no implementan persistencia permanente.
 
 Conservé las traducciones y las versiones de AGP y Gradle. Coroutines se declara en `1.10.2`, que ya era la versión resuelta por el proyecto.
 
