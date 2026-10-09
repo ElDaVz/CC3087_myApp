@@ -23,42 +23,33 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
-import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
+import com.uvg.cc3087.myapp.ui.state.EditFormAction
+import com.uvg.cc3087.myapp.ui.state.EditFormUiState
+import com.uvg.cc3087.myapp.ui.state.FieldMoveDirection
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditForm(
-    initialTitle: String,
-    initialFields: List<FormFieldDraft>,
+    uiState: EditFormUiState,
+    onAction: (EditFormAction) -> Unit,
+    onValidate: () -> FormValidationResult,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var formTitle by rememberSaveable(initialTitle) {
-        mutableStateOf(initialTitle)
-    }
-    var fields by remember(initialTitle) {
-        mutableStateOf(initialFields)
-    }
-    var nextFieldNumber by rememberSaveable(initialTitle) {
-        mutableStateOf(initialFields.size + 1)
-    }
-
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val fieldIdsWithTitleErrors = uiState.fieldIdsWithTitleErrors
 
     fun showMessage(message: String) {
         coroutineScope.launch {
@@ -67,38 +58,15 @@ fun EditForm(
         }
     }
 
-    fun addField(type: FormFieldType) {
-        fields = fields + FormFieldDraft(
-            id = "field-$nextFieldNumber",
-            type = type,
-            title = type.defaultTitle
-        )
-        nextFieldNumber += 1
-    }
-
-    fun updateField(updatedField: FormFieldDraft) {
-        fields = fields.map { field ->
-            if (field.id == updatedField.id) updatedField else field
-        }
-    }
-
-    fun moveField(fromIndex: Int, direction: Int) {
-        val targetIndex = fromIndex + direction
-        if (targetIndex !in fields.indices) return
-
-        val reorderedFields = fields.toMutableList()
-        val movedField = reorderedFields.removeAt(fromIndex)
-        reorderedFields.add(targetIndex, movedField)
-        fields = reorderedFields
-    }
-
     fun validateForm() {
-        when {
-            formTitle.isBlank() -> showMessage("Escribe el título del formulario")
-            fields.isEmpty() -> showMessage("Agrega al menos un campo")
-            fields.any { it.title.isBlank() } -> showMessage("Completa el nombre de todos los campos")
-            else -> showMessage("Formulario listo para continuar :D")
+        // el viewmodel valida y la ui elige cómo mostrar el resultado
+        val message = when (onValidate()) {
+            FormValidationResult.TITLE_REQUIRED -> "Escribe el título del formulario"
+            FormValidationResult.FIELD_REQUIRED -> "Agrega al menos un campo"
+            FormValidationResult.FIELD_TITLE_REQUIRED -> "Completa el nombre de todos los campos"
+            FormValidationResult.READY -> "Formulario listo para continuar :D"
         }
+        showMessage(message)
     }
 
     Scaffold(
@@ -137,12 +105,12 @@ fun EditForm(
                         style = MaterialTheme.typography.titleMedium
                     )
                     OutlinedTextField(
-                        value = formTitle,
-                        onValueChange = { formTitle = it },
+                        value = uiState.title,
+                        onValueChange = { onAction(EditFormAction.ChangeTitle(it)) },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Título") },
                         singleLine = true,
-                        isError = formTitle.isBlank()
+                        isError = uiState.hasTitleError
                     )
                 }
             }
@@ -156,7 +124,7 @@ fun EditForm(
 
                     FormFieldType.entries.forEach { type ->
                         OutlinedButton(
-                            onClick = { addField(type) },
+                            onClick = { onAction(EditFormAction.AddField(type)) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Agregar ${type.label.lowercase()}")
@@ -165,7 +133,7 @@ fun EditForm(
                 }
             }
 
-            if (fields.isEmpty()) {
+            if (uiState.fields.isEmpty()) {
                 item(key = "empty-fields") {
                     Text(
                         text = "Todavía no hay campos. Agrega uno para comenzar",
@@ -176,25 +144,26 @@ fun EditForm(
             }
 
             itemsIndexed(
-                items = fields,
+                items = uiState.fields,
                 key = { _, field -> field.id }
             ) { index, field ->
                 FormFieldEditorCard(
                     field = field,
                     position = index,
                     canMoveUp = index > 0,
-                    canMoveDown = index < fields.lastIndex,
+                    canMoveDown = index < uiState.fields.lastIndex,
+                    isTitleError = field.id in fieldIdsWithTitleErrors,
                     onTitleChange = { newTitle ->
-                        updateField(field.copy(title = newTitle))
+                        onAction(EditFormAction.ChangeFieldTitle(field.id, newTitle))
                     },
                     onRequiredChange = { required ->
-                        updateField(field.copy(required = required))
+                        onAction(EditFormAction.SetFieldRequired(field.id, required))
                     },
-                    onMoveUp = { moveField(index, -1) },
-                    onMoveDown = { moveField(index, 1) },
-                    onDelete = {
-                        fields = fields.filterNot { it.id == field.id }
-                    }
+                    onMoveUp = { onAction(EditFormAction.MoveField(field.id, FieldMoveDirection.UP)) },
+                    onMoveDown = {
+                        onAction(EditFormAction.MoveField(field.id, FieldMoveDirection.DOWN))
+                    },
+                    onDelete = { onAction(EditFormAction.DeleteField(field.id)) }
                 )
             }
         }
@@ -206,8 +175,12 @@ fun EditForm(
 private fun EditFormPreview() {
     MyappTheme(dynamicColor = false) {
         EditForm(
-            initialTitle = "Solicitud de empleo",
-            initialFields = FormEditorSampleData.templateFields,
+            uiState = EditFormUiState(
+                title = "Solicitud de empleo",
+                fields = FormEditorSampleData.templateFields
+            ),
+            onAction = {},
+            onValidate = { FormValidationResult.READY },
             onBackClick = {}
         )
     }

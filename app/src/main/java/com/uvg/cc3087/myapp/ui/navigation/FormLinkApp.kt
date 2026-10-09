@@ -15,15 +15,19 @@ import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.TemplateSampleData
 import com.uvg.cc3087.myapp.di.AppContainer
+import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.resources.titleResId
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
 import com.uvg.cc3087.myapp.ui.screens.EditForm
 import com.uvg.cc3087.myapp.ui.screens.Forms
 import com.uvg.cc3087.myapp.ui.state.ChooseTemplateUiState
+import com.uvg.cc3087.myapp.ui.state.EditFormAction
+import com.uvg.cc3087.myapp.ui.state.EditFormUiState
 import com.uvg.cc3087.myapp.ui.state.FormFilter
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
+import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
 
 private enum class AppDestination {
@@ -34,6 +38,7 @@ private enum class AppDestination {
 
 @Composable
 fun FormLinkApp() {
+    val context = LocalContext.current
     // este viewmodel vive en la actividad y conserva el filtro al ir a plantillas :D
     val formsViewModel: FormsViewModel = viewModel(
         factory = FormsViewModel.factory(AppContainer.formRepository)
@@ -43,11 +48,22 @@ fun FormLinkApp() {
         factory = ChooseTemplateViewModel.factory(AppContainer.templateRepository)
     )
     val chooseTemplateUiState by chooseTemplateViewModel.uiState.collectAsStateWithLifecycle()
+    val editFormViewModel: EditFormViewModel = viewModel(factory = EditFormViewModel.factory())
+    val editFormUiState by editFormViewModel.uiState.collectAsStateWithLifecycle()
 
     FormLinkContent(
         formsUiState = formsUiState,
         chooseTemplateUiState = chooseTemplateUiState,
-        onFilterSelected = formsViewModel::selectFilter
+        editFormUiState = editFormUiState,
+        onFilterSelected = formsViewModel::selectFilter,
+        onStartEditor = { templateTitle ->
+            editFormViewModel.startDraft(
+                title = templateTitle ?: context.getString(R.string.untitled_form),
+                fields = if (templateTitle == null) emptyList() else FormEditorSampleData.templateFields
+            )
+        },
+        onEditorAction = editFormViewModel::onAction,
+        onValidateEditor = editFormViewModel::validate
     )
 }
 
@@ -55,16 +71,16 @@ fun FormLinkApp() {
 private fun FormLinkContent(
     formsUiState: FormsUiState,
     chooseTemplateUiState: ChooseTemplateUiState,
-    onFilterSelected: (FormFilter) -> Unit
+    editFormUiState: EditFormUiState,
+    onFilterSelected: (FormFilter) -> Unit,
+    onStartEditor: (String?) -> Unit,
+    onEditorAction: (EditFormAction) -> Unit,
+    onValidateEditor: () -> FormValidationResult
 ) {
     val context = LocalContext.current
     // cada pantalla recibe su estado y la navegación sigue aquí
     var currentDestination by rememberSaveable {
         mutableStateOf(AppDestination.FORMS)
-    }
-
-    var selectedTemplateTitle by rememberSaveable {
-        mutableStateOf<String?>(null)
     }
 
     val showForms = {
@@ -76,7 +92,8 @@ private fun FormLinkContent(
     }
 
     val showEditor: (String?) -> Unit = { templateTitle ->
-        selectedTemplateTitle = templateTitle
+        // solo iniciar desde plantillas reinicia el borrador, no una recomposición o rotación
+        onStartEditor(templateTitle)
         currentDestination = AppDestination.EDIT_FORM
     }
 
@@ -113,12 +130,9 @@ private fun FormLinkContent(
 
         AppDestination.EDIT_FORM -> {
             EditForm(
-                initialTitle = selectedTemplateTitle ?: context.getString(R.string.untitled_form),
-                initialFields = if (selectedTemplateTitle == null) {
-                    emptyList()
-                } else {
-                    FormEditorSampleData.templateFields
-                },
+                uiState = editFormUiState,
+                onAction = onEditorAction,
+                onValidate = onValidateEditor,
                 onBackClick = showTemplates
             )
         }
@@ -133,7 +147,11 @@ private fun FormLinkAppPreview() {
         FormLinkContent(
             formsUiState = FormsUiState(forms = FormSampleData.forms),
             chooseTemplateUiState = ChooseTemplateUiState(templates = TemplateSampleData.templates),
-            onFilterSelected = {}
+            editFormUiState = EditFormUiState(),
+            onFilterSelected = {},
+            onStartEditor = {},
+            onEditorAction = {},
+            onValidateEditor = { FormValidationResult.READY }
         )
     }
 }

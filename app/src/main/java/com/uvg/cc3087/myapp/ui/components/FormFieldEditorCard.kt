@@ -29,6 +29,7 @@ fun FormFieldEditorCard(
     position: Int,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
+    isTitleError: Boolean,
     onTitleChange: (String) -> Unit,
     onRequiredChange: (Boolean) -> Unit,
     onMoveUp: () -> Unit,
@@ -71,9 +72,9 @@ fun FormFieldEditorCard(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Nombre del campo") },
                 singleLine = true,
-                isError = field.title.isBlank(),
+                isError = isTitleError,
                 supportingText = {
-                    if (field.title.isBlank()) {
+                    if (isTitleError) {
                         Text("El nombre no puede quedar vacío")
                     }
                 }

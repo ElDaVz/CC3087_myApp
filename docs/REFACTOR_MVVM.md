@@ -54,9 +54,27 @@ Para verificar este segundo bloque ejecuté:
 
 La compilación y el APK terminaron correctamente el 8 de octubre. Pasaron las quince pruebas locales, sin fallos ni pruebas omitidas: las diez del bloque anterior y las cinco nuevas de Plantillas. La comprobación visual en Android sigue pendiente.
 
+## Tercer bloque: Editor y validaciones
+
+Moví el título y la lista de campos a `EditFormViewModel`. `EditForm.kt` recibe un `EditFormUiState` y envía acciones para cambiar el título, agregar campos, editar sus nombres, marcar obligatorios, reordenar y eliminar. Las tarjetas reciben sus errores desde el estado en lugar de calcularlos dentro del componente.
+
+`FormDraftValidator`, en `domain/validation`, mantiene las reglas anteriores y devuelve un resultado sin recursos de Android. Primero revisa el título del formulario, después que exista al menos un campo y finalmente los nombres de los campos. La pantalla conserva los mismos mensajes y el Snackbar. Validar todavía no guarda ni publica nada.
+
+Los campos se modifican por ID, no por posición. Los nuevos usan un UUID, así que eliminar y agregar no reutiliza el identificador anterior. Al moverlos se conservan sus títulos, tipos y obligatoriedad.
+
+El ViewModel conserva el borrador durante los cambios de configuración. Además, guarda el título y una lista de valores simples en `SavedStateHandle` para restaurar este editor básico: ID, tipo, nombre y obligatoriedad, manteniendo el orden. Esta copia es estado temporal y pequeño, no una base de datos; cuando se integre Room, los borradores deberán vivir allí. `SavedStateHandle` no sustituye el guardado al cerrar la tarea, forzar la detención o reiniciar el teléfono.
+
+Solo abrir un formulario en blanco o una plantilla inicia un borrador nuevo. Una recomposición no llama a ese inicio. Por ahora, regresar a Plantillas y elegir otra tarjeta comienza de nuevo, igual que antes; no agregué una pantalla de confirmación para descartar cambios.
+
+Las pruebas nuevas cubren las ediciones, los límites al mover campos, IDs desconocidos, IDs únicos, el reinicio de un borrador y los datos restaurados en un ViewModel nuevo. Las pruebas del validador comprueban las reglas y su prioridad. La restauración se simula con otro `SavedStateHandle`; no equivale a una prueba de rotación o muerte del proceso en un dispositivo.
+
+Volví a ejecutar `:app:compileDebugKotlin`, `:app:testDebugUnitTest` y `:app:assembleDebug` el 8 de octubre. La compilación y el APK terminaron correctamente. Pasaron las 37 pruebas locales, sin fallos ni omisiones: 15 anteriores, 16 del editor y 6 del validador. No ejecuté pruebas de interfaz en un dispositivo en este bloque.
+
+No agregué dependencias, no cambié `MainActivity` ni implementé Room o Firebase. Los textos del editor siguen como estaban; su localización queda pendiente de una revisión aparte.
+
 ## Lo que queda pendiente
 
-La migración completa todavía no está terminada. Faltan el editor y sus validaciones, además de las comprobaciones visuales de navegación y rotación en Android. `FormRepository` solo cubre `observeForms()`, cuya firma coincide con la lectura que prepara el equipo. Guardar, eliminar, publicar y autenticar se integrarán con el contrato de backend y los repositorios del equipo; estos bloques no implementan persistencia permanente.
+Las tres pantallas actuales ya tienen su estado separado, pero falta comprobar visualmente la navegación, los toques y la rotación en Android antes del PR. `FormRepository` solo cubre `observeForms()`, cuya firma coincide con la lectura que prepara el equipo. Guardar, eliminar, publicar y autenticar se integrarán con el contrato de backend y los repositorios del equipo; estos bloques no implementan persistencia permanente.
 
 Conservé las traducciones y las versiones de AGP y Gradle. Coroutines se declara en `1.10.2`, que ya era la versión resuelta por el proyecto.
 
@@ -65,3 +83,4 @@ Conservé las traducciones y las versiones de AGP y Gradle. Coroutines se declar
 - [Recomendaciones de arquitectura de Android](https://developer.android.com/topic/architecture/recommendations)
 - [ViewModels con dependencias](https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories)
 - [Pruebas de Kotlin Flow](https://developer.android.com/kotlin/flow/test)
+- [Estado guardado en ViewModel y sus límites](https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-savedstate)
