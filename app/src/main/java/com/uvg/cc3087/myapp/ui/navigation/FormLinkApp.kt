@@ -13,13 +13,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.FormSampleData
+import com.uvg.cc3087.myapp.data.TemplateSampleData
 import com.uvg.cc3087.myapp.di.AppContainer
+import com.uvg.cc3087.myapp.ui.resources.titleResId
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
 import com.uvg.cc3087.myapp.ui.screens.EditForm
 import com.uvg.cc3087.myapp.ui.screens.Forms
+import com.uvg.cc3087.myapp.ui.state.ChooseTemplateUiState
 import com.uvg.cc3087.myapp.ui.state.FormFilter
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
+import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
 
 private enum class AppDestination {
@@ -35,9 +39,14 @@ fun FormLinkApp() {
         factory = FormsViewModel.factory(AppContainer.formRepository)
     )
     val formsUiState by formsViewModel.uiState.collectAsStateWithLifecycle()
+    val chooseTemplateViewModel: ChooseTemplateViewModel = viewModel(
+        factory = ChooseTemplateViewModel.factory(AppContainer.templateRepository)
+    )
+    val chooseTemplateUiState by chooseTemplateViewModel.uiState.collectAsStateWithLifecycle()
 
     FormLinkContent(
         formsUiState = formsUiState,
+        chooseTemplateUiState = chooseTemplateUiState,
         onFilterSelected = formsViewModel::selectFilter
     )
 }
@@ -45,10 +54,11 @@ fun FormLinkApp() {
 @Composable
 private fun FormLinkContent(
     formsUiState: FormsUiState,
+    chooseTemplateUiState: ChooseTemplateUiState,
     onFilterSelected: (FormFilter) -> Unit
 ) {
     val context = LocalContext.current
-    // la navegación queda en la ui y el estado de formularios queda en su viewmodel
+    // cada pantalla recibe su estado y la navegación sigue aquí
     var currentDestination by rememberSaveable {
         mutableStateOf(AppDestination.FORMS)
     }
@@ -92,9 +102,12 @@ private fun FormLinkContent(
 
         AppDestination.CHOOSE_TEMPLATE -> {
             ChooseTemplate(
+                uiState = chooseTemplateUiState,
                 onBackClick = showForms,
                 onBlankFormClick = { showEditor(null) },
-                onTemplateClick = { template -> showEditor(context.getString(template.titleResId)) }
+                onTemplateClick = { template ->
+                    showEditor(context.getString(template.type.titleResId))
+                }
             )
         }
 
@@ -119,6 +132,7 @@ private fun FormLinkAppPreview() {
         // la preview usa un estado de ejemplo y no necesita crear un viewmodel
         FormLinkContent(
             formsUiState = FormsUiState(forms = FormSampleData.forms),
+            chooseTemplateUiState = ChooseTemplateUiState(templates = TemplateSampleData.templates),
             onFilterSelected = {}
         )
     }

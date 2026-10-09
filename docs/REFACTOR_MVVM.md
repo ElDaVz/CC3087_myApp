@@ -34,9 +34,29 @@ El 8 de octubre ejecuté esos comandos: la compilación y el APK terminaron corr
 
 La prueba con `SavedStateHandle` simula valores restaurados. No sustituye una prueba de navegación, rotación o cierre del proceso en Android; esas comprobaciones se deben registrar aparte cuando se ejecuten.
 
+## Segundo bloque: Plantillas
+
+Saqué la lista de tarjetas de `ChooseTemplate.kt`. Ahora `TemplateSampleData` contiene los cuatro ejemplos y `SampleTemplateRepository` los entrega a través de `TemplateRepository`. `ChooseTemplateViewModel` convierte esa lista en un `ChooseTemplateUiState`, que la pantalla recibe desde la navegación.
+
+`FormTemplate` tiene un ID estable y un tipo. Los títulos y subtítulos se resuelven en `ui/resources/TemplateResources.kt`, usando los mismos recursos en español e inglés. Así, ni el modelo ni el ViewModel dependen de `R`, `Context` o del idioma del dispositivo. El grid usa el ID de cada plantilla como key.
+
+Conservé el diseño y las acciones existentes: formulario en blanco o una plantilla abren el editor, y la flecha regresa a Formularios. No agregué una selección persistente porque el toque ya lleva directamente al editor. Tampoco cambié el contenido de los campos de ejemplo: las cuatro plantillas siguen usando los mismos campos que usaban antes.
+
+Las previews reciben datos de ejemplo sin crear ViewModels. `AppContainer` elige el repositorio de plantillas, con la misma inyección por constructor del bloque anterior. No agregué dependencias ni modifiqué `MainActivity`.
+
+Agregué cuatro pruebas de `ChooseTemplateViewModel` para comprobar el orden, las actualizaciones, una lista vacía y una instancia nueva que vuelve a leer el repositorio. La prueba de `SampleTemplateRepository` revisa los cuatro tipos, sus IDs únicos y las suscripciones repetidas. Estas pruebas son locales; no comprueban toques ni rotación en Android.
+
+Para verificar este segundo bloque ejecuté:
+
+```powershell
+.\gradlew.bat :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug
+```
+
+La compilación y el APK terminaron correctamente el 8 de octubre. Pasaron las quince pruebas locales, sin fallos ni pruebas omitidas: las diez del bloque anterior y las cinco nuevas de Plantillas. La comprobación visual en Android sigue pendiente.
+
 ## Lo que queda pendiente
 
-La migración completa todavía no está terminada. Faltan Plantillas, el editor y sus validaciones. Este repositorio solo cubre `observeForms()`, cuya firma coincide con la lectura que prepara el equipo. Guardar, eliminar, publicar y autenticar se integrarán con el contrato de backend y los repositorios del equipo; este bloque no implementa persistencia permanente.
+La migración completa todavía no está terminada. Faltan el editor y sus validaciones, además de las comprobaciones visuales de navegación y rotación en Android. `FormRepository` solo cubre `observeForms()`, cuya firma coincide con la lectura que prepara el equipo. Guardar, eliminar, publicar y autenticar se integrarán con el contrato de backend y los repositorios del equipo; estos bloques no implementan persistencia permanente.
 
 Conservé las traducciones y las versiones de AGP y Gradle. Coroutines se declara en `1.10.2`, que ya era la versión resuelta por el proyecto.
 
