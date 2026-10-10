@@ -58,14 +58,17 @@ class EditFormViewModelTest {
     }
 
     @Test
-    fun addingEachFieldTypeCreatesUniqueIdsAndTheExistingDefaultTitles() {
+    fun addingEachFieldTypeCreatesUniqueIdsAndKeepsTheProvidedTitles() {
         val viewModel = editor(initialFields = emptyList())
+        val initialTitles = listOf("Text question", "Selecciona una opción", "Choose a date")
 
-        FormFieldType.entries.forEach { type -> viewModel.onAction(EditFormAction.AddField(type)) }
+        FormFieldType.entries.zip(initialTitles).forEach { (type, title) ->
+            viewModel.onAction(EditFormAction.AddField(type, title))
+        }
 
         val addedFields = viewModel.uiState.value.fields
         assertEquals(FormFieldType.entries, addedFields.map { it.type })
-        assertEquals(FormFieldType.entries.map { it.defaultTitle }, addedFields.map { it.title })
+        assertEquals(initialTitles, addedFields.map { it.title })
         assertEquals(3, addedFields.map { it.id }.distinct().size)
         assertTrue(addedFields.none { it.required })
     }
@@ -73,11 +76,11 @@ class EditFormViewModelTest {
     @Test
     fun deletingAndAddingAFieldDoesNotReuseItsId() {
         val viewModel = editor(initialFields = emptyList())
-        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT))
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Pregunta de texto"))
         val previousId = viewModel.uiState.value.fields.single().id
 
         viewModel.onAction(EditFormAction.DeleteField(previousId))
-        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT))
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Pregunta de texto"))
 
         assertNotEquals(previousId, viewModel.uiState.value.fields.single().id)
     }
@@ -164,7 +167,7 @@ class EditFormViewModelTest {
     fun startingAnotherDraftResetsThePreviousEditsEvenWithTheSameTitle() {
         val viewModel = editor()
         viewModel.onAction(EditFormAction.ChangeFieldTitle("first", "Editado"))
-        viewModel.onAction(EditFormAction.AddField(FormFieldType.DATE))
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.DATE, "Selecciona una fecha"))
 
         viewModel.startDraft("Pedido", TemplateType.ORDER_FORM)
 
@@ -180,7 +183,7 @@ class EditFormViewModelTest {
         original.onAction(EditFormAction.ChangeFieldTitle("first", "Nombre actualizado"))
         original.onAction(EditFormAction.SetFieldRequired("last", true))
         original.onAction(EditFormAction.MoveField("last", FieldMoveDirection.UP))
-        original.onAction(EditFormAction.AddField(FormFieldType.MULTIPLE_CHOICE))
+        original.onAction(EditFormAction.AddField(FormFieldType.MULTIPLE_CHOICE, "Choose an option"))
 
         // recreamos el viewmodel con los valores guardados, no con su instancia anterior
         val savedValues = savedStateHandle.keys().associateWith { key ->
@@ -192,7 +195,7 @@ class EditFormViewModelTest {
         assertEquals(original.uiState.value, restored.uiState.value)
         assertTrue(restoredRepository.requestedTemplateTypes.isEmpty())
         val restoredIds = restored.uiState.value.fields.map { it.id }
-        restored.onAction(EditFormAction.AddField(FormFieldType.TEXT))
+        restored.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Text question"))
         assertEquals(restoredIds, restored.uiState.value.fields.dropLast(1).map { it.id })
         assertEquals(5, restored.uiState.value.fields.map { it.id }.distinct().size)
     }
@@ -205,7 +208,7 @@ class EditFormViewModelTest {
         viewModel.onAction(EditFormAction.ChangeTitle("Pedido"))
         assertEquals(FormValidationResult.FIELD_REQUIRED, viewModel.validate())
 
-        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT))
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Pregunta de texto"))
         assertEquals(FormValidationResult.READY, viewModel.validate())
 
         val fieldId = viewModel.uiState.value.fields.single().id
@@ -283,6 +286,36 @@ class EditFormViewModelTest {
         assertEquals(listOf(TemplateType.EVENT_RSVP), repository.requestedTemplateTypes)
         assertTrue(viewModel.uiState.value.fields.isEmpty())
         assertEquals(FormValidationResult.FIELD_REQUIRED, viewModel.validate())
+    }
+
+    @Test
+    fun theProvidedInitialTitleIsPreservedWhenTheDraftIsRestored() {
+        val savedStateHandle = SavedStateHandle()
+        val original = EditFormViewModel(templateRepository(), savedStateHandle)
+        original.startDraft("Formulario", null)
+        val initialTitle = "Question: ¿cuál prefieres?"
+
+        original.onAction(EditFormAction.AddField(FormFieldType.TEXT, initialTitle))
+
+        val savedValues = savedStateHandle.keys().associateWith { key ->
+            savedStateHandle.get<Any?>(key)
+        }
+        val restored = EditFormViewModel(templateRepository(), SavedStateHandle(savedValues))
+
+        assertEquals(initialTitle, original.uiState.value.fields.single().title)
+        assertEquals(original.uiState.value, restored.uiState.value)
+    }
+
+    @Test
+    fun anEmptyInitialTitleIsValidatedInsteadOfBeingReplacedByHardcodedText() {
+        val viewModel = editor(initialFields = emptyList())
+
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT, ""))
+
+        val field = viewModel.uiState.value.fields.single()
+        assertEquals("", field.title)
+        assertEquals(setOf(field.id), viewModel.uiState.value.fieldIdsWithTitleErrors)
+        assertEquals(FormValidationResult.FIELD_TITLE_REQUIRED, viewModel.validate())
     }
 
     private fun editor(

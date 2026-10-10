@@ -102,9 +102,25 @@ La compilación y el APK terminaron correctamente. Pasaron las 43 pruebas locale
 
 No modifiqué `MainActivity`, dependencias, otras ramas ni otros PR. Este bloque tampoco agrega autenticación, guardado permanente ni conexión con Firebase.
 
+## Quinto bloque: textos de interfaz fuera del modelo
+
+Quité `label` y `defaultTitle` de `FormFieldType`. El enum conserva los mismos tipos `TEXT`, `MULTIPLE_CHOICE` y `DATE`, pero ya no incluye textos de presentación en español. `FormFieldDraft` sigue guardando el título del campo como un dato del borrador.
+
+Las etiquetas, los títulos iniciales, los botones, los mensajes de validación y las descripciones de accesibilidad del editor ahora están en recursos. Agregué `ui/resources/EditorResources.kt` para relacionar cada tipo y resultado de validación con su recurso, igual que ya se hacía con las plantillas.
+
+Al tocar Agregar, `EditForm` resuelve el título inicial con `stringResource` y envía `AddField(type, initialTitle)`. El ViewModel crea el campo con el texto recibido, sin usar `Context`, `R` ni un idioma fijo. Las validaciones siguen en `FormDraftValidator`, y la UI decide qué mensaje muestra el Snackbar.
+
+Conservé los textos que se veían en español y añadí los equivalentes en inglés. No cambié la distribución ni agregué acciones. Los títulos ya escritos y los campos de ejemplo de las plantillas no se traducen al cambiar el idioma: son contenido del formulario, no etiquetas de la interfaz. Los nombres de los tipos y el formato de `SavedStateHandle` tampoco cambiaron.
+
+Siguiendo `testing-setup`, mantuve JUnit 4 y agregué seis pruebas locales: cuatro comprueban las asociaciones de recursos y dos revisan que el título recibido se conserve al restaurar y que un título vacío siga mostrando el error de validación. Las pruebas anteriores ahora envían el título inicial de manera explícita.
+
+El 9 de octubre ejecuté otra vez `:app:compileDebugKotlin`, `:app:testDebugUnitTest` y `:app:assembleDebug`. Compilaron el código y los recursos, se generó el APK y pasaron las 49 pruebas locales, sin fallos ni omisiones. Además, revisé los XML: los 27 textos nuevos tienen las mismas claves en español e inglés, sin duplicados.
+
+Las pruebas de recursos comprueban IDs, no el texto dibujado por Android. No ejecuté el emulador en este bloque; todavía falta comprobar visualmente la versión final. No modifiqué dependencias, `MainActivity`, otras ramas ni otros PR.
+
 ## Lo que queda pendiente
 
-Las tres pantallas actuales ya tienen su estado separado y los campos iniciales del editor ahora pasan por el repositorio. Para terminar esta refactorización falta separar los textos de interfaz que aún contiene `FormFieldType` y repetir la revisión del recorrido con la versión final. La navegación, los recursos y el Snackbar permanecen en la UI porque son responsabilidades de presentación.
+Las tres pantallas actuales ya tienen su estado separado, los campos iniciales del editor pasan por el repositorio y los textos de presentación están fuera del modelo. Para cerrar esta refactorización falta repetir la revisión del recorrido con la versión final y dejar los resultados actualizados en el PR. La navegación, los recursos y el Snackbar permanecen en la UI porque son responsabilidades de presentación.
 
 El PR sigue abierto y el alcance es únicamente el código actual de `Features/tony-mvvm`, sin integrar las ramas del equipo. `FormRepository` todavía solo cubre `observeForms()`: guardar, eliminar, publicar y autenticar son funcionalidades de otra etapa, no pendientes de este refactor. Las comprobaciones adicionales del reporte se mantienen como límites documentados.
 
@@ -118,3 +134,4 @@ Conservé las traducciones y las versiones de AGP y Gradle. Coroutines se declar
 - [Estado guardado en ViewModel y sus límites](https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-savedstate)
 - [Repositorios y límites de la capa de datos](https://developer.android.com/topic/architecture/data-layer)
 - [Producción del estado de la UI](https://developer.android.com/topic/architecture/ui-layer/state-production)
+- [Recursos de texto de Android](https://developer.android.com/guide/topics/resources/string-resource)

@@ -1,12 +1,10 @@
 package com.uvg.cc3087.myapp.data.model
 
-enum class FormFieldType(
-    val label: String,
-    val defaultTitle: String
-) {
-    TEXT("Texto", "Pregunta de texto"),
-    MULTIPLE_CHOICE("Opción múltiple", "Selecciona una opción"),
-    DATE("Fecha", "Selecciona una fecha")
+// el modelo identifica el tipo y la ui se encarga de cómo nombrarlo
+enum class FormFieldType {
+    TEXT,
+    MULTIPLE_CHOICE,
+    DATE
 }
 
 data class FormFieldDraft(

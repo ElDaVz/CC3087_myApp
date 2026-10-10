@@ -26,12 +26,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
+import com.uvg.cc3087.myapp.ui.resources.addActionResId
+import com.uvg.cc3087.myapp.ui.resources.defaultTitleResId
+import com.uvg.cc3087.myapp.ui.resources.messageResId
 import com.uvg.cc3087.myapp.ui.state.EditFormAction
 import com.uvg.cc3087.myapp.ui.state.EditFormUiState
 import com.uvg.cc3087.myapp.ui.state.FieldMoveDirection
@@ -47,6 +53,7 @@ fun EditForm(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val fieldIdsWithTitleErrors = uiState.fieldIdsWithTitleErrors
@@ -60,31 +67,25 @@ fun EditForm(
 
     fun validateForm() {
         // el viewmodel valida y la ui elige cómo mostrar el resultado
-        val message = when (onValidate()) {
-            FormValidationResult.TITLE_REQUIRED -> "Escribe el título del formulario"
-            FormValidationResult.FIELD_REQUIRED -> "Agrega al menos un campo"
-            FormValidationResult.FIELD_TITLE_REQUIRED -> "Completa el nombre de todos los campos"
-            FormValidationResult.READY -> "Formulario listo para continuar :D"
-        }
-        showMessage(message)
+        showMessage(context.getString(onValidate().messageResId))
     }
 
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Editar formulario") },
+                title = { Text(stringResource(R.string.editor_heading)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Volver a plantillas"
+                            contentDescription = stringResource(R.string.editor_back_to_templates)
                         )
                     }
                 },
                 actions = {
                     TextButton(onClick = ::validateForm) {
-                        Text("Validar")
+                        Text(stringResource(R.string.editor_validate))
                     }
                 }
             )
@@ -101,14 +102,14 @@ fun EditForm(
             item(key = "form-details") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Información del formulario",
+                        text = stringResource(R.string.editor_form_information),
                         style = MaterialTheme.typography.titleMedium
                     )
                     OutlinedTextField(
                         value = uiState.title,
                         onValueChange = { onAction(EditFormAction.ChangeTitle(it)) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Título") },
+                        label = { Text(stringResource(R.string.editor_form_title)) },
                         singleLine = true,
                         isError = uiState.hasTitleError
                     )
@@ -118,16 +119,17 @@ fun EditForm(
             item(key = "add-field-controls") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Agregar campo",
+                        text = stringResource(R.string.editor_add_field),
                         style = MaterialTheme.typography.titleMedium
                     )
 
                     FormFieldType.entries.forEach { type ->
+                        val initialTitle = stringResource(type.defaultTitleResId)
                         OutlinedButton(
-                            onClick = { onAction(EditFormAction.AddField(type)) },
+                            onClick = { onAction(EditFormAction.AddField(type, initialTitle)) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Agregar ${type.label.lowercase()}")
+                            Text(stringResource(type.addActionResId))
                         }
                     }
                 }
@@ -136,7 +138,7 @@ fun EditForm(
             if (uiState.fields.isEmpty()) {
                 item(key = "empty-fields") {
                     Text(
-                        text = "Todavía no hay campos. Agrega uno para comenzar",
+                        text = stringResource(R.string.editor_empty_fields),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

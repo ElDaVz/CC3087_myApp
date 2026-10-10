@@ -42,7 +42,8 @@ class EditFormViewModel(
                 fields = current.fields + FormFieldDraft(
                     id = "field-${UUID.randomUUID()}",
                     type = action.type,
-                    title = action.type.defaultTitle
+                    // conservamos el texto recibido, sin buscar recursos ni decidir el idioma
+                    title = action.initialTitle
                 )
             )
             is EditFormAction.ChangeFieldTitle -> current.copy(
