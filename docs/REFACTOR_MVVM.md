@@ -78,7 +78,7 @@ Después de guardar los tres bloques, probé el recorrido en el emulador Pixel 9
 
 También giré el editor a horizontal y regresé a vertical: se conservaron el título, el campo editado, el orden y las casillas. Al regresar a Forms, Draft siguió seleccionado. No necesité cambiar el código durante esta revisión.
 
-El detalle de las acciones, los resultados, las capturas y los límites está en [PRUEBAS_MVVM.md](PRUEBAS_MVVM.md). La prueba real de cierre del proceso sigue pendiente; no debe confundirse con la rotación ni con la restauración simulada de las pruebas locales.
+El detalle de las acciones, los resultados, las capturas y los límites está en [PRUEBAS_MVVM.md](PRUEBAS_MVVM.md). Al terminar este bloque del 8 de octubre faltaba la prueba real de cierre del proceso; se comprobó por separado en la revisión final del 9 de octubre.
 
 ## Cuarto bloque: inicio del borrador desde el repositorio
 
@@ -118,9 +118,23 @@ El 9 de octubre ejecuté otra vez `:app:compileDebugKotlin`, `:app:testDebugUnit
 
 Las pruebas de recursos comprueban IDs, no el texto dibujado por Android. No ejecuté el emulador en este bloque; todavía falta comprobar visualmente la versión final. No modifiqué dependencias, `MainActivity`, otras ramas ni otros PR.
 
-## Lo que queda pendiente
+## Sexto bloque: verificación de la versión final
 
-Las tres pantallas actuales ya tienen su estado separado, los campos iniciales del editor pasan por el repositorio y los textos de presentación están fuera del modelo. Para cerrar esta refactorización falta repetir la revisión del recorrido con la versión final y dejar los resultados actualizados en el PR. La navegación, los recursos y el Snackbar permanecen en la UI porque son responsabilidades de presentación.
+Después del commit `179a5ed`, volví a compilar y generar el APK. También ejecuté de nuevo `:app:testDebugUnitTest --rerun`: las 49 pruebas pasaron, sin fallos, errores ni omisiones. En esta ejecución sí se volvió a ejecutar la tarea de pruebas; las tareas de compilación ya estaban actualizadas.
+
+Probé el APK final en Pixel 9 Pro con Android 17, API 37. Comprobé los filtros, New Form, Order Form, Blank Form, la edición del título y de los campos, la obligatoriedad, mover, agregar los tres tipos y eliminar. También revisé los mensajes de formulario listo, falta de campos, nombre vacío y título obligatorio.
+
+La rotación conservó el borrador. Además, llevé la app a segundo plano, detuve su proceso con `am kill` y reabrí la tarea usando el Intent del lanzador: un proceso nuevo recuperó el editor, los cambios y el filtro Draft. No utilicé `force-stop` ni borré la tarea de Recientes. Esto comprueba la restauración temporal de Android, no el guardado permanente.
+
+Cambié temporalmente el idioma de la app a español y regresé al inglés. Las etiquetas y los errores se tradujeron, mientras los títulos escritos siguieron iguales. Un campo agregado en español comenzó con Pregunta de texto y conservó ese contenido al volver al inglés. Así comprobé en pantalla la separación entre recursos de interfaz y datos del borrador :D
+
+No cambié código en esta revisión. Actualicé este documento y `PRUEBAS_MVVM.md` con los resultados, los comandos, la recuperación del proceso y los límites reales. Siguiendo `android-cli`, inspeccioné el layout antes de los toques y revisé visualmente cada captura; no presento este recorrido como una suite automática de UI.
+
+Las capturas están fuera del repositorio, en `evidencias-mvvm-9oct-revision-final`, dentro de Documentos/Plataformas Moviles. Restauré el idioma y la rotación originales y detuve únicamente el emulador que inicié para la prueba. El reporte también registra una observación de Atrás enviado por ADB con el teclado abierto; no cambié ese manejo de navegación.
+
+## Cierre del refactor y alcance del PR
+
+Las tres pantallas actuales ya tienen su estado separado, los campos iniciales del editor pasan por el repositorio y los textos de presentación están fuera del modelo. La revisión de la versión final ya está hecha. Solo falta subir este bloque de documentación y actualizar manualmente la descripción del PR con las 49 pruebas y el recorrido final. La navegación, los recursos y el Snackbar permanecen en la UI porque son responsabilidades de presentación.
 
 El PR sigue abierto y el alcance es únicamente el código actual de `Features/tony-mvvm`, sin integrar las ramas del equipo. `FormRepository` todavía solo cubre `observeForms()`: guardar, eliminar, publicar y autenticar son funcionalidades de otra etapa, no pendientes de este refactor. Las comprobaciones adicionales del reporte se mantienen como límites documentados.
 
