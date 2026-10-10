@@ -11,9 +11,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.uvg.cc3087.myapp.R
-import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.TemplateSampleData
+import com.uvg.cc3087.myapp.data.model.FormTemplate
 import com.uvg.cc3087.myapp.di.AppContainer
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.resources.titleResId
@@ -48,7 +48,9 @@ fun FormLinkApp() {
         factory = ChooseTemplateViewModel.factory(AppContainer.templateRepository)
     )
     val chooseTemplateUiState by chooseTemplateViewModel.uiState.collectAsStateWithLifecycle()
-    val editFormViewModel: EditFormViewModel = viewModel(factory = EditFormViewModel.factory())
+    val editFormViewModel: EditFormViewModel = viewModel(
+        factory = EditFormViewModel.factory(AppContainer.templateRepository)
+    )
     val editFormUiState by editFormViewModel.uiState.collectAsStateWithLifecycle()
 
     FormLinkContent(
@@ -56,10 +58,11 @@ fun FormLinkApp() {
         chooseTemplateUiState = chooseTemplateUiState,
         editFormUiState = editFormUiState,
         onFilterSelected = formsViewModel::selectFilter,
-        onStartEditor = { templateTitle ->
+        onStartEditor = { template ->
             editFormViewModel.startDraft(
-                title = templateTitle ?: context.getString(R.string.untitled_form),
-                fields = if (templateTitle == null) emptyList() else FormEditorSampleData.templateFields
+                // el idioma se resuelve en la ui y los campos los decide el viewmodel
+                title = context.getString(template?.type?.titleResId ?: R.string.untitled_form),
+                templateType = template?.type
             )
         },
         onEditorAction = editFormViewModel::onAction,
@@ -73,11 +76,10 @@ private fun FormLinkContent(
     chooseTemplateUiState: ChooseTemplateUiState,
     editFormUiState: EditFormUiState,
     onFilterSelected: (FormFilter) -> Unit,
-    onStartEditor: (String?) -> Unit,
+    onStartEditor: (FormTemplate?) -> Unit,
     onEditorAction: (EditFormAction) -> Unit,
     onValidateEditor: () -> FormValidationResult
 ) {
-    val context = LocalContext.current
     // cada pantalla recibe su estado y la navegación sigue aquí
     var currentDestination by rememberSaveable {
         mutableStateOf(AppDestination.FORMS)
@@ -91,9 +93,9 @@ private fun FormLinkContent(
         currentDestination = AppDestination.CHOOSE_TEMPLATE
     }
 
-    val showEditor: (String?) -> Unit = { templateTitle ->
+    val showEditor: (FormTemplate?) -> Unit = { template ->
         // solo iniciar desde plantillas reinicia el borrador, no una recomposición o rotación
-        onStartEditor(templateTitle)
+        onStartEditor(template)
         currentDestination = AppDestination.EDIT_FORM
     }
 
@@ -122,9 +124,7 @@ private fun FormLinkContent(
                 uiState = chooseTemplateUiState,
                 onBackClick = showForms,
                 onBlankFormClick = { showEditor(null) },
-                onTemplateClick = { template ->
-                    showEditor(context.getString(template.type.titleResId))
-                }
+                onTemplateClick = showEditor
             )
         }
 

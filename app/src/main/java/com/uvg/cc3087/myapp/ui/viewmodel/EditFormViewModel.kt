@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.model.TemplateType
+import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.domain.validation.FormDraftValidator
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.state.EditFormAction
@@ -18,11 +20,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class EditFormViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel() {
+class EditFormViewModel(
+    private val templateRepository: TemplateRepository,
+    private val savedStateHandle: SavedStateHandle
+) : ViewModel() {
     private val mutableUiState = MutableStateFlow(restoreState())
     val uiState: StateFlow<EditFormUiState> = mutableUiState.asStateFlow()
 
-    fun startDraft(title: String, fields: List<FormFieldDraft>) {
+    fun startDraft(title: String, templateType: TemplateType?) {
+        // la ui pasa la selección y aquí obtenemos los datos para iniciar el editor
+        val fields = templateType?.let(templateRepository::getInitialFields).orEmpty()
         // entrar desde una plantilla crea un borrador nuevo, aunque el título sea el mismo
         updateState(EditFormUiState(title = title, fields = fields.toList()))
     }
@@ -114,8 +121,8 @@ class EditFormViewModel(private val savedStateHandle: SavedStateHandle) : ViewMo
         private const val FIELDS_KEY = "editor_fields"
         private const val FIELD_VALUE_COUNT = 4
 
-        fun factory(): ViewModelProvider.Factory = viewModelFactory {
-            initializer { EditFormViewModel(createSavedStateHandle()) }
+        fun factory(templateRepository: TemplateRepository): ViewModelProvider.Factory = viewModelFactory {
+            initializer { EditFormViewModel(templateRepository, createSavedStateHandle()) }
         }
     }
 }

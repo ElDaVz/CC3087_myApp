@@ -2,11 +2,9 @@ package com.uvg.cc3087.myapp.ui.viewmodel
 
 import com.uvg.cc3087.myapp.data.model.FormTemplate
 import com.uvg.cc3087.myapp.data.model.TemplateType
-import com.uvg.cc3087.myapp.data.repository.TemplateRepository
+import com.uvg.cc3087.myapp.testing.FakeTemplateRepository
 import com.uvg.cc3087.myapp.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -78,11 +76,5 @@ class ChooseTemplateViewModelTest {
             viewModel.uiState.collect {}
         }
         runCurrent()
-    }
-
-    private class FakeTemplateRepository(initialTemplates: List<FormTemplate>) : TemplateRepository {
-        val templates = MutableStateFlow(initialTemplates)
-
-        override fun observeTemplates(): Flow<List<FormTemplate>> = templates
     }
 }

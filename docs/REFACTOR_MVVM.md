@@ -1,4 +1,4 @@
-# Refactor MVVM - avance del 8 de octubre
+# Refactor MVVM - avances del 8 y 9 de octubre
 
 ## Qué cambié en Formularios
 
@@ -72,7 +72,7 @@ Volví a ejecutar `:app:compileDebugKotlin`, `:app:testDebugUnitTest` y `:app:as
 
 No agregué dependencias, no cambié `MainActivity` ni implementé Room o Firebase. Los textos del editor siguen como estaban; su localización queda pendiente de una revisión aparte.
 
-## Revisión final en Android
+## Revisión en Android del 8 de octubre
 
 Después de guardar los tres bloques, probé el recorrido en el emulador Pixel 9 Pro. Funcionaron el filtro Draft, New Form, Order Form, Blank Form, las ediciones de campos, el cambio de obligatoriedad, el orden, agregar y eliminar, los avisos de Validar y los botones de regreso.
 
@@ -80,9 +80,33 @@ También giré el editor a horizontal y regresé a vertical: se conservaron el t
 
 El detalle de las acciones, los resultados, las capturas y los límites está en [PRUEBAS_MVVM.md](PRUEBAS_MVVM.md). La prueba real de cierre del proceso sigue pendiente; no debe confundirse con la rotación ni con la restauración simulada de las pruebas locales.
 
+## Cuarto bloque: inicio del borrador desde el repositorio
+
+En la revisión del 9 de octubre encontré que `FormLinkApp` todavía elegía directamente los campos de `FormEditorSampleData`. El estado del editor ya estaba en su ViewModel, pero esa decisión seguía en la navegación.
+
+Ahora la UI envía la plantilla seleccionada y resuelve su título con los recursos del idioma. `EditFormViewModel` recibe `TemplateRepository` por constructor y pide los campos con `getInitialFields(templateType)`. Si se elige un formulario en blanco, comienza sin campos y no consulta una plantilla. La navegación solo cambia de pantalla y conecta los callbacks.
+
+`SampleTemplateRepository` conserva los mismos tres campos para las cuatro plantillas. No diseñé contenido nuevo para cada una; el cambio es de organización, no de funcionalidad. La lectura es síncrona porque este catálogo está en memoria y no hace consultas a disco ni a la red. Cada lectura devuelve una lista propia y el ViewModel copia los campos al iniciar el borrador.
+
+La selección se identifica por `TemplateType`, no por el título visible. Así, el idioma o un título diferente no determinan qué datos recibe el editor. Crear o restaurar el ViewModel tampoco consulta de nuevo la plantilla: el borrador solo se inicia con la acción del usuario, conservando la restauración desde `SavedStateHandle`.
+
+Mantuve JUnit 4 y la inyección manual que ya tenía esta rama. Con la guía `testing-setup`, agregué `testing/FakeTemplateRepository` y lo compartí entre las pruebas del catálogo y del editor. Las seis pruebas nuevas comprueban la selección por tipo, el cambio entre plantillas con el mismo título, una plantilla sin campos, el inicio del ViewModel sin consultas y los datos y copias del repositorio de ejemplo. También actualicé las pruebas anteriores para usar el contrato nuevo y comprobar que la restauración no consulta el catálogo.
+
+El 9 de octubre ejecuté:
+
+```powershell
+.\gradlew.bat :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --console=plain
+```
+
+La compilación y el APK terminaron correctamente. Pasaron las 43 pruebas locales, sin fallos ni omisiones: 37 anteriores y 6 nuevas. No ejecuté el emulador en este bloque; las capturas del 8 de octubre corresponden a la versión anterior.
+
+No modifiqué `MainActivity`, dependencias, otras ramas ni otros PR. Este bloque tampoco agrega autenticación, guardado permanente ni conexión con Firebase.
+
 ## Lo que queda pendiente
 
-Las tres pantallas actuales ya tienen su estado separado y el recorrido principal se comprobó en el emulador. Quedan las comprobaciones adicionales indicadas en el reporte y la revisión del equipo en el PR. `FormRepository` solo cubre `observeForms()`, cuya firma coincide con la lectura que prepara el equipo. Guardar, eliminar, publicar y autenticar se integrarán con el contrato de backend y los repositorios del equipo; estos bloques no implementan persistencia permanente.
+Las tres pantallas actuales ya tienen su estado separado y los campos iniciales del editor ahora pasan por el repositorio. Para terminar esta refactorización falta separar los textos de interfaz que aún contiene `FormFieldType` y repetir la revisión del recorrido con la versión final. La navegación, los recursos y el Snackbar permanecen en la UI porque son responsabilidades de presentación.
+
+El PR sigue abierto y el alcance es únicamente el código actual de `Features/tony-mvvm`, sin integrar las ramas del equipo. `FormRepository` todavía solo cubre `observeForms()`: guardar, eliminar, publicar y autenticar son funcionalidades de otra etapa, no pendientes de este refactor. Las comprobaciones adicionales del reporte se mantienen como límites documentados.
 
 Conservé las traducciones y las versiones de AGP y Gradle. Coroutines se declara en `1.10.2`, que ya era la versión resuelta por el proyecto.
 
@@ -92,3 +116,5 @@ Conservé las traducciones y las versiones de AGP y Gradle. Coroutines se declar
 - [ViewModels con dependencias](https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories)
 - [Pruebas de Kotlin Flow](https://developer.android.com/kotlin/flow/test)
 - [Estado guardado en ViewModel y sus límites](https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-savedstate)
+- [Repositorios y límites de la capa de datos](https://developer.android.com/topic/architecture/data-layer)
+- [Producción del estado de la UI](https://developer.android.com/topic/architecture/ui-layer/state-production)
