@@ -1,6 +1,5 @@
 package com.uvg.cc3087.myapp.ui.screens
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -17,26 +16,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
+import com.uvg.cc3087.myapp.data.TemplateSampleData
+import com.uvg.cc3087.myapp.data.model.FormTemplate
 import com.uvg.cc3087.myapp.ui.components.TemplateCard
-
-data class Template(
-    @param:StringRes val titleResId: Int,
-    @param:StringRes val subtitleResId: Int
-)
-
-private val templates = listOf(
-    Template(R.string.template_job_application, R.string.template_job_application_subtitle),
-    Template(R.string.template_order_form, R.string.template_order_form_subtitle),
-    Template(R.string.template_event_rsvp, R.string.template_event_rsvp_subtitle),
-    Template(R.string.template_feedback, R.string.template_feedback_subtitle)
-)
+import com.uvg.cc3087.myapp.ui.resources.subtitleResId
+import com.uvg.cc3087.myapp.ui.resources.titleResId
+import com.uvg.cc3087.myapp.ui.state.ChooseTemplateUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChooseTemplate(
+    uiState: ChooseTemplateUiState,
     onBackClick: () -> Unit = {},
     onBlankFormClick: () -> Unit = {},
-    onTemplateClick: (Template) -> Unit = {}
+    onTemplateClick: (FormTemplate) -> Unit = {}
 ) {
 
     Scaffold(
@@ -167,13 +160,13 @@ fun ChooseTemplate(
             ) {
 
                 items(
-                    items = templates,
-                    key = { template -> template.titleResId }
+                    items = uiState.templates,
+                    key = { template -> template.id }
                 ) { template ->
 
                     TemplateCard(
-                        title = stringResource(template.titleResId),
-                        subtitle = stringResource(template.subtitleResId),
+                        title = stringResource(template.type.titleResId),
+                        subtitle = stringResource(template.type.subtitleResId),
                         onClick = { onTemplateClick(template) }
                     )
                 }
@@ -186,6 +179,6 @@ fun ChooseTemplate(
 @Composable
 fun ChooseTemplatePreview() {
     MaterialTheme {
-        ChooseTemplate()
+        ChooseTemplate(uiState = ChooseTemplateUiState(templates = TemplateSampleData.templates))
     }
 }

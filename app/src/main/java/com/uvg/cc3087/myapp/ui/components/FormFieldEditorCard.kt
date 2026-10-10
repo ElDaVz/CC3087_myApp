@@ -20,8 +20,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
+import com.uvg.cc3087.myapp.ui.resources.labelResId
 
 @Composable
 fun FormFieldEditorCard(
@@ -29,6 +32,7 @@ fun FormFieldEditorCard(
     position: Int,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
+    isTitleError: Boolean,
     onTitleChange: (String) -> Unit,
     onRequiredChange: (Boolean) -> Unit,
     onMoveUp: () -> Unit,
@@ -47,12 +51,12 @@ fun FormFieldEditorCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Campo ${position + 1}",
+                        text = stringResource(R.string.editor_field_position, position + 1),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = field.type.label,
+                        text = stringResource(field.type.labelResId),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -60,7 +64,7 @@ fun FormFieldEditorCard(
                 IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Outlined.Delete,
-                        contentDescription = "Eliminar campo"
+                        contentDescription = stringResource(R.string.editor_delete_field)
                     )
                 }
             }
@@ -69,12 +73,12 @@ fun FormFieldEditorCard(
                 value = field.title,
                 onValueChange = onTitleChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nombre del campo") },
+                label = { Text(stringResource(R.string.editor_field_name)) },
                 singleLine = true,
-                isError = field.title.isBlank(),
+                isError = isTitleError,
                 supportingText = {
-                    if (field.title.isBlank()) {
-                        Text("El nombre no puede quedar vacío")
+                    if (isTitleError) {
+                        Text(stringResource(R.string.editor_empty_field_title))
                     }
                 }
             )
@@ -87,7 +91,7 @@ fun FormFieldEditorCard(
                     checked = field.required,
                     onCheckedChange = onRequiredChange
                 )
-                Text("Obligatorio")
+                Text(stringResource(R.string.editor_required))
                 Spacer(modifier = Modifier.weight(1f))
 
                 IconButton(
@@ -96,7 +100,7 @@ fun FormFieldEditorCard(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.KeyboardArrowUp,
-                        contentDescription = "Mover campo hacia arriba"
+                        contentDescription = stringResource(R.string.editor_move_field_up)
                     )
                 }
 
@@ -106,7 +110,7 @@ fun FormFieldEditorCard(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.KeyboardArrowDown,
-                        contentDescription = "Mover campo hacia abajo"
+                        contentDescription = stringResource(R.string.editor_move_field_down)
                     )
                 }
             }
