@@ -3,13 +3,10 @@ package com.uvg.cc3087.myapp.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -18,11 +15,9 @@ import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.TextFields
-import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
@@ -39,36 +34,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 
 private data class FieldPaletteItem(
     val type: FormFieldType,
-    val description: String,
+    @param:StringRes val descriptionRes: Int,
     val icon: ImageVector
 )
 
 private val availableFieldTypes = listOf(
     FieldPaletteItem(
         type = FormFieldType.TEXT,
-        description = "Nombres y títulos",
+        descriptionRes = R.string.field_text_description,
         icon = Icons.Outlined.TextFields
     ),
     FieldPaletteItem(
         type = FormFieldType.MULTIPLE_CHOICE,
-        description = "Una opción",
+        descriptionRes = R.string.field_selection_description,
         icon = Icons.Outlined.RadioButtonChecked
     ),
     FieldPaletteItem(
         type = FormFieldType.DATE,
-        description = "Selector de fecha",
+        descriptionRes = R.string.field_date_description,
         icon = Icons.Outlined.CalendarToday
     ),
-    FieldPaletteItem(FormFieldType.PARAGRAPH, "Respuestas largas", Icons.Outlined.TextFields),
-    FieldPaletteItem(FormFieldType.NUMBER, "Cifras y cantidades", Icons.Outlined.TextFields),
-    FieldPaletteItem(FormFieldType.EMAIL, "Validación de correo", Icons.Outlined.TextFields),
-    FieldPaletteItem(FormFieldType.CHECKBOX, "Sí o no", Icons.Outlined.RadioButtonChecked),
-    FieldPaletteItem(FormFieldType.CHECKBOX_GROUP, "Varias opciones", Icons.Outlined.RadioButtonChecked),
-    FieldPaletteItem(FormFieldType.DROPDOWN, "Lista compacta", Icons.Outlined.RadioButtonChecked)
+    FieldPaletteItem(FormFieldType.PARAGRAPH, R.string.field_paragraph_description, Icons.Outlined.TextFields),
+    FieldPaletteItem(FormFieldType.NUMBER, R.string.field_number_description, Icons.Outlined.TextFields),
+    FieldPaletteItem(FormFieldType.EMAIL, R.string.field_email_description, Icons.Outlined.TextFields),
+    FieldPaletteItem(FormFieldType.CHECKBOX, R.string.field_confirmation_description, Icons.Outlined.RadioButtonChecked),
+    FieldPaletteItem(FormFieldType.DROPDOWN, R.string.field_dropdown_description, Icons.Outlined.RadioButtonChecked)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,9 +78,10 @@ fun AddFieldBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
+    val resources = LocalResources.current
     val visibleTypes = availableFieldTypes.filter { item ->
-        item.type.label.contains(searchQuery, ignoreCase = true) ||
-            item.description.contains(searchQuery, ignoreCase = true)
+        resources.getString(item.type.labelRes).contains(searchQuery, ignoreCase = true) ||
+            resources.getString(item.descriptionRes).contains(searchQuery, ignoreCase = true)
     }
 
     ModalBottomSheet(
@@ -102,12 +101,12 @@ fun AddFieldBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Agregar campo",
+                    text = stringResource(R.string.add_field),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = onDismissRequest) {
-                    Text("Listo")
+                    Text(stringResource(R.string.done))
                 }
             }
 
@@ -122,18 +121,18 @@ fun AddFieldBottomSheet(
                         contentDescription = null
                     )
                 },
-                label = { Text("Buscar tipo de campo") }
+                label = { Text(stringResource(R.string.search_field_type)) }
             )
 
             Text(
-                text = "Campos disponibles",
+                text = stringResource(R.string.available_fields),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
 
             if (visibleTypes.isEmpty()) {
                 Text(
-                    text = "No hay campos que coincidan con tu búsqueda.",
+                    text = stringResource(R.string.no_matching_fields),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -180,11 +179,11 @@ private fun FieldPaletteCard(
                 modifier = Modifier.size(24.dp)
             )
             Text(
-                text = item.type.label,
+                text = stringResource(item.type.labelRes),
                 style = MaterialTheme.typography.titleSmall
             )
             Text(
-                text = item.description,
+                text = stringResource(item.descriptionRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

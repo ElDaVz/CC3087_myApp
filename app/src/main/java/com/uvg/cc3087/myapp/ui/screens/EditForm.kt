@@ -6,14 +6,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.zIndex
-import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
@@ -24,8 +20,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -36,14 +30,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
-import com.uvg.cc3087.myapp.data.model.hasValidOptions
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
 import com.uvg.cc3087.myapp.ui.components.AddFieldBottomSheet
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
@@ -60,67 +58,27 @@ fun EditForm(
     var formTitle by rememberSaveable(initialTitle) {
         mutableStateOf(initialTitle)
     }
-    var fields by remember(initialTitle) {
+    var fields by rememberSaveable(initialTitle, stateSaver = listSaver<List<FormFieldDraft>, FormFieldDraft>(
+        save = { it }, restore = { it }
+    )) {
         mutableStateOf(initialFields)
     }
     var showFieldCatalog by rememberSaveable { mutableStateOf(false) }
     var focusedFieldId by remember { mutableStateOf<String?>(null) }
     var pendingFieldId by remember { mutableStateOf<String?>(null) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    var showPreview by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    var draggedId by remember { mutableStateOf<String?>(null) }
-    var dragY by remember { mutableStateOf(0f) }
-    val handleOffset = with(LocalDensity.current) { 40.dp.toPx() }
-    val edgeSize = with(LocalDensity.current) { 72.dp.toPx() }
-
-    LaunchedEffect(draggedId) {
-        if (draggedId == null) return@LaunchedEffect
-        while (true) {
-            val layout = listState.layoutInfo
-            val scroll = when {
-                dragY < layout.viewportStartOffset + edgeSize -> -18f
-                dragY > layout.viewportEndOffset - edgeSize -> 18f
-                else -> 0f
-            }
-            if (scroll != 0f) listState.scrollBy(scroll)
-            delay(16)
-        }
-    }
-
-    fun finishDrag() {
-        val id = draggedId ?: return
-        val target = listState.layoutInfo.visibleItemsInfo
-            .filter { item -> fields.any { it.id == item.key } }
-            .minByOrNull { item ->
-                when {
-                    dragY < item.offset -> item.offset - dragY
-                    dragY > item.offset + item.size -> dragY - item.offset - item.size
-                    else -> 0f
-                }
-            }
-        val from = fields.indexOfFirst { it.id == id }
-        val to = fields.indexOfFirst { it.id == target?.key }
-        if (from >= 0 && to >= 0 && from != to) {
-            fields = fields.toMutableList().apply { add(to, removeAt(from)) }
-        }
-        draggedId = null
-    }
-
-    fun showMessage(message: String) {
-        coroutineScope.launch {
-            snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(message)
-        }
-    }
-
+    val focusManager = LocalFocusManager.current
     fun addField(type: FormFieldType) {
         val fieldId = java.util.UUID.randomUUID().toString()
         fields = fields + FormFieldDraft(
             id = fieldId,
             type = type,
-            title = type.defaultTitle
+            title = "",
+            includeTime = false,
+            allowDecimals = false
         )
         pendingFieldId = fieldId
     }
@@ -150,45 +108,43 @@ fun EditForm(
         val movedField = reorderedFields.removeAt(fromIndex)
         reorderedFields.add(targetIndex, movedField)
         fields = reorderedFields
+        coroutineScope.launch { listState.animateScrollToItem(targetIndex + 1) }
     }
 
-    fun validateForm() {
-        when {
-            formTitle.isBlank() -> showMessage("Escribe el título del formulario")
-            fields.isEmpty() -> showMessage("Agrega al menos un campo")
-            fields.any { it.title.isBlank() } -> showMessage("Completa el nombre de todos los campos")
-            fields.any { !it.hasValidOptions() } ->
-                showMessage("Agrega al menos dos opciones con nombre en cada campo de selección")
-            else -> showMessage("Formulario listo para continuar :D")
-        }
+    if (showPreview) {
+        FormPreviewScreen(
+            title = formTitle,
+            fields = fields,
+            onClose = { showPreview = false }
+        )
+        return
     }
 
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Editar formulario") },
+                title = { Text(stringResource(R.string.edit_form_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Volver a plantillas"
+                            contentDescription = stringResource(R.string.back_to_templates)
                         )
                     }
                 },
                 actions = {
-                    TextButton(onClick = ::validateForm) {
-                        Text("Validar")
+                    TextButton(onClick = { focusManager.clearFocus(); showPreview = true }) {
+                        Text(stringResource(R.string.preview))
                     }
                 }
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showFieldCatalog = true },
                 icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text("Agregar campo") }
+                text = { Text(stringResource(R.string.add_field)) }
             )
         }
     ) { innerPadding ->
@@ -196,23 +152,24 @@ fun EditForm(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding).imePadding(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "form-details") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Información del formulario",
+                        text = stringResource(R.string.form_details),
                         style = MaterialTheme.typography.titleMedium
                     )
                     OutlinedTextField(
                         value = formTitle,
                         onValueChange = { formTitle = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Título") },
+                        label = { Text(stringResource(R.string.form_title)) },
                         singleLine = true,
-                        isError = formTitle.isBlank()
+                        isError = formTitle.isBlank(),
+                        supportingText = { if (formTitle.isBlank()) Text(stringResource(R.string.error_form_title)) }
                     )
                 }
             }
@@ -220,7 +177,7 @@ fun EditForm(
             if (fields.isEmpty()) {
                 item(key = "empty-fields") {
                     Text(
-                        text = "Todavía no hay campos. Agrega uno para comenzar",
+                        text = stringResource(R.string.empty_fields),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -232,33 +189,11 @@ fun EditForm(
                 key = { _, field -> field.id }
             ) { index, field ->
                 FormFieldEditorCard(
-                    modifier = Modifier.zIndex(if (draggedId == field.id) 1f else 0f)
-                        .graphicsLayer {
-                            if (draggedId == field.id) {
-                                val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == field.id }
-                                translationY = dragY - (item?.offset ?: 0) - handleOffset
-                                alpha = 0.85f
-                            }
-                        },
                     field = field,
                     position = index,
                     canMoveUp = index > 0,
                     canMoveDown = index < fields.lastIndex,
-                    onTitleChange = { newTitle ->
-                        updateField(field.copy(title = newTitle))
-                    },
-                    onRequiredChange = { required ->
-                        updateField(field.copy(required = required))
-                    },
-                    onOptionsChange = { updateField(field.copy(options = it)) },
-                    onMultipleAnswersChange = { updateField(field.copy(allowMultipleAnswers = it)) },
-                    onDragStart = {
-                        draggedId = field.id
-                        dragY = (listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == field.id }?.offset ?: 0) + handleOffset
-                    },
-                    onDrag = { dragY += it },
-                    onDragEnd = ::finishDrag,
-                    onDragCancel = { draggedId = null },
+                    onFieldChange = ::updateField,
                     onMoveUp = { moveField(index, -1) },
                     onMoveDown = { moveField(index, 1) },
                     onDelete = {
@@ -289,8 +224,8 @@ fun EditForm(
 private fun EditFormPreview() {
     MyappTheme(dynamicColor = false) {
         EditForm(
-            initialTitle = "Solicitud de empleo",
-            initialFields = FormEditorSampleData.templateFields,
+            initialTitle = stringResource(R.string.template_job_application),
+            initialFields = FormEditorSampleData.templateFields(LocalResources.current),
             onBackClick = {}
         )
     }

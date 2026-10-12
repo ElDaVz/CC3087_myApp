@@ -1,43 +1,27 @@
 package com.uvg.cc3087.myapp.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DragIndicator
-import androidx.compose.material3.Switch
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.FilterChip
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.CustomAccessibilityAction
-import com.uvg.cc3087.myapp.data.model.FormFieldType
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.uvg.cc3087.myapp.data.model.FormFieldDraft
-import com.uvg.cc3087.myapp.data.model.FieldOption
-import com.uvg.cc3087.myapp.data.model.hasOptions
+import com.uvg.cc3087.myapp.R
+import com.uvg.cc3087.myapp.data.model.*
 
 @Composable
 fun FormFieldEditorCard(
@@ -45,130 +29,150 @@ fun FormFieldEditorCard(
     position: Int,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
-    onTitleChange: (String) -> Unit,
-    onRequiredChange: (Boolean) -> Unit,
+    onFieldChange: (FormFieldDraft) -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit,
-    onMultipleAnswersChange: (Boolean) -> Unit = {},
-    onDragStart: () -> Unit = {},
-    onDrag: (Float) -> Unit = {},
-    onDragEnd: () -> Unit = {},
-    onDragCancel: () -> Unit = {},
-    onOptionsChange: (List<FieldOption>) -> Unit = {},
+    modifier: Modifier = Modifier,
     shouldFocusTitle: Boolean = false,
-    onTitleFocusRequested: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onTitleFocusRequested: () -> Unit = {}
 ) {
     val titleFocusRequester = remember(field.id) { FocusRequester() }
-    val dragStart by rememberUpdatedState(onDragStart)
-    val drag by rememberUpdatedState(onDrag)
-    val dragEnd by rememberUpdatedState(onDragEnd)
-    val dragCancel by rememberUpdatedState(onDragCancel)
-
+    val errors = field.configurationErrors()
     LaunchedEffect(shouldFocusTitle) {
         if (shouldFocusTitle) {
             titleFocusRequester.requestFocus()
             onTitleFocusRequested()
         }
     }
-
     OutlinedCard(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Outlined.DragIndicator,
-                    contentDescription = "Arrastra para reordenar",
-                    modifier = Modifier.size(48.dp)
-                        .semantics {
-                            customActions = buildList {
-                                if (canMoveUp) add(CustomAccessibilityAction("Mover arriba") { onMoveUp(); true })
-                                if (canMoveDown) add(CustomAccessibilityAction("Mover abajo") { onMoveDown(); true })
-                            }
-                        }
-                        .pointerInput(field.id) {
-                            detectDragGestures(
-                                onDragStart = { dragStart() },
-                                onDragEnd = { dragEnd() },
-                                onDragCancel = { dragCancel() },
-                                onDrag = { change, amount -> change.consume(); drag(amount.y) }
-                            )
-                        }
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Campo ${position + 1}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = field.type.label,
-                        style = MaterialTheme.typography.titleMedium
-                    )
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.field_position, position + 1), style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(field.type.labelRes), style = MaterialTheme.typography.titleMedium)
                 }
-
+                IconButton(onClick = onMoveUp, enabled = canMoveUp) {
+                    Icon(Icons.Outlined.ArrowUpward, stringResource(R.string.move_field_up, position + 1), Modifier.size(20.dp))
+                }
+                IconButton(onClick = onMoveDown, enabled = canMoveDown) {
+                    Icon(Icons.Outlined.ArrowDownward, stringResource(R.string.move_field_down, position + 1), Modifier.size(20.dp))
+                }
                 IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Outlined.Delete,
-                        contentDescription = "Eliminar campo"
-                    )
+                    Icon(Icons.Outlined.Delete, stringResource(R.string.delete_field))
                 }
             }
-
             OutlinedTextField(
                 value = field.title,
-                onValueChange = onTitleChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(titleFocusRequester),
-                label = { Text("Nombre del campo") },
-                singleLine = true,
-                isError = field.title.isBlank(),
-                supportingText = {
-                    if (field.title.isBlank()) {
-                        Text("El nombre no puede quedar vacío")
-                    }
-                }
+                onValueChange = { onFieldChange(field.copy(title = it)) },
+                placeholder = { Text(stringResource(R.string.question_placeholder)) },
+                modifier = Modifier.fillMaxWidth().focusRequester(titleFocusRequester).testTag("question-${field.id}"),
+                minLines = 1,
+                maxLines = 4,
+                isError = FieldError.MISSING_QUESTION in errors
             )
-
-            if (field.type.hasOptions) {
-                FieldOptionsEditor(field.options, onOptionsChange)
+            OutlinedTextField(
+                value = field.helpText,
+                onValueChange = { onFieldChange(field.copy(helpText = it)) },
+                label = { Text(stringResource(R.string.help_text_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3
+            )
+            if (field.type in listOf(FormFieldType.TEXT, FormFieldType.PARAGRAPH, FormFieldType.EMAIL, FormFieldType.NUMBER)) {
+                OutlinedTextField(
+                    value = field.placeholder,
+                    onValueChange = { onFieldChange(field.copy(placeholder = it)) },
+                    label = { Text(stringResource(R.string.answer_placeholder_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
             }
-            if (field.type == FormFieldType.CHECKBOX_GROUP) {
-                Text("Respuestas permitidas", style = MaterialTheme.typography.labelLarge)
+            if (field.type.hasOptions) {
+                Text(stringResource(R.string.allowed_answers), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
-                        selected = !field.allowMultipleAnswers,
-                        onClick = { onMultipleAnswersChange(false) },
-                        label = { Text("Una sola respuesta") }
+                        selected = !field.isMultipleSelection,
+                        onClick = { onFieldChange(field.withSelectionMode(false)) },
+                        label = { Text(stringResource(R.string.answer_single)) }
                     )
                     FilterChip(
-                        selected = field.allowMultipleAnswers,
-                        onClick = { onMultipleAnswersChange(true) },
-                        label = { Text("Varias respuestas") }
+                        selected = field.isMultipleSelection,
+                        onClick = { onFieldChange(field.withSelectionMode(true)) },
+                        label = { Text(stringResource(R.string.answer_multiple)) }
                     )
                 }
+                FieldOptionsEditor(field, onChange = { onFieldChange(field.copy(options = it)) })
             }
-            Text("Vista previa interactiva", style = MaterialTheme.typography.labelLarge)
-            FieldAnswerPreview(field)
-
             HorizontalDivider()
-            Text("Configuración del campo", style = MaterialTheme.typography.labelLarge,
+            Text(stringResource(R.string.field_settings), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Obligatorio")
-                Spacer(modifier = Modifier.weight(1f))
-                Switch(checked = field.required, onCheckedChange = onRequiredChange)
+            FieldSettingSwitch(stringResource(R.string.required), field.required) {
+                onFieldChange(field.copy(required = it))
             }
+            if (field.type == FormFieldType.DATE) {
+                FieldSettingSwitch(stringResource(R.string.include_time), field.includeTime) {
+                    onFieldChange(field.copy(includeTime = it))
+                }
+                FieldSettingSwitch(stringResource(R.string.disallow_past_dates), field.disallowPastDates) {
+                    onFieldChange(field.copy(disallowPastDates = it))
+                }
+            }
+            if (field.type == FormFieldType.NUMBER) NumberFieldSettings(field, onFieldChange)
         }
     }
+}
+
+@Composable
+private fun FieldSettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    // A single accessible target for both the label and switch.
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text(label) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = null) },
+        modifier = Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChange),
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+    )
+}
+
+@Composable
+private fun NumberFieldSettings(field: FormFieldDraft, onChange: (FormFieldDraft) -> Unit) {
+    val locale = currentFormLocale()
+    val errors = field.configurationErrors()
+    Text(stringResource(R.string.number_format), style = MaterialTheme.typography.labelLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(!field.allowDecimals, onClick = { onChange(field.copy(allowDecimals = false)) },
+            label = { Text(stringResource(R.string.number_integer)) })
+        FilterChip(field.allowDecimals, onClick = { onChange(field.copy(allowDecimals = true)) },
+            label = { Text(stringResource(R.string.number_decimal)) })
+    }
+    OutlinedTextField(
+        value = localizedNumber(field.minimum, locale),
+        onValueChange = { onChange(field.copy(minimum = canonicalNumber(it, locale))) },
+        label = { Text(stringResource(R.string.minimum_label)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        isError = FieldError.INVALID_MINIMUM in errors || FieldError.INVALID_RANGE in errors,
+        supportingText = { if (FieldError.INVALID_MINIMUM in errors) Text(fieldErrorText(FieldError.INVALID_MINIMUM, field)) },
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = localizedNumber(field.maximum, locale),
+        onValueChange = { onChange(field.copy(maximum = canonicalNumber(it, locale))) },
+        label = { Text(stringResource(R.string.maximum_label)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        isError = FieldError.INVALID_MAXIMUM in errors || FieldError.INVALID_RANGE in errors,
+        supportingText = {
+            if (FieldError.INVALID_MAXIMUM in errors) Text(fieldErrorText(FieldError.INVALID_MAXIMUM, field))
+            else if (FieldError.INVALID_RANGE in errors) Text(fieldErrorText(FieldError.INVALID_RANGE, field))
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = field.unit,
+        onValueChange = { onChange(field.copy(unit = it)) },
+        label = { Text(stringResource(R.string.unit_label)) },
+        placeholder = { Text(stringResource(R.string.unit_example)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
 }

@@ -38,7 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -61,13 +61,13 @@ enum class FormFilter(@param:StringRes val labelResId: Int) {
 @Composable
 fun Forms(
     modifier: Modifier = Modifier,
-    forms: List<FormSummary> = FormSampleData.forms,
+    forms: List<FormSummary> = FormSampleData.forms(LocalResources.current),
     selectedFilter: FormFilter = FormFilter.ALL,
     onFilterSelected: (FormFilter) -> Unit = {},
     onNewFormClick: () -> Unit = {},
     onFormClick: (FormSummary) -> Unit = {}
 ) {
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -82,7 +82,7 @@ fun Forms(
     fun showMessage(@StringRes messageResId: Int, vararg formatArgs: Any) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(context.getString(messageResId, *formatArgs))
+            snackbarHostState.showSnackbar(resources.getString(messageResId, *formatArgs))
         }
     }
 
