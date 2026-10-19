@@ -67,7 +67,7 @@
     <string name="editor_title_required">Enter the form title</string>
     <string name="editor_field_required">Add at least one field</string>
     <string name="editor_field_title_required">Fill in all field names</string>
-    <string name="editor_ready">Form ready to continue :D</string>
+    <string name="editor_ready">Form ready to continue</string>
     <plurals name="response_count">
         <item quantity="one">%d response</item>
         <item quantity="other">%d responses</item>
@@ -185,4 +185,15 @@
         <item quantity="one">%d option selected</item>
         <item quantity="other">%d options selected</item>
     </plurals>
+    <string name="draft_saving">Saving…</string>
+    <string name="draft_saved">Saved on this device</string>
+    <string name="draft_save_error">Changes could not be saved on this device</string>
+    <string name="draft_loading">Loading draft…</string>
+    <string name="draft_not_found">This draft is no longer available</string>
+    <string name="draft_load_error">The draft could not be loaded</string>
+    <string name="retry">Retry</string>
+    <string name="forms_loading">Loading your forms…</string>
+    <string name="forms_load_error">Your forms could not be loaded</string>
+    <string name="forms_empty">No forms yet. Create your first one with New Form.</string>
+    <string name="forms_filter_empty">No forms match this filter</string>
 </resources>

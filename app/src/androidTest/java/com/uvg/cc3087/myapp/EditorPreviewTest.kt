@@ -13,6 +13,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.espresso.Espresso.pressBack
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
+import com.uvg.cc3087.myapp.data.repository.SampleFormRepository
+import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.flow.flowOf
@@ -101,7 +103,7 @@ class EditorPreviewTest {
 
 // mantenemos el idioma de las pruebas sin cambiar la configuración del emulador
 @Composable
-private fun SpanishTestTheme(content: @Composable () -> Unit) {
+internal fun SpanishTestTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val configuration = remember(context) {
         Configuration(context.resources.configuration).apply { setLocale(Locale.forLanguageTag("es")) }
@@ -135,9 +137,12 @@ private fun TestEditor(title: String, initialFields: List<FormFieldDraft>) {
             override fun observeTemplates() = flowOf(emptyList<FormTemplate>())
             override fun getInitialFields(templateType: TemplateType) = initialFields
         }
-        EditFormViewModel(repository, saved).apply {
+        EditFormViewModel(repository, saved, SampleFormRepository()).apply {
             if (!saved.contains("editor_title")) startDraft(title, TemplateType.ORDER_FORM)
         }
+    }
+    DisposableEffect(viewModel) {
+        onDispose { ViewModelStore().apply { put("editor", viewModel); clear() } }
     }
     val state by viewModel.uiState.collectAsState()
     EditForm(state, viewModel::onAction, viewModel::validate, onBackClick = {})

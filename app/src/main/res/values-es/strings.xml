@@ -67,7 +67,7 @@
     <string name="editor_title_required">Escribe el título del formulario</string>
     <string name="editor_field_required">Agrega al menos un campo</string>
     <string name="editor_field_title_required">Completa el nombre de todos los campos</string>
-    <string name="editor_ready">Formulario listo para continuar :D</string>
+    <string name="editor_ready">Formulario listo para continuar</string>
     <plurals name="response_count">
         <item quantity="one">%d respuesta</item>
         <item quantity="other">%d respuestas</item>
@@ -185,4 +185,15 @@
         <item quantity="one">%d opción seleccionada</item>
         <item quantity="other">%d opciones seleccionadas</item>
     </plurals>
+    <string name="draft_saving">Guardando…</string>
+    <string name="draft_saved">Guardado en este dispositivo</string>
+    <string name="draft_save_error">No se pudieron guardar los cambios en este dispositivo</string>
+    <string name="draft_loading">Cargando borrador…</string>
+    <string name="draft_not_found">Este borrador ya no está disponible</string>
+    <string name="draft_load_error">No se pudo cargar el borrador</string>
+    <string name="retry">Reintentar</string>
+    <string name="forms_loading">Cargando tus formularios…</string>
+    <string name="forms_load_error">No se pudieron cargar tus formularios</string>
+    <string name="forms_empty">Todavía no hay formularios. Crea el primero con Nuevo formulario.</string>
+    <string name="forms_filter_empty">No hay formularios que coincidan con este filtro</string>
 </resources>

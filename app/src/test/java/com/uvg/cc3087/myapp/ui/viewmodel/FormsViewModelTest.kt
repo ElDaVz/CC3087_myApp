@@ -10,6 +10,8 @@ import com.uvg.cc3087.myapp.ui.state.FormFilter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
+import java.io.IOException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -140,6 +142,30 @@ class FormsViewModelTest {
 
         assertEquals(FormFilter.ALL, viewModel.uiState.value.selectedFilter)
         assertEquals(forms, viewModel.uiState.value.forms)
+    }
+
+    @Test
+    fun aReadFailureCanBeRetriedWithoutLosingTheSelectedFilter() = runTest {
+        var failRead = true
+        val repository = object : FormRepository by FakeFormRepository(forms) {
+            override fun observeForms(): Flow<List<FormSummary>> = flow {
+                if (failRead) throw IOException("read failed")
+                emit(forms)
+            }
+        }
+        val viewModel = FormsViewModel(repository, SavedStateHandle())
+        observe(viewModel)
+        viewModel.selectFilter(FormFilter.DRAFT)
+        runCurrent()
+        assertTrue(viewModel.uiState.value.hasLoadError)
+        failRead = false
+        viewModel.retryLoading()
+        runCurrent()
+
+        assertEquals(false, viewModel.uiState.value.hasLoadError)
+        assertEquals(false, viewModel.uiState.value.isLoading)
+        assertEquals(FormFilter.DRAFT, viewModel.uiState.value.selectedFilter)
+        assertEquals(listOf(forms[1]), viewModel.uiState.value.forms)
     }
 
     private fun TestScope.observe(viewModel: FormsViewModel) {
