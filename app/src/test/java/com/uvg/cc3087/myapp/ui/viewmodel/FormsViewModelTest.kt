@@ -3,6 +3,7 @@ package com.uvg.cc3087.myapp.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
+import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.testing.MainDispatcherRule
 import com.uvg.cc3087.myapp.ui.state.FormFilter
@@ -153,6 +154,9 @@ class FormsViewModelTest {
         val forms = MutableStateFlow(initialForms)
 
         override fun observeForms(): Flow<List<FormSummary>> = forms
+        override suspend fun getDraft(id: String): FormDraft? = null
+        override suspend fun saveDraft(draft: FormDraft) = Unit
+        override suspend fun deleteDraft(id: String) = Unit
     }
 
     private fun form(id: String, status: FormStatus) = FormSummary(
