@@ -8,21 +8,13 @@ import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.model.FieldError
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.ui.resources.labelResId
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 @get:StringRes
 val FormFieldType.labelRes: Int
-    get() = when (this) {
-        FormFieldType.TEXT -> R.string.field_text
-        FormFieldType.PARAGRAPH -> R.string.field_paragraph
-        FormFieldType.NUMBER -> R.string.field_number
-        FormFieldType.EMAIL -> R.string.field_email
-        FormFieldType.CHECKBOX -> R.string.field_confirmation
-        FormFieldType.CHECKBOX_GROUP, FormFieldType.MULTIPLE_CHOICE -> R.string.field_selection
-        FormFieldType.DROPDOWN -> R.string.field_dropdown
-        FormFieldType.DATE -> R.string.field_date
-    }
+    get() = labelResId
 
 @Composable
 fun currentFormLocale(): Locale = LocalConfiguration.current.locales[0]

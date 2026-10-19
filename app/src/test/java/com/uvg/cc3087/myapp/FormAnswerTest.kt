@@ -3,6 +3,7 @@ package com.uvg.cc3087.myapp
 import com.uvg.cc3087.myapp.data.model.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Locale
 
 class FormAnswerTest {
     @Test fun requiredFieldsRejectEmptyAnswersForEveryType() {
@@ -18,7 +19,8 @@ class FormAnswerTest {
         assertNull(email.answerError(FormAnswer(text = "person@example.com")))
         val number = email.copy(type = FormFieldType.NUMBER)
         assertNotNull(number.answerError(FormAnswer(text = "twelve")))
-        assertNull(number.answerError(FormAnswer(text = "-12,5")))
+        assertNull(number.answerError(FormAnswer(text = "-12,5"), locale = Locale.forLanguageTag("es")))
+        assertNull(number.answerError(FormAnswer(text = "-12.5"), locale = Locale.US))
     }
 
     @Test fun choicesRejectStaleOptionsAndRespectSingleAnswerMode() {
@@ -28,7 +30,8 @@ class FormAnswerTest {
         assertNull(field.answerError(both))
         assertNotNull(field.copy(allowMultipleAnswers = false).answerError(both))
         assertNotNull(field.copy(type = FormFieldType.MULTIPLE_CHOICE).answerError(both))
-        assertNotNull(field.copy(type = FormFieldType.DROPDOWN).answerError(both))
+        assertNotNull(field.copy(type = FormFieldType.DROPDOWN, allowMultipleAnswers = false).answerError(both))
+        assertNull(field.copy(type = FormFieldType.DROPDOWN, allowMultipleAnswers = true).answerError(both))
         assertNotNull(field.answerError(FormAnswer(selectedIds = setOf("deleted"))))
     }
 

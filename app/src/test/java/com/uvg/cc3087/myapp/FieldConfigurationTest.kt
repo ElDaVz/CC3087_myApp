@@ -8,7 +8,10 @@ class FieldConfigurationTest {
     @Test fun selectionFieldsRequireTwoNonBlankOptions() {
         listOf(FormFieldType.MULTIPLE_CHOICE, FormFieldType.CHECKBOX_GROUP, FormFieldType.DROPDOWN).forEach { type ->
             val field = FormFieldDraft("test", type, "Question")
-            assertTrue(field.hasValidOptions())
+            assertFalse(field.hasValidOptions())
+            assertTrue(field.copy(options = listOf(
+                FieldOption("a", "Sí"), FieldOption("b", "No")
+            )).hasValidOptions())
             assertFalse(field.copy(options = emptyList()).hasValidOptions())
             assertFalse(field.copy(options = field.options.take(1)).hasValidOptions())
             assertFalse(field.copy(options = listOf(FieldOption(label = "Yes"), FieldOption(label = " "))).hasValidOptions())

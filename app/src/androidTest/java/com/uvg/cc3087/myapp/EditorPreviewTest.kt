@@ -1,10 +1,23 @@
 package com.uvg.cc3087.myapp
 
+import android.content.res.Configuration
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.espresso.Espresso.pressBack
 import com.uvg.cc3087.myapp.data.model.*
+import com.uvg.cc3087.myapp.data.repository.TemplateRepository
+import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
+import androidx.lifecycle.SavedStateHandle
+import kotlinx.coroutines.flow.flowOf
+import java.io.Serializable
+import java.util.Locale
 import com.uvg.cc3087.myapp.ui.screens.EditForm
 import com.uvg.cc3087.myapp.ui.screens.FormPreviewScreen
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
@@ -16,8 +29,8 @@ class EditorPreviewTest {
 
     @Test fun previewValidatesAnswersAndReturnsToUnchangedEditor() {
         compose.setContent {
-            MyappTheme {
-                EditForm("Encuesta", listOf(FormFieldDraft("name", FormFieldType.TEXT, "Nombre", required = true)), {})
+            SpanishTestTheme {
+                TestEditor("Encuesta", listOf(FormFieldDraft("name", FormFieldType.TEXT, "Nombre", required = true)))
             }
         }
         compose.onNodeWithText("Vista previa").performClick()
@@ -36,11 +49,11 @@ class EditorPreviewTest {
 
     @Test fun moveButtonsChangePreviewOrder() {
         compose.setContent {
-            MyappTheme {
-                EditForm("Encuesta", listOf(
+            SpanishTestTheme {
+                TestEditor("Encuesta", listOf(
                     FormFieldDraft("a", FormFieldType.TEXT, "Primero"),
                     FormFieldDraft("b", FormFieldType.TEXT, "Segundo")
-                ), {})
+                ))
             }
         }
         compose.onNodeWithContentDescription("Mover campo 1 arriba").assertIsNotEnabled()
@@ -53,7 +66,7 @@ class EditorPreviewTest {
     @Test fun previewAnswersSurviveRestorationAndResetClearsThem() {
         val restoration = StateRestorationTester(compose)
         restoration.setContent {
-            MyappTheme {
+            SpanishTestTheme {
                 FormPreviewScreen("Encuesta", listOf(FormFieldDraft("name", FormFieldType.TEXT, "Nombre")), {})
             }
         }
@@ -67,11 +80,11 @@ class EditorPreviewTest {
     @Test fun selectionModeAndCustomOptionsSurviveEditorRestoration() {
         val restoration = StateRestorationTester(compose)
         restoration.setContent {
-            MyappTheme {
-                EditForm("Encuesta", listOf(FormFieldDraft(
+            SpanishTestTheme {
+                TestEditor("Encuesta", listOf(FormFieldDraft(
                     "choice", FormFieldType.MULTIPLE_CHOICE, "Preferencias",
                     options = listOf(FieldOption("a", "Café"), FieldOption("b", "Té"))
-                )), {})
+                )))
             }
         }
         compose.onNodeWithText("Varias").performScrollTo().performClick()
@@ -83,4 +96,48 @@ class EditorPreviewTest {
         compose.onNodeWithText("Café").assertIsOn()
         compose.onNodeWithText("Té").assertIsOn()
     }
+}
+
+// mantenemos el idioma de las pruebas sin cambiar la configuración del emulador
+@Composable
+private fun SpanishTestTheme(content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val configuration = remember(context) {
+        Configuration(context.resources.configuration).apply { setLocale(Locale.forLanguageTag("es")) }
+    }
+    val resources = remember(context, configuration) {
+        context.createConfigurationContext(configuration).resources
+    }
+    CompositionLocalProvider(
+        LocalResources provides resources,
+        LocalConfiguration provides configuration
+    ) {
+        MyappTheme(content = content)
+    }
+}
+
+// el mismo viewmodel de producción recibe un repositorio pequeño para estas pruebas
+@Composable
+private fun TestEditor(title: String, initialFields: List<FormFieldDraft>) {
+    val handleSaver = remember {
+        Saver<SavedStateHandle, Serializable>(
+            save = { handle -> HashMap(handle.keys().associateWith { handle.get<Any?>(it) }) },
+            restore = {
+                @Suppress("UNCHECKED_CAST")
+                SavedStateHandle(it as Map<String, Any?>)
+            }
+        )
+    }
+    val saved = rememberSaveable(saver = handleSaver) { SavedStateHandle() }
+    val viewModel = remember(saved) {
+        val repository = object : TemplateRepository {
+            override fun observeTemplates() = flowOf(emptyList<FormTemplate>())
+            override fun getInitialFields(templateType: TemplateType) = initialFields
+        }
+        EditFormViewModel(repository, saved).apply {
+            if (!saved.contains("editor_title")) startDraft(title, TemplateType.ORDER_FORM)
+        }
+    }
+    val state by viewModel.uiState.collectAsState()
+    EditForm(state, viewModel::onAction, viewModel::validate, onBackClick = {})
 }

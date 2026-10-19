@@ -22,11 +22,11 @@ data class FormFieldDraft(
     ) else emptyList(),
     val helpText: String = "",
     val placeholder: String = "",
-    // Existing date fields keep their time input; new fields explicitly default to date-only.
+    // los campos anteriores conservan la hora y los nuevos comienzan solo con fecha
     val includeTime: Boolean = true,
     val disallowPastDates: Boolean = false,
     val allowDecimals: Boolean = true,
-    // Bounds use canonical decimal notation, retaining invalid draft input for inline feedback.
+    // guardamos los límites tal como se editan para poder mostrar errores sin borrar lo escrito
     val minimum: String = "",
     val maximum: String = "",
     val unit: String = ""

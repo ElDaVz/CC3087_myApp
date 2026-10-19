@@ -124,7 +124,7 @@ fun FormFieldEditorCard(
 
 @Composable
 private fun FieldSettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    // A single accessible target for both the label and switch.
+    // el texto y el switch responden como un solo control accesible
     androidx.compose.material3.ListItem(
         headlineContent = { Text(label) },
         trailingContent = { Switch(checked = checked, onCheckedChange = null) },
