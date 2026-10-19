@@ -33,7 +33,8 @@ class EditorPreviewTest {
                 TestEditor("Encuesta", listOf(FormFieldDraft("name", FormFieldType.TEXT, "Nombre", required = true)))
             }
         }
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithText("Vista previa").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Vista previa").assertHasClickAction().performClick()
         compose.onNodeWithText("Probar envío").performScrollTo().performClick()
         compose.onNodeWithText("Este campo es obligatorio").assertExists()
         compose.onNodeWithText("Tu respuesta").performTextInput("Ana")
@@ -42,7 +43,7 @@ class EditorPreviewTest {
         compose.onNodeWithContentDescription("Volver al editor").performClick()
         compose.onNodeWithText("Nombre").assertExists()
         compose.onNodeWithText("Ana").assertDoesNotExist()
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithContentDescription("Vista previa").performClick()
         pressBack()
         compose.onNodeWithText("Editar formulario").assertExists()
     }
@@ -58,7 +59,7 @@ class EditorPreviewTest {
         }
         compose.onNodeWithContentDescription("Mover campo 1 arriba").assertIsNotEnabled()
         compose.onNodeWithContentDescription("Mover campo 1 abajo").performClick()
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithContentDescription("Vista previa").performClick()
         compose.onNodeWithText("1. Segundo").assertExists()
         compose.onNodeWithText("2. Primero").assertExists()
     }
@@ -89,7 +90,7 @@ class EditorPreviewTest {
         }
         compose.onNodeWithText("Varias").performScrollTo().performClick()
         restoration.emulateSavedInstanceStateRestore()
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithContentDescription("Vista previa").performClick()
         compose.onNodeWithText("Selecciona todas las opciones que correspondan").assertExists()
         compose.onNodeWithText("Café").performClick()
         compose.onNodeWithText("Té").performClick()
