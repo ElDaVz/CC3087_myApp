@@ -6,36 +6,44 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
+import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
+import com.uvg.cc3087.myapp.ui.components.AddFieldBottomSheet
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
@@ -50,30 +58,40 @@ fun EditForm(
     var formTitle by rememberSaveable(initialTitle) {
         mutableStateOf(initialTitle)
     }
-    var fields by remember(initialTitle) {
+    var fields by rememberSaveable(initialTitle, stateSaver = listSaver<List<FormFieldDraft>, FormFieldDraft>(
+        save = { it }, restore = { it }
+    )) {
         mutableStateOf(initialFields)
     }
-    var nextFieldNumber by rememberSaveable(initialTitle) {
-        mutableStateOf(initialFields.size + 1)
-    }
+    var showFieldCatalog by rememberSaveable { mutableStateOf(false) }
+    var focusedFieldId by remember { mutableStateOf<String?>(null) }
+    var pendingFieldId by remember { mutableStateOf<String?>(null) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    var showPreview by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-
-    fun showMessage(message: String) {
-        coroutineScope.launch {
-            snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(message)
-        }
+    val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
+    fun addField(type: FormFieldType) {
+        val fieldId = java.util.UUID.randomUUID().toString()
+        fields = fields + FormFieldDraft(
+            id = fieldId,
+            type = type,
+            title = "",
+            includeTime = false,
+            allowDecimals = false
+        )
+        pendingFieldId = fieldId
     }
 
-    fun addField(type: FormFieldType) {
-        fields = fields + FormFieldDraft(
-            id = "field-$nextFieldNumber",
-            type = type,
-            title = type.defaultTitle
-        )
-        nextFieldNumber += 1
+    LaunchedEffect(pendingFieldId, showFieldCatalog) {
+        if (showFieldCatalog) return@LaunchedEffect
+        val fieldId = pendingFieldId ?: return@LaunchedEffect
+        val fieldIndex = fields.indexOfFirst { field -> field.id == fieldId }
+        if (fieldIndex >= 0) {
+            listState.animateScrollToItem(fieldIndex + 1)
+            focusedFieldId = fieldId
+            pendingFieldId = null
+        }
     }
 
     fun updateField(updatedField: FormFieldDraft) {
@@ -90,85 +108,76 @@ fun EditForm(
         val movedField = reorderedFields.removeAt(fromIndex)
         reorderedFields.add(targetIndex, movedField)
         fields = reorderedFields
+        coroutineScope.launch { listState.animateScrollToItem(targetIndex + 1) }
     }
 
-    fun validateForm() {
-        when {
-            formTitle.isBlank() -> showMessage("Escribe el título del formulario")
-            fields.isEmpty() -> showMessage("Agrega al menos un campo")
-            fields.any { it.title.isBlank() } -> showMessage("Completa el nombre de todos los campos")
-            else -> showMessage("Formulario listo para continuar :D")
-        }
+    if (showPreview) {
+        FormPreviewScreen(
+            title = formTitle,
+            fields = fields,
+            onClose = { showPreview = false }
+        )
+        return
     }
 
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Editar formulario") },
+                title = { Text(stringResource(R.string.edit_form_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Volver a plantillas"
+                            contentDescription = stringResource(R.string.back_to_templates)
                         )
                     }
                 },
                 actions = {
-                    TextButton(onClick = ::validateForm) {
-                        Text("Validar")
+                    TextButton(onClick = { focusManager.clearFocus(); showPreview = true }) {
+                        Text(stringResource(R.string.preview))
                     }
                 }
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showFieldCatalog = true },
+                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.add_field)) }
+            )
+        }
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
+                .padding(innerPadding).imePadding(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "form-details") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Información del formulario",
+                        text = stringResource(R.string.form_details),
                         style = MaterialTheme.typography.titleMedium
                     )
                     OutlinedTextField(
                         value = formTitle,
                         onValueChange = { formTitle = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Título") },
+                        label = { Text(stringResource(R.string.form_title)) },
                         singleLine = true,
-                        isError = formTitle.isBlank()
+                        isError = formTitle.isBlank(),
+                        supportingText = { if (formTitle.isBlank()) Text(stringResource(R.string.error_form_title)) }
                     )
-                }
-            }
-
-            item(key = "add-field-controls") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Agregar campo",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    FormFieldType.entries.forEach { type ->
-                        OutlinedButton(
-                            onClick = { addField(type) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Agregar ${type.label.lowercase()}")
-                        }
-                    }
                 }
             }
 
             if (fields.isEmpty()) {
                 item(key = "empty-fields") {
                     Text(
-                        text = "Todavía no hay campos. Agrega uno para comenzar",
+                        text = stringResource(R.string.empty_fields),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -184,20 +193,29 @@ fun EditForm(
                     position = index,
                     canMoveUp = index > 0,
                     canMoveDown = index < fields.lastIndex,
-                    onTitleChange = { newTitle ->
-                        updateField(field.copy(title = newTitle))
-                    },
-                    onRequiredChange = { required ->
-                        updateField(field.copy(required = required))
-                    },
+                    onFieldChange = ::updateField,
                     onMoveUp = { moveField(index, -1) },
                     onMoveDown = { moveField(index, 1) },
                     onDelete = {
                         fields = fields.filterNot { it.id == field.id }
+                    },
+                    shouldFocusTitle = field.id == focusedFieldId,
+                    onTitleFocusRequested = {
+                        focusedFieldId = null
                     }
                 )
             }
         }
+    }
+
+    if (showFieldCatalog) {
+        AddFieldBottomSheet(
+            onDismissRequest = { showFieldCatalog = false },
+            onFieldSelected = { type ->
+                addField(type)
+                showFieldCatalog = false
+            }
+        )
     }
 }
 
@@ -206,8 +224,8 @@ fun EditForm(
 private fun EditFormPreview() {
     MyappTheme(dynamicColor = false) {
         EditForm(
-            initialTitle = "Solicitud de empleo",
-            initialFields = FormEditorSampleData.templateFields,
+            initialTitle = stringResource(R.string.template_job_application),
+            initialFields = FormEditorSampleData.templateFields(LocalResources.current),
             onBackClick = {}
         )
     }
