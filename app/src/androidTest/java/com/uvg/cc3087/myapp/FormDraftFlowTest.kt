@@ -101,6 +101,29 @@ class FormDraftFlowTest {
         }
     }
 
+    @Test fun previewSaveOpensTheStoredReceiptAndCanReturnToForms() {
+        launchApp(repository)
+        compose.onNodeWithText("Nuevo formulario").performClick()
+        compose.onNodeWithText("Formulario de pedido").performClick()
+        waitForSaved()
+        compose.onNodeWithContentDescription("Vista previa").performClick()
+        compose.onNodeWithText("Guardar formulario").performScrollTo().performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("¡Formulario guardado!").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Borrador").assertExists()
+        compose.onNodeWithText("Compartir por WhatsApp").assertIsNotEnabled()
+        compose.onNodeWithText("Volver a mis formularios").performScrollTo().performClick()
+        compose.onNodeWithText("Mis formularios").assertExists()
+        compose.onNodeWithText("Compartir").performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("¡Formulario guardado!").fetchSemanticsNodes().isNotEmpty()
+        }
+        pressBack()
+        compose.onNodeWithText("Mis formularios").assertExists()
+        runBlocking { assertEquals(1, repository.observeForms().first().size) }
+    }
+
     private fun launchApp(forms: FormRepository) {
         val templates = object : TemplateRepository {
             override fun observeTemplates() = flowOf(TemplateSampleData.templates)

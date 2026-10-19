@@ -196,4 +196,20 @@
     <string name="forms_load_error">Your forms could not be loaded</string>
     <string name="forms_empty">No forms yet. Create your first one with New Form.</string>
     <string name="forms_filter_empty">No forms match this filter</string>
+    <string name="save_and_share">Save and share</string>
+    <string name="save_form">Save form</string>
+    <string name="back_to_editing">Back to editing</string>
+    <string name="form_saved">Form Saved!</string>
+    <string name="form_ready_to_share">Your form is ready to share with customers.</string>
+    <string name="form_saved_locally">Saved on this device. Not published yet.</string>
+    <string name="shareable_link">Shareable link</string>
+    <string name="no_public_link">No public link yet</string>
+    <string name="share_via_whatsapp">Share via WhatsApp</string>
+    <string name="copy_link">Copy link</string>
+    <string name="link_copied">Link copied</string>
+    <string name="link_copy_error">The link could not be copied</string>
+    <string name="whatsapp_unavailable">WhatsApp is not available on this device</string>
+    <string name="saved_fields">Fields</string>
+    <string name="saved_status">Status</string>
+    <string name="back_to_my_forms">Back to my forms</string>
 </resources>

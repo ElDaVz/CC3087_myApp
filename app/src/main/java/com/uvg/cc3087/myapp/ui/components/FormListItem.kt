@@ -51,7 +51,8 @@ fun FormListItem(
     onClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    onViewClick: () -> Unit = {}
+    onViewClick: () -> Unit = {},
+    shareEnabled: Boolean = true
 ) {
     val displayTitle = form.title.ifBlank { stringResource(R.string.untitled_form) }
     val responseText = pluralStringResource(
@@ -119,7 +120,8 @@ fun FormListItem(
             FormActionButton(
                 label = stringResource(R.string.share),
                 onClick = onShareClick,
-                icon = Icons.Outlined.Share
+                icon = Icons.Outlined.Share,
+                enabled = shareEnabled
             )
             FormActionButton(
                 label = stringResource(R.string.edit),
@@ -168,9 +170,10 @@ private fun StatusLabel(status: FormStatus) {
 private fun FormActionButton(
     label: String,
     onClick: () -> Unit,
-    icon: ImageVector
+    icon: ImageVector,
+    enabled: Boolean = true
 ) {
-    TextButton(onClick = onClick) {
+    TextButton(onClick = onClick, enabled = enabled) {
         Icon(
             imageVector = icon,
             contentDescription = null,

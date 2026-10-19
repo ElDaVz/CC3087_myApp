@@ -49,4 +49,4 @@ Configuración basada en la [documentación de Room](https://developer.android.c
 
 ## Qué sigue pendiente
 
-Este avance cubre borradores locales, no autenticación, sincronización con Firebase, publicación, enlaces públicos ni respuestas enviadas. Share y View en las tarjetas todavía muestran sus avisos provisionales. El repositorio ya permite eliminar borradores, pero la acción de eliminación desde la lista no se agregó en este paso.
+Este avance cubre borradores locales, no autenticación, sincronización con Firebase, publicación, enlaces públicos ni respuestas enviadas. En el siguiente bloque, Share ya abre la confirmación local de [Save & Share](SAVE_AND_SHARE.md); View conserva su aviso provisional. El repositorio ya permite eliminar borradores, pero la acción de eliminación desde la lista no se agregó en este paso.

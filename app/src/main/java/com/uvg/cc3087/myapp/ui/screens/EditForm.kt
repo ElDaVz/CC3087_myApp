@@ -63,7 +63,8 @@ fun EditForm(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     onRetrySave: () -> Unit = {},
-    onRetryLoad: () -> Unit = {}
+    onRetryLoad: () -> Unit = {},
+    onSaveForm: (() -> Unit)? = null
 ) {
     val resources = LocalResources.current
     val focusManager = LocalFocusManager.current
@@ -100,7 +101,10 @@ fun EditForm(
         FormPreviewScreen(
             title = uiState.title,
             fields = uiState.fields,
-            onClose = { showPreview = false }
+            onClose = { showPreview = false },
+            onSaveForm = onSaveForm,
+            saveStatus = uiState.saveStatus,
+            onRetrySave = onRetrySave
         )
         return
     }

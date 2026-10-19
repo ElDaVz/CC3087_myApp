@@ -61,7 +61,9 @@ fun Forms(
     onFilterSelected: (FormFilter) -> Unit = {},
     onNewFormClick: () -> Unit = {},
     onFormClick: (FormSummary) -> Unit = {},
-    onRetryLoad: () -> Unit = {}
+    onRetryLoad: () -> Unit = {},
+    onShareFormClick: (FormSummary) -> Unit = {},
+    unsavedDraftId: String? = null
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -148,9 +150,10 @@ fun Forms(
                 FormListItem(
                     form = form,
                     onClick = { onFormClick(form) },
-                    onShareClick = { showMessage(R.string.share_form, form.title) },
+                    onShareClick = { onShareFormClick(form) },
                     onEditClick = { onFormClick(form) },
-                    onViewClick = { showMessage(R.string.view_form, form.title) }
+                    onViewClick = { showMessage(R.string.view_form, form.title) },
+                    shareEnabled = form.id != unsavedDraftId
                 )
             }
         }

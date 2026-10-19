@@ -19,6 +19,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.ui.components.FormAnswerInput
+import com.uvg.cc3087.myapp.ui.components.DraftSaveNotice
+import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
 import com.uvg.cc3087.myapp.ui.components.currentFormLocale
 import com.uvg.cc3087.myapp.ui.components.fieldErrorText
 import com.uvg.cc3087.myapp.R
@@ -26,7 +28,14 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormPreviewScreen(title: String, fields: List<FormFieldDraft>, onClose: () -> Unit) {
+fun FormPreviewScreen(
+    title: String,
+    fields: List<FormFieldDraft>,
+    onClose: () -> Unit,
+    onSaveForm: (() -> Unit)? = null,
+    saveStatus: DraftSaveStatus = DraftSaveStatus.IDLE,
+    onRetrySave: () -> Unit = {}
+) {
     var answers by rememberSaveable { mutableStateOf(hashMapOf<String, FormAnswer>()) }
     var attempted by rememberSaveable { mutableStateOf(false) }
     var submitted by rememberSaveable { mutableStateOf(false) }
@@ -36,6 +45,14 @@ fun FormPreviewScreen(title: String, fields: List<FormFieldDraft>, onClose: () -
     val focusManager = LocalFocusManager.current
     val configurationValid = title.isNotBlank() && fields.isNotEmpty() &&
         fields.all { it.configurationErrors().isEmpty() }
+
+    fun testSubmission() {
+        attempted = true
+        focusManager.clearFocus()
+        val firstError = fields.indexOfFirst { it.answerError(answers[it.id] ?: FormAnswer(), locale = locale) != null }
+        submitted = firstError == -1
+        if (firstError >= 0) scope.launch { listState.animateScrollToItem(firstError + 1) }
+    }
 
     BackHandler(onBack = onClose)
     Scaffold(topBar = {
@@ -109,21 +126,30 @@ fun FormPreviewScreen(title: String, fields: List<FormFieldDraft>, onClose: () -
             }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (onSaveForm != null) {
+                        DraftSaveNotice(saveStatus, onRetrySave)
+                        Button(
+                            enabled = configurationValid && saveStatus == DraftSaveStatus.SAVED,
+                            onClick = onSaveForm,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(stringResource(R.string.save_form)) }
+                        OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.back_to_editing))
+                        }
+                    }
                     if (submitted) {
                         Text(stringResource(R.string.preview_success),
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     }
-                    Button(
-                        enabled = configurationValid,
-                        onClick = {
-                            attempted = true
-                            focusManager.clearFocus()
-                            val firstError = fields.indexOfFirst { it.answerError(answers[it.id] ?: FormAnswer(), locale = locale) != null }
-                            submitted = firstError == -1
-                            if (firstError >= 0) scope.launch { listState.animateScrollToItem(firstError + 1) }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text(stringResource(R.string.test_submit)) }
+                    if (onSaveForm == null) {
+                        Button(enabled = configurationValid, onClick = ::testSubmission, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.test_submit))
+                        }
+                    } else {
+                        TextButton(enabled = configurationValid, onClick = ::testSubmission, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.test_submit))
+                        }
+                    }
                 }
             }
         }
