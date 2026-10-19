@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">myapp</string>
+    <string name="app_name">FormLink</string>
     <string name="formlink">FormLink</string>
     <string name="my_forms">My Forms</string>
     <string name="new_form">New Form</string>
