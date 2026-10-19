@@ -1,11 +1,13 @@
 package com.uvg.cc3087.myapp.domain.validation
 
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
+import com.uvg.cc3087.myapp.data.model.configurationErrors
 
 enum class FormValidationResult {
     TITLE_REQUIRED,
     FIELD_REQUIRED,
     FIELD_TITLE_REQUIRED,
+    FIELD_CONFIGURATION_INVALID,
     READY
 }
 
@@ -15,6 +17,7 @@ object FormDraftValidator {
         title.isBlank() -> FormValidationResult.TITLE_REQUIRED
         fields.isEmpty() -> FormValidationResult.FIELD_REQUIRED
         fields.any { it.title.isBlank() } -> FormValidationResult.FIELD_TITLE_REQUIRED
+        fields.any { it.configurationErrors().isNotEmpty() } -> FormValidationResult.FIELD_CONFIGURATION_INVALID
         else -> FormValidationResult.READY
     }
 }

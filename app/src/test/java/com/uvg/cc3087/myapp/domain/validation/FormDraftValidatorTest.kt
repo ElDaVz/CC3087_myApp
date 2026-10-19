@@ -2,6 +2,7 @@ package com.uvg.cc3087.myapp.domain.validation
 
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.model.FieldOption
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -57,5 +58,25 @@ class FormDraftValidatorTest {
             FormValidationResult.READY,
             FormDraftValidator.validate("Pedido", listOf(validField))
         )
+    }
+
+    @Test
+    fun choicesNeedValidNonRepeatedOptions() {
+        val choice = FormFieldDraft("choice", FormFieldType.DROPDOWN, "Bebida")
+        assertEquals(FormValidationResult.FIELD_CONFIGURATION_INVALID,
+            FormDraftValidator.validate("Pedido", listOf(choice)))
+        assertEquals(FormValidationResult.READY, FormDraftValidator.validate("Pedido", listOf(
+            choice.copy(options = listOf(FieldOption("a", "Café"), FieldOption("b", "Té")))
+        )))
+    }
+
+    @Test
+    fun numberBoundsAreValidatedBeforeTheFormIsReady() {
+        val number = FormFieldDraft("number", FormFieldType.NUMBER, "Cantidad",
+            minimum = "10", maximum = "2")
+        assertEquals(FormValidationResult.FIELD_CONFIGURATION_INVALID,
+            FormDraftValidator.validate("Pedido", listOf(number)))
+        assertEquals(FormValidationResult.READY,
+            FormDraftValidator.validate("Pedido", listOf(number.copy(maximum = "20"))))
     }
 }

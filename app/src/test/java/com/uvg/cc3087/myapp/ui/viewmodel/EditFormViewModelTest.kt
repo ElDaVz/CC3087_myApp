@@ -3,6 +3,8 @@ package com.uvg.cc3087.myapp.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.model.FieldOption
+import com.uvg.cc3087.myapp.data.model.withSelectionMode
 import com.uvg.cc3087.myapp.data.model.TemplateType
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.testing.FakeTemplateRepository
@@ -14,6 +16,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 
 class EditFormViewModelTest {
     private val fields = listOf(
@@ -60,7 +66,7 @@ class EditFormViewModelTest {
     @Test
     fun addingEachFieldTypeCreatesUniqueIdsAndKeepsTheProvidedTitles() {
         val viewModel = editor(initialFields = emptyList())
-        val initialTitles = listOf("Text question", "Selecciona una opción", "Choose a date")
+        val initialTitles = FormFieldType.entries.map { "Question: ${it.name}" }
 
         FormFieldType.entries.zip(initialTitles).forEach { (type, title) ->
             viewModel.onAction(EditFormAction.AddField(type, title))
@@ -69,8 +75,9 @@ class EditFormViewModelTest {
         val addedFields = viewModel.uiState.value.fields
         assertEquals(FormFieldType.entries, addedFields.map { it.type })
         assertEquals(initialTitles, addedFields.map { it.title })
-        assertEquals(3, addedFields.map { it.id }.distinct().size)
+        assertEquals(FormFieldType.entries.size, addedFields.map { it.id }.distinct().size)
         assertTrue(addedFields.none { it.required })
+        assertTrue(addedFields.none { it.includeTime || it.allowDecimals })
     }
 
     @Test
@@ -316,6 +323,91 @@ class EditFormViewModelTest {
         assertEquals("", field.title)
         assertEquals(setOf(field.id), viewModel.uiState.value.fieldIdsWithTitleErrors)
         assertEquals(FormValidationResult.FIELD_TITLE_REQUIRED, viewModel.validate())
+    }
+
+    @Test
+    fun updatingAFieldKeepsAllItsConfigurationAndTheOtherFields() {
+        val viewModel = editor()
+        val changed = fields[1].copy(
+            options = listOf(FieldOption("a", "Café"), FieldOption("b", "Té")),
+            helpText = "Puedes elegir varias",
+            placeholder = "Tu respuesta",
+            required = true
+        ).withSelectionMode(true)
+
+        viewModel.onAction(EditFormAction.UpdateField(changed))
+
+        assertEquals(listOf(fields[0], changed, fields[2]), viewModel.uiState.value.fields)
+        assertEquals(FormValidationResult.READY, viewModel.validate())
+    }
+
+    @Test
+    fun updatingAnUnknownFieldDoesNotInsertIt() {
+        val viewModel = editor()
+        val before = viewModel.uiState.value
+        viewModel.onAction(EditFormAction.UpdateField(fields[0].copy(id = "missing")))
+        assertEquals(before, viewModel.uiState.value)
+    }
+
+    @Test
+    fun serializedSavedStateRestoresEveryConfigurationAndOptionIdentity() {
+        val saved = SavedStateHandle()
+        val original = EditFormViewModel(templateRepository(), saved)
+        original.startDraft("Encuesta", TemplateType.ORDER_FORM)
+        original.onAction(EditFormAction.UpdateField(fields[1].copy(
+            options = listOf(FieldOption("coffee", "Café"), FieldOption("tea", "Té")),
+            helpText = "Elige tus bebidas",
+            placeholder = "Aquí",
+            required = true
+        ).withSelectionMode(true)))
+        original.onAction(EditFormAction.UpdateField(fields[2].copy(
+            includeTime = true, disallowPastDates = true
+        )))
+        original.onAction(EditFormAction.AddField(FormFieldType.NUMBER))
+        val number = original.uiState.value.fields.last()
+        original.onAction(EditFormAction.UpdateField(number.copy(
+            title = "Cantidad", allowDecimals = false, minimum = "-2",
+            maximum = "15", unit = "unidades"
+        )))
+
+        // pasamos por serialización real para no reutilizar las instancias originales
+        val values = HashMap(saved.keys().associateWith { saved.get<Any?>(it) })
+        val bytes = ByteArrayOutputStream().also { output ->
+            ObjectOutputStream(output).use { it.writeObject(values) }
+        }.toByteArray()
+        @Suppress("UNCHECKED_CAST")
+        val restoredValues = ObjectInputStream(ByteArrayInputStream(bytes)).use {
+            it.readObject() as Map<String, Any?>
+        }
+        val restored = EditFormViewModel(templateRepository(), SavedStateHandle(restoredValues))
+
+        assertEquals(original.uiState.value, restored.uiState.value)
+        assertEquals(listOf("coffee", "tea"), restored.uiState.value.fields[1].options.map { it.id })
+    }
+
+    @Test
+    fun legacyFourValueRecordsStillRestoreAndMigrateOnEdit() {
+        val saved = SavedStateHandle(mapOf(
+            "editor_title" to "Anterior",
+            "editor_fields" to arrayListOf("old", "TEXT", "Nombre", "true")
+        ))
+        val viewModel = EditFormViewModel(templateRepository(), saved)
+        assertEquals(listOf(FormFieldDraft("old", FormFieldType.TEXT, "Nombre", true)), viewModel.uiState.value.fields)
+        viewModel.onAction(EditFormAction.ChangeTitle("Actualizado"))
+        assertTrue(saved.contains("editor_fields_v2"))
+        assertFalse(saved.contains("editor_fields"))
+    }
+
+    @Test
+    fun blankOptionsAreRejectedUntilTheChoicesAreCompleted() {
+        val viewModel = editor(initialFields = emptyList())
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.MULTIPLE_CHOICE, "Bebida"))
+        assertEquals(FormValidationResult.FIELD_CONFIGURATION_INVALID, viewModel.validate())
+        val field = viewModel.uiState.value.fields.single()
+        viewModel.onAction(EditFormAction.UpdateField(field.copy(
+            options = listOf(FieldOption("a", "Café"), FieldOption("b", "Té"))
+        )))
+        assertEquals(FormValidationResult.READY, viewModel.validate())
     }
 
     private fun editor(

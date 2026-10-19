@@ -51,4 +51,16 @@ class SampleTemplateRepositoryTest {
         assertNotSame(firstRead, secondRead)
         assertEquals(firstRead, secondRead)
     }
+
+    @Test
+    fun translatedTemplateFieldsKeepTheirOptionsAndAreCopied() {
+        val repository = SampleTemplateRepository()
+        val translated = FormEditorSampleData.templateFields.map { it.copy(title = "Campo ${it.id}") }
+        repository.updateSampleFields(translated)
+        val result = repository.getInitialFields(TemplateType.ORDER_FORM)
+        assertEquals(translated, result)
+        assertNotSame(translated, result)
+        assertEquals(translated[1].options, result[1].options)
+        assertNotSame(translated[1].options, result[1].options)
+    }
 }

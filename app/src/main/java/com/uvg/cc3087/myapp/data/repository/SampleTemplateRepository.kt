@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 class SampleTemplateRepository : TemplateRepository {
+    private var initialFields = FormEditorSampleData.templateFields
+
+    fun updateSampleFields(localizedFields: List<FormFieldDraft>) {
+        initialFields = localizedFields.map { it.copy(options = it.options.toList()) }
+    }
+
     override fun observeTemplates(): Flow<List<FormTemplate>> =
         flowOf(TemplateSampleData.templates)
 
@@ -18,6 +24,6 @@ class SampleTemplateRepository : TemplateRepository {
             TemplateType.JOB_APPLICATION,
             TemplateType.ORDER_FORM,
             TemplateType.EVENT_RSVP,
-            TemplateType.FEEDBACK -> FormEditorSampleData.templateFields.toList()
+            TemplateType.FEEDBACK -> initialFields.map { it.copy(options = it.options.toList()) }
         }
 }

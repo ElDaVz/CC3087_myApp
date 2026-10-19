@@ -31,7 +31,10 @@ class EditFormViewModel(
         // la ui pasa la selección y aquí obtenemos los datos para iniciar el editor
         val fields = templateType?.let(templateRepository::getInitialFields).orEmpty()
         // entrar desde una plantilla crea un borrador nuevo, aunque el título sea el mismo
-        updateState(EditFormUiState(title = title, fields = fields.toList()))
+        updateState(EditFormUiState(
+            title = title,
+            fields = fields.map { it.copy(options = it.options.toList()) }
+        ))
     }
 
     fun onAction(action: EditFormAction) {
@@ -43,8 +46,17 @@ class EditFormViewModel(
                     id = "field-${UUID.randomUUID()}",
                     type = action.type,
                     // conservamos el texto recibido, sin buscar recursos ni decidir el idioma
-                    title = action.initialTitle
+                    title = action.initialTitle,
+                    includeTime = false,
+                    allowDecimals = false
                 )
+            )
+            is EditFormAction.UpdateField -> current.copy(
+                fields = current.fields.map { field ->
+                    if (field.id == action.field.id) {
+                        action.field.copy(options = action.field.options.toList())
+                    } else field
+                }
             )
             is EditFormAction.ChangeFieldTitle -> current.copy(
                 fields = current.fields.map { field ->
@@ -90,15 +102,22 @@ class EditFormViewModel(
 
     private fun updateState(updated: EditFormUiState) {
         savedStateHandle[TITLE_KEY] = updated.title
-        // guardamos valores simples, no instancias de modelos ni recursos de android
-        savedStateHandle[FIELDS_KEY] = ArrayList(updated.fields.flatMap { field ->
-            listOf(field.id, field.type.name, field.title, field.required.toString())
-        })
+        // el modelo ya es serializable y así no perdemos opciones ni ajustes al restaurar
+        savedStateHandle[FIELDS_V2_KEY] = ArrayList(
+            updated.fields.map { it.copy(options = it.options.toList()) }
+        )
+        savedStateHandle.remove<ArrayList<String>>(FIELDS_KEY)
         mutableUiState.value = updated
     }
 
     private fun restoreState(): EditFormUiState {
         val title = savedStateHandle.get<String>(TITLE_KEY).orEmpty()
+        if (savedStateHandle.contains(FIELDS_V2_KEY)) {
+            val savedFields = savedStateHandle.get<ArrayList<*>>(FIELDS_V2_KEY).orEmpty()
+            val fields = savedFields.filterIsInstance<FormFieldDraft>()
+            return EditFormUiState(title = title, fields = fields)
+        }
+        // todavía aceptamos los borradores de cuatro valores de la versión anterior
         val values = savedStateHandle.get<ArrayList<String>>(FIELDS_KEY).orEmpty()
         if (values.size % FIELD_VALUE_COUNT != 0) return EditFormUiState(title = title)
 
@@ -120,6 +139,7 @@ class EditFormViewModel(
     companion object {
         private const val TITLE_KEY = "editor_title"
         private const val FIELDS_KEY = "editor_fields"
+        private const val FIELDS_V2_KEY = "editor_fields_v2"
         private const val FIELD_VALUE_COUNT = 4
 
         fun factory(templateRepository: TemplateRepository): ViewModelProvider.Factory = viewModelFactory {

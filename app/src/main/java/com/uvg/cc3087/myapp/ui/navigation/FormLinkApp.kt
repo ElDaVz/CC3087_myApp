@@ -2,16 +2,18 @@ package com.uvg.cc3087.myapp.ui.navigation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormSampleData
+import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.TemplateSampleData
 import com.uvg.cc3087.myapp.data.model.FormTemplate
 import com.uvg.cc3087.myapp.di.AppContainer
@@ -38,7 +40,14 @@ private enum class AppDestination {
 
 @Composable
 fun FormLinkApp() {
-    val context = LocalContext.current
+    val resources = LocalResources.current
+    val languageTags = resources.configuration.locales.toLanguageTags()
+    LaunchedEffect(languageTags) {
+        AppContainer.updateSampleData(
+            FormSampleData.forms(resources),
+            FormEditorSampleData.templateFields(resources)
+        )
+    }
     // este viewmodel vive en la actividad y conserva el filtro al ir a plantillas :D
     val formsViewModel: FormsViewModel = viewModel(
         factory = FormsViewModel.factory(AppContainer.formRepository)
@@ -61,7 +70,7 @@ fun FormLinkApp() {
         onStartEditor = { template ->
             editFormViewModel.startDraft(
                 // el idioma se resuelve en la ui y los campos los decide el viewmodel
-                title = context.getString(template?.type?.titleResId ?: R.string.untitled_form),
+                title = resources.getString(template?.type?.titleResId ?: R.string.untitled_form),
                 templateType = template?.type
             )
         },

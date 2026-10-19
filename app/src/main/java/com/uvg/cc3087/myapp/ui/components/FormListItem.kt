@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,6 +38,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.uvg.cc3087.myapp.R
+import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
@@ -178,15 +180,6 @@ private fun FormActionButton(
     }
 }
 
-private val previewForm = FormSummary(
-    id = "bakery-custom-order",
-    title = "Pedido personalizado de pastelería",
-    responseCount = 12,
-    updatedDate = "18 jul",
-    status = FormStatus.ACTIVE,
-    imageUrl = "https://picsum.photos/seed/bakery-custom-order/160/160"
-)
-
 // estas previews nos ayudan a revisar la tarjeta en modo claro y oscuro :D
 @Preview(name = "Form item - Light", showBackground = true)
 @Preview(
@@ -198,7 +191,7 @@ private val previewForm = FormSummary(
 private fun FormListItemPreview() {
     MyappTheme(dynamicColor = false) {
         FormListItem(
-            form = previewForm,
+            form = FormSampleData.forms(LocalResources.current).first(),
             modifier = Modifier.padding(16.dp)
         )
     }

@@ -11,7 +11,11 @@ class EditorResourcesTest {
     @Test
     fun fieldTypesUseTheirOwnLabelResources() {
         assertEquals(
-            listOf(R.string.editor_type_text, R.string.editor_type_multiple_choice, R.string.editor_type_date),
+            listOf(
+                R.string.field_text, R.string.field_paragraph, R.string.field_number,
+                R.string.field_email, R.string.field_confirmation, R.string.field_selection,
+                R.string.field_dropdown, R.string.field_selection, R.string.field_date
+            ),
             FormFieldType.entries.map { it.labelResId }
         )
     }
@@ -21,6 +25,12 @@ class EditorResourcesTest {
         assertEquals(
             listOf(
                 R.string.editor_default_text_title,
+                R.string.question_placeholder,
+                R.string.question_placeholder,
+                R.string.question_placeholder,
+                R.string.question_placeholder,
+                R.string.question_placeholder,
+                R.string.question_placeholder,
                 R.string.editor_default_choice_title,
                 R.string.editor_default_date_title
             ),
@@ -31,7 +41,11 @@ class EditorResourcesTest {
     @Test
     fun addActionsMatchEachFieldType() {
         assertEquals(
-            listOf(R.string.editor_add_text, R.string.editor_add_multiple_choice, R.string.editor_add_date),
+            listOf(
+                R.string.editor_add_text, R.string.add_field, R.string.add_field,
+                R.string.add_field, R.string.add_field, R.string.add_field, R.string.add_field,
+                R.string.editor_add_multiple_choice, R.string.editor_add_date
+            ),
             FormFieldType.entries.map { it.addActionResId }
         )
     }
@@ -43,6 +57,7 @@ class EditorResourcesTest {
                 R.string.editor_title_required,
                 R.string.editor_field_required,
                 R.string.editor_field_title_required,
+                R.string.preview_configuration_error,
                 R.string.editor_ready
             ),
             FormValidationResult.entries.map { it.messageResId }
