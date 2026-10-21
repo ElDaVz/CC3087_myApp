@@ -51,8 +51,10 @@ fun FormListItem(
     onClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    onViewClick: () -> Unit = {}
+    onViewClick: () -> Unit = {},
+    shareEnabled: Boolean = true
 ) {
+    val displayTitle = form.title.ifBlank { stringResource(R.string.untitled_form) }
     val responseText = pluralStringResource(
         R.plurals.response_count,
         form.responseCount,
@@ -76,7 +78,7 @@ fun FormListItem(
                     .data(form.imageUrl)
                     .crossfade(true)
                     .build(),
-                contentDescription = stringResource(R.string.thumbnail_for_form, form.title),
+                contentDescription = stringResource(R.string.thumbnail_for_form, displayTitle),
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(12.dp)),
@@ -93,7 +95,7 @@ fun FormListItem(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = form.title,
+                    text = displayTitle,
                     style = MaterialTheme.typography.titleMedium
                 )
 
@@ -118,7 +120,8 @@ fun FormListItem(
             FormActionButton(
                 label = stringResource(R.string.share),
                 onClick = onShareClick,
-                icon = Icons.Outlined.Share
+                icon = Icons.Outlined.Share,
+                enabled = shareEnabled
             )
             FormActionButton(
                 label = stringResource(R.string.edit),
@@ -167,9 +170,10 @@ private fun StatusLabel(status: FormStatus) {
 private fun FormActionButton(
     label: String,
     onClick: () -> Unit,
-    icon: ImageVector
+    icon: ImageVector,
+    enabled: Boolean = true
 ) {
-    TextButton(onClick = onClick) {
+    TextButton(onClick = onClick, enabled = enabled) {
         Icon(
             imageVector = icon,
             contentDescription = null,

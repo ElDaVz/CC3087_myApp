@@ -1,6 +1,7 @@
 package com.uvg.cc3087.myapp.ui.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.data.model.FieldOption
@@ -8,6 +9,9 @@ import com.uvg.cc3087.myapp.data.model.withSelectionMode
 import com.uvg.cc3087.myapp.data.model.TemplateType
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.testing.FakeTemplateRepository
+import com.uvg.cc3087.myapp.testing.FakeFormRepository
+import com.uvg.cc3087.myapp.testing.MainDispatcherRule
+import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.ui.state.EditFormAction
 import com.uvg.cc3087.myapp.ui.state.EditFormUiState
 import com.uvg.cc3087.myapp.ui.state.FieldMoveDirection
@@ -16,12 +20,20 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.Rule
+import org.junit.After
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
 class EditFormViewModelTest {
+    @get:Rule val mainDispatcherRule = MainDispatcherRule()
+    private val viewModels = ViewModelStore()
+    private var viewModelNumber = 0
+
+    @After fun clearViewModels() { viewModels.clear() }
+
     private val fields = listOf(
         FormFieldDraft("first", FormFieldType.TEXT, "Nombre", required = true),
         FormFieldDraft("middle", FormFieldType.MULTIPLE_CHOICE, "Pedido"),
@@ -31,7 +43,7 @@ class EditFormViewModelTest {
     @Test
     fun startingBlankDraftKeepsTheTitleAndNoFields() {
         val repository = templateRepository()
-        val viewModel = EditFormViewModel(repository, SavedStateHandle())
+        val viewModel = createViewModel(repository, SavedStateHandle())
 
         viewModel.startDraft("Sin título", null)
 
@@ -43,7 +55,7 @@ class EditFormViewModelTest {
     @Test
     fun startingFromTemplateCopiesTheFieldsWithoutChangingTheSource() {
         val sourceFields = fields.toMutableList()
-        val viewModel = EditFormViewModel(templateRepository(sourceFields), SavedStateHandle())
+        val viewModel = createViewModel(templateRepository(sourceFields), SavedStateHandle())
         viewModel.startDraft("Pedido", TemplateType.ORDER_FORM)
 
         sourceFields.clear()
@@ -178,13 +190,14 @@ class EditFormViewModelTest {
 
         viewModel.startDraft("Pedido", TemplateType.ORDER_FORM)
 
-        assertEquals(EditFormUiState(title = "Pedido", fields = fields), viewModel.uiState.value)
+        assertEquals("Pedido", viewModel.uiState.value.title)
+        assertEquals(fields, viewModel.uiState.value.fields)
     }
 
     @Test
     fun savedValuesRestoreTheTitleFieldsOrderIdsAndRequiredFlags() {
         val savedStateHandle = SavedStateHandle()
-        val original = EditFormViewModel(templateRepository(), savedStateHandle)
+        val original = createViewModel(templateRepository(), savedStateHandle)
         original.startDraft("Pedido", TemplateType.ORDER_FORM)
         original.onAction(EditFormAction.ChangeTitle("Pedido\n\"Especial\""))
         original.onAction(EditFormAction.ChangeFieldTitle("first", "Nombre actualizado"))
@@ -197,7 +210,7 @@ class EditFormViewModelTest {
             savedStateHandle.get<Any?>(key)
         }
         val restoredRepository = templateRepository()
-        val restored = EditFormViewModel(restoredRepository, SavedStateHandle(savedValues))
+        val restored = createViewModel(restoredRepository, SavedStateHandle(savedValues))
 
         assertEquals(original.uiState.value, restored.uiState.value)
         assertTrue(restoredRepository.requestedTemplateTypes.isEmpty())
@@ -232,7 +245,7 @@ class EditFormViewModelTest {
             )
         )
 
-        val viewModel = EditFormViewModel(templateRepository(), savedStateHandle)
+        val viewModel = createViewModel(templateRepository(), savedStateHandle)
 
         assertEquals("Pedido recuperado", viewModel.uiState.value.title)
         assertTrue(viewModel.uiState.value.fields.isEmpty())
@@ -242,7 +255,7 @@ class EditFormViewModelTest {
     fun creatingTheViewModelDoesNotStartATemplateDraft() {
         val repository = templateRepository()
 
-        val viewModel = EditFormViewModel(repository, SavedStateHandle())
+        val viewModel = createViewModel(repository, SavedStateHandle())
 
         assertEquals(EditFormUiState(), viewModel.uiState.value)
         assertTrue(repository.requestedTemplateTypes.isEmpty())
@@ -251,7 +264,7 @@ class EditFormViewModelTest {
     @Test
     fun theSelectedTemplateTypeChoosesTheFieldsNotTheDisplayedTitle() {
         val repository = templateRepository()
-        val viewModel = EditFormViewModel(repository, SavedStateHandle())
+        val viewModel = createViewModel(repository, SavedStateHandle())
 
         viewModel.startDraft("Título elegido por el usuario", TemplateType.FEEDBACK)
 
@@ -269,7 +282,7 @@ class EditFormViewModelTest {
                 TemplateType.FEEDBACK to feedbackFields
             )
         )
-        val viewModel = EditFormViewModel(repository, SavedStateHandle())
+        val viewModel = createViewModel(repository, SavedStateHandle())
         viewModel.startDraft("Formulario", TemplateType.ORDER_FORM)
         viewModel.onAction(EditFormAction.ChangeFieldTitle("first", "Editado"))
 
@@ -279,14 +292,15 @@ class EditFormViewModelTest {
             listOf(TemplateType.ORDER_FORM, TemplateType.FEEDBACK),
             repository.requestedTemplateTypes
         )
-        assertEquals(EditFormUiState("Formulario", feedbackFields), viewModel.uiState.value)
+        assertEquals("Formulario", viewModel.uiState.value.title)
+        assertEquals(feedbackFields, viewModel.uiState.value.fields)
         assertEquals("Nombre", fields.first().title)
     }
 
     @Test
     fun aTemplateWithoutFieldsDoesNotFallBackToSampleData() {
         val repository = FakeTemplateRepository()
-        val viewModel = EditFormViewModel(repository, SavedStateHandle())
+        val viewModel = createViewModel(repository, SavedStateHandle())
 
         viewModel.startDraft("Plantilla vacía", TemplateType.EVENT_RSVP)
 
@@ -298,7 +312,7 @@ class EditFormViewModelTest {
     @Test
     fun theProvidedInitialTitleIsPreservedWhenTheDraftIsRestored() {
         val savedStateHandle = SavedStateHandle()
-        val original = EditFormViewModel(templateRepository(), savedStateHandle)
+        val original = createViewModel(templateRepository(), savedStateHandle)
         original.startDraft("Formulario", null)
         val initialTitle = "Question: ¿cuál prefieres?"
 
@@ -307,7 +321,7 @@ class EditFormViewModelTest {
         val savedValues = savedStateHandle.keys().associateWith { key ->
             savedStateHandle.get<Any?>(key)
         }
-        val restored = EditFormViewModel(templateRepository(), SavedStateHandle(savedValues))
+        val restored = createViewModel(templateRepository(), SavedStateHandle(savedValues))
 
         assertEquals(initialTitle, original.uiState.value.fields.single().title)
         assertEquals(original.uiState.value, restored.uiState.value)
@@ -352,7 +366,7 @@ class EditFormViewModelTest {
     @Test
     fun serializedSavedStateRestoresEveryConfigurationAndOptionIdentity() {
         val saved = SavedStateHandle()
-        val original = EditFormViewModel(templateRepository(), saved)
+        val original = createViewModel(templateRepository(), saved)
         original.startDraft("Encuesta", TemplateType.ORDER_FORM)
         original.onAction(EditFormAction.UpdateField(fields[1].copy(
             options = listOf(FieldOption("coffee", "Café"), FieldOption("tea", "Té")),
@@ -379,7 +393,7 @@ class EditFormViewModelTest {
         val restoredValues = ObjectInputStream(ByteArrayInputStream(bytes)).use {
             it.readObject() as Map<String, Any?>
         }
-        val restored = EditFormViewModel(templateRepository(), SavedStateHandle(restoredValues))
+        val restored = createViewModel(templateRepository(), SavedStateHandle(restoredValues))
 
         assertEquals(original.uiState.value, restored.uiState.value)
         assertEquals(listOf("coffee", "tea"), restored.uiState.value.fields[1].options.map { it.id })
@@ -391,7 +405,7 @@ class EditFormViewModelTest {
             "editor_title" to "Anterior",
             "editor_fields" to arrayListOf("old", "TEXT", "Nombre", "true")
         ))
-        val viewModel = EditFormViewModel(templateRepository(), saved)
+        val viewModel = createViewModel(templateRepository(), saved)
         assertEquals(listOf(FormFieldDraft("old", FormFieldType.TEXT, "Nombre", true)), viewModel.uiState.value.fields)
         viewModel.onAction(EditFormAction.ChangeTitle("Actualizado"))
         assertTrue(saved.contains("editor_fields_v2"))
@@ -413,11 +427,16 @@ class EditFormViewModelTest {
     private fun editor(
         title: String = "Pedido",
         initialFields: List<FormFieldDraft> = fields
-    ) = EditFormViewModel(templateRepository(initialFields), SavedStateHandle()).apply {
+    ) = createViewModel(templateRepository(initialFields), SavedStateHandle()).apply {
         startDraft(title, TemplateType.ORDER_FORM)
     }
 
     private fun templateRepository(initialFields: List<FormFieldDraft> = fields) = FakeTemplateRepository(
         initialFieldsByTemplate = TemplateType.entries.associateWith { initialFields }
     )
+
+    private fun createViewModel(templates: TemplateRepository, saved: SavedStateHandle) =
+        EditFormViewModel(templates, saved, FakeFormRepository()).also {
+            viewModels.put("editor-${viewModelNumber++}", it)
+        }
 }

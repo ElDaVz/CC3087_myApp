@@ -13,6 +13,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.espresso.Espresso.pressBack
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
+import com.uvg.cc3087.myapp.data.repository.SampleFormRepository
+import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.flow.flowOf
@@ -33,7 +35,8 @@ class EditorPreviewTest {
                 TestEditor("Encuesta", listOf(FormFieldDraft("name", FormFieldType.TEXT, "Nombre", required = true)))
             }
         }
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithText("Vista previa").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Vista previa").assertHasClickAction().performClick()
         compose.onNodeWithText("Probar envío").performScrollTo().performClick()
         compose.onNodeWithText("Este campo es obligatorio").assertExists()
         compose.onNodeWithText("Tu respuesta").performTextInput("Ana")
@@ -42,7 +45,7 @@ class EditorPreviewTest {
         compose.onNodeWithContentDescription("Volver al editor").performClick()
         compose.onNodeWithText("Nombre").assertExists()
         compose.onNodeWithText("Ana").assertDoesNotExist()
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithContentDescription("Vista previa").performClick()
         pressBack()
         compose.onNodeWithText("Editar formulario").assertExists()
     }
@@ -58,7 +61,7 @@ class EditorPreviewTest {
         }
         compose.onNodeWithContentDescription("Mover campo 1 arriba").assertIsNotEnabled()
         compose.onNodeWithContentDescription("Mover campo 1 abajo").performClick()
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithContentDescription("Vista previa").performClick()
         compose.onNodeWithText("1. Segundo").assertExists()
         compose.onNodeWithText("2. Primero").assertExists()
     }
@@ -89,7 +92,7 @@ class EditorPreviewTest {
         }
         compose.onNodeWithText("Varias").performScrollTo().performClick()
         restoration.emulateSavedInstanceStateRestore()
-        compose.onNodeWithText("Vista previa").performClick()
+        compose.onNodeWithContentDescription("Vista previa").performClick()
         compose.onNodeWithText("Selecciona todas las opciones que correspondan").assertExists()
         compose.onNodeWithText("Café").performClick()
         compose.onNodeWithText("Té").performClick()
@@ -100,7 +103,7 @@ class EditorPreviewTest {
 
 // mantenemos el idioma de las pruebas sin cambiar la configuración del emulador
 @Composable
-private fun SpanishTestTheme(content: @Composable () -> Unit) {
+internal fun SpanishTestTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val configuration = remember(context) {
         Configuration(context.resources.configuration).apply { setLocale(Locale.forLanguageTag("es")) }
@@ -134,9 +137,12 @@ private fun TestEditor(title: String, initialFields: List<FormFieldDraft>) {
             override fun observeTemplates() = flowOf(emptyList<FormTemplate>())
             override fun getInitialFields(templateType: TemplateType) = initialFields
         }
-        EditFormViewModel(repository, saved).apply {
+        EditFormViewModel(repository, saved, SampleFormRepository()).apply {
             if (!saved.contains("editor_title")) startDraft(title, TemplateType.ORDER_FORM)
         }
+    }
+    DisposableEffect(viewModel) {
+        onDispose { ViewModelStore().apply { put("editor", viewModel); clear() } }
     }
     val state by viewModel.uiState.collectAsState()
     EditForm(state, viewModel::onAction, viewModel::validate, onBackClick = {})

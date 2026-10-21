@@ -5,9 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,12 +18,19 @@ import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.TemplateSampleData
 import com.uvg.cc3087.myapp.data.model.FormTemplate
+import com.uvg.cc3087.myapp.data.repository.FormRepository
+import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.di.AppContainer
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.resources.titleResId
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
 import com.uvg.cc3087.myapp.ui.screens.EditForm
 import com.uvg.cc3087.myapp.ui.screens.Forms
+import com.uvg.cc3087.myapp.ui.screens.SaveShareScreen
+import com.uvg.cc3087.myapp.ui.state.SaveShareUiState
+import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
+import com.uvg.cc3087.myapp.ui.resources.copyFormLink
+import com.uvg.cc3087.myapp.ui.resources.shareFormLinkOnWhatsApp
 import com.uvg.cc3087.myapp.ui.state.ChooseTemplateUiState
 import com.uvg.cc3087.myapp.ui.state.EditFormAction
 import com.uvg.cc3087.myapp.ui.state.EditFormUiState
@@ -31,36 +40,46 @@ import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
+import com.uvg.cc3087.myapp.ui.viewmodel.SaveShareViewModel
 
 private enum class AppDestination {
     FORMS,
     CHOOSE_TEMPLATE,
-    EDIT_FORM
+    EDIT_FORM,
+    SAVE_SHARE
 }
 
 @Composable
 fun FormLinkApp() {
+    val context = LocalContext.current.applicationContext
+    val formRepository = remember(context) { AppContainer.formRepository(context) }
     val resources = LocalResources.current
     val languageTags = resources.configuration.locales.toLanguageTags()
     LaunchedEffect(languageTags) {
-        AppContainer.updateSampleData(
-            FormSampleData.forms(resources),
-            FormEditorSampleData.templateFields(resources)
-        )
+        AppContainer.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
-    // este viewmodel vive en la actividad y conserva el filtro al ir a plantillas :D
+    FormLinkRoute(formRepository, AppContainer.templateRepository)
+}
+
+@Composable
+internal fun FormLinkRoute(formRepository: FormRepository, templateRepository: TemplateRepository) {
+    val resources = LocalResources.current
+    // los viewmodels comparten el repositorio, no una copia de los formularios
     val formsViewModel: FormsViewModel = viewModel(
-        factory = FormsViewModel.factory(AppContainer.formRepository)
+        factory = FormsViewModel.factory(formRepository)
     )
     val formsUiState by formsViewModel.uiState.collectAsStateWithLifecycle()
     val chooseTemplateViewModel: ChooseTemplateViewModel = viewModel(
-        factory = ChooseTemplateViewModel.factory(AppContainer.templateRepository)
+        factory = ChooseTemplateViewModel.factory(templateRepository)
     )
     val chooseTemplateUiState by chooseTemplateViewModel.uiState.collectAsStateWithLifecycle()
     val editFormViewModel: EditFormViewModel = viewModel(
-        factory = EditFormViewModel.factory(AppContainer.templateRepository)
+        factory = EditFormViewModel.factory(templateRepository, formRepository)
     )
     val editFormUiState by editFormViewModel.uiState.collectAsStateWithLifecycle()
+    val saveShareViewModel: SaveShareViewModel = viewModel(factory = SaveShareViewModel.factory(formRepository))
+    val saveShareUiState by saveShareViewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     FormLinkContent(
         formsUiState = formsUiState,
@@ -75,7 +94,16 @@ fun FormLinkApp() {
             )
         },
         onEditorAction = editFormViewModel::onAction,
-        onValidateEditor = editFormViewModel::validate
+        onValidateEditor = editFormViewModel::validate,
+        onOpenDraft = editFormViewModel::openDraft,
+        onRetrySave = editFormViewModel::retrySave,
+        onRetryEditorLoad = editFormViewModel::retryLoad,
+        onRetryFormsLoad = formsViewModel::retryLoading,
+        saveShareUiState = saveShareUiState,
+        onOpenSaveShare = saveShareViewModel::openDraft,
+        onRetrySaveShareLoad = saveShareViewModel::retryLoading,
+        onCopyLink = { copyFormLink(context, it) },
+        onWhatsAppShare = { shareFormLinkOnWhatsApp(context, it) }
     )
 }
 
@@ -87,32 +115,47 @@ private fun FormLinkContent(
     onFilterSelected: (FormFilter) -> Unit,
     onStartEditor: (FormTemplate?) -> Unit,
     onEditorAction: (EditFormAction) -> Unit,
-    onValidateEditor: () -> FormValidationResult
+    onValidateEditor: () -> FormValidationResult,
+    onOpenDraft: (String) -> Unit = {},
+    onRetrySave: () -> Unit = {},
+    onRetryEditorLoad: () -> Unit = {},
+    onRetryFormsLoad: () -> Unit = {},
+    saveShareUiState: SaveShareUiState = SaveShareUiState(),
+    onOpenSaveShare: (String) -> Unit = {},
+    onRetrySaveShareLoad: () -> Unit = {},
+    onCopyLink: (String) -> Boolean = { false },
+    onWhatsAppShare: (String) -> Boolean = { false }
 ) {
     // cada pantalla recibe su estado y la navegación sigue aquí
     var currentDestination by rememberSaveable {
         mutableStateOf(AppDestination.FORMS)
+    }
+    var editorReturnDestination by rememberSaveable {
+        mutableStateOf(AppDestination.CHOOSE_TEMPLATE)
+    }
+    var saveShareReturnDestination by rememberSaveable {
+        mutableStateOf(AppDestination.EDIT_FORM)
     }
 
     val showForms = {
         currentDestination = AppDestination.FORMS
     }
 
-    val showTemplates = {
-        currentDestination = AppDestination.CHOOSE_TEMPLATE
-    }
-
     val showEditor: (FormTemplate?) -> Unit = { template ->
         // solo iniciar desde plantillas reinicia el borrador, no una recomposición o rotación
         onStartEditor(template)
+        editorReturnDestination = AppDestination.CHOOSE_TEMPLATE
         currentDestination = AppDestination.EDIT_FORM
     }
+
+    val leaveEditor = { currentDestination = editorReturnDestination }
 
     // el botón físico sigue el mismo recorrido que las flechas de la app
     BackHandler(enabled = currentDestination != AppDestination.FORMS) {
         when (currentDestination) {
             AppDestination.CHOOSE_TEMPLATE -> showForms()
-            AppDestination.EDIT_FORM -> showTemplates()
+            AppDestination.EDIT_FORM -> leaveEditor()
+            AppDestination.SAVE_SHARE -> { currentDestination = saveShareReturnDestination }
             AppDestination.FORMS -> Unit
         }
     }
@@ -124,6 +167,18 @@ private fun FormLinkContent(
                 onFilterSelected = onFilterSelected,
                 onNewFormClick = {
                     currentDestination = AppDestination.CHOOSE_TEMPLATE
+                },
+                onFormClick = { form ->
+                    onOpenDraft(form.id)
+                    editorReturnDestination = AppDestination.FORMS
+                    currentDestination = AppDestination.EDIT_FORM
+                },
+                onRetryLoad = onRetryFormsLoad,
+                unsavedDraftId = editFormUiState.takeIf { it.saveStatus != DraftSaveStatus.SAVED }?.draftId,
+                onShareFormClick = { form ->
+                    onOpenSaveShare(form.id)
+                    saveShareReturnDestination = AppDestination.FORMS
+                    currentDestination = AppDestination.SAVE_SHARE
                 }
             )
         }
@@ -142,7 +197,29 @@ private fun FormLinkContent(
                 uiState = editFormUiState,
                 onAction = onEditorAction,
                 onValidate = onValidateEditor,
-                onBackClick = showTemplates
+                onBackClick = leaveEditor,
+                onRetrySave = onRetrySave,
+                onRetryLoad = onRetryEditorLoad,
+                onSaveForm = {
+                    val id = editFormUiState.draftId
+                    if (id != null && editFormUiState.saveStatus == DraftSaveStatus.SAVED &&
+                        onValidateEditor() == FormValidationResult.READY) {
+                        onOpenSaveShare(id)
+                        saveShareReturnDestination = AppDestination.EDIT_FORM
+                        currentDestination = AppDestination.SAVE_SHARE
+                    }
+                }
+            )
+        }
+
+        AppDestination.SAVE_SHARE -> {
+            SaveShareScreen(
+                uiState = saveShareUiState,
+                onBack = { currentDestination = saveShareReturnDestination },
+                onBackToForms = showForms,
+                onRetry = onRetrySaveShareLoad,
+                onCopyLink = onCopyLink,
+                onWhatsAppShare = onWhatsAppShare
             )
         }
     }

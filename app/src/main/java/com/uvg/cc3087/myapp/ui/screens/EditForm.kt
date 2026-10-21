@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -24,7 +25,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +45,8 @@ import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.components.AddFieldBottomSheet
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
+import com.uvg.cc3087.myapp.ui.components.DraftLoadStatus
+import com.uvg.cc3087.myapp.ui.components.DraftSaveNotice
 import com.uvg.cc3087.myapp.ui.resources.messageResId
 import com.uvg.cc3087.myapp.ui.state.EditFormAction
 import com.uvg.cc3087.myapp.ui.state.EditFormUiState
@@ -59,7 +61,10 @@ fun EditForm(
     onAction: (EditFormAction) -> Unit,
     onValidate: () -> FormValidationResult,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRetrySave: () -> Unit = {},
+    onRetryLoad: () -> Unit = {},
+    onSaveForm: (() -> Unit)? = null
 ) {
     val resources = LocalResources.current
     val focusManager = LocalFocusManager.current
@@ -91,11 +96,15 @@ fun EditForm(
         pendingScrollId = fieldId
     }
 
-    if (showPreview) {
+    val canEdit = !uiState.isLoading && uiState.loadError == null
+    if (showPreview && canEdit) {
         FormPreviewScreen(
             title = uiState.title,
             fields = uiState.fields,
-            onClose = { showPreview = false }
+            onClose = { showPreview = false },
+            onSaveForm = onSaveForm,
+            saveStatus = uiState.saveStatus,
+            onRetrySave = onRetrySave
         )
         return
     }
@@ -103,36 +112,56 @@ fun EditForm(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.edit_form_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.ArrowBack,
-                            stringResource(R.string.back_to_templates)
-                        )
+            Column {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.edit_form_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.ArrowBack,
+                                stringResource(R.string.go_back)
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(enabled = canEdit, onClick = {
+                            focusManager.clearFocus()
+                            showPreview = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Visibility,
+                                contentDescription = stringResource(R.string.preview)
+                            )
+                        }
                     }
-                },
-                actions = {
-                    TextButton(onClick = {
-                        focusManager.clearFocus()
-                        showPreview = true
-                    }) {
-                        Text(stringResource(R.string.preview))
-                    }
+                )
+                if (canEdit) {
+                    DraftSaveNotice(
+                        uiState.saveStatus,
+                        onRetrySave,
+                        Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)
+                    )
                 }
-            )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showFieldCatalog = true },
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.add_field)) }
-            )
+            if (canEdit) {
+                ExtendedFloatingActionButton(
+                    onClick = { showFieldCatalog = true },
+                    icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                    text = { Text(stringResource(R.string.add_field)) }
+                )
+            }
         }
     ) { innerPadding ->
-        LazyColumn(
+        if (!canEdit) {
+            DraftLoadStatus(
+                error = uiState.loadError,
+                onRetry = onRetryLoad,
+                modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)
+            )
+        } else LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().padding(innerPadding).imePadding(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
@@ -197,7 +226,7 @@ fun EditForm(
         }
     }
 
-    if (showFieldCatalog) {
+    if (showFieldCatalog && canEdit) {
         AddFieldBottomSheet(
             onDismissRequest = { showFieldCatalog = false },
             onFieldSelected = { type ->

@@ -1,4 +1,6 @@
-# CC3087_myApp
+git add README.md
+git commit -m "docs: restaura README original del equipo"
+git push origin Features/tony-avance-ui# CC3087_myApp
 
 Proyecto desarrollado con **Android Studio**, utilizando **Kotlin** y **Jetpack Compose**.
 

@@ -21,6 +21,8 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -58,7 +60,10 @@ fun Forms(
     modifier: Modifier = Modifier,
     onFilterSelected: (FormFilter) -> Unit = {},
     onNewFormClick: () -> Unit = {},
-    onFormClick: (FormSummary) -> Unit = {}
+    onFormClick: (FormSummary) -> Unit = {},
+    onRetryLoad: () -> Unit = {},
+    onShareFormClick: (FormSummary) -> Unit = {},
+    unsavedDraftId: String? = null
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -112,11 +117,29 @@ fun Forms(
                 FormsControls(
                     selectedFilter = uiState.selectedFilter,
                     onFilterSelected = onFilterSelected,
-                    onNewFormClick = {
-                        onNewFormClick()
-                        showMessage(R.string.new_form_selected)
-                    }
+                    onNewFormClick = onNewFormClick
                 )
+            }
+
+            if (uiState.isLoading || uiState.hasLoadError || uiState.forms.isEmpty()) {
+                item(key = "forms-status") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        if (uiState.isLoading) CircularProgressIndicator()
+                        Text(stringResource(when {
+                            uiState.isLoading -> R.string.forms_loading
+                            uiState.hasLoadError -> R.string.forms_load_error
+                            uiState.selectedFilter == FormFilter.ALL -> R.string.forms_empty
+                            else -> R.string.forms_filter_empty
+                        }))
+                        if (uiState.hasLoadError) {
+                            OutlinedButton(onClick = onRetryLoad) { Text(stringResource(R.string.retry)) }
+                        }
+                    }
+                }
             }
 
             // usamos el id real para que compose identifique cada elemento correctamente
@@ -126,13 +149,11 @@ fun Forms(
             ) { form ->
                 FormListItem(
                     form = form,
-                    onClick = {
-                        onFormClick(form)
-                        showMessage(R.string.form_selected, form.title)
-                    },
-                    onShareClick = { showMessage(R.string.share_form, form.title) },
-                    onEditClick = { showMessage(R.string.edit_form, form.title) },
-                    onViewClick = { showMessage(R.string.view_form, form.title) }
+                    onClick = { onFormClick(form) },
+                    onShareClick = { onShareFormClick(form) },
+                    onEditClick = { onFormClick(form) },
+                    onViewClick = { showMessage(R.string.view_form, form.title) },
+                    shareEnabled = form.id != unsavedDraftId
                 )
             }
         }

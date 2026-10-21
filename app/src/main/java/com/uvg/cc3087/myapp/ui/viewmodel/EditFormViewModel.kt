@@ -4,41 +4,98 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
+import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.data.model.TemplateType
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
+import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.domain.validation.FormDraftValidator
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.state.EditFormAction
 import com.uvg.cc3087.myapp.ui.state.EditFormUiState
 import com.uvg.cc3087.myapp.ui.state.FieldMoveDirection
+import com.uvg.cc3087.myapp.ui.state.DraftLoadError
+import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class EditFormViewModel(
     private val templateRepository: TemplateRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val formRepository: FormRepository,
+    private val now: () -> Long = System::currentTimeMillis
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(restoreState())
     val uiState: StateFlow<EditFormUiState> = mutableUiState.asStateFlow()
+    private var createdAt = savedStateHandle.get<Long>(CREATED_AT_KEY) ?: 0L
+    private var revision = 0L
+    private val requests = Channel<DraftRequest>(Channel.UNLIMITED)
+
+    init {
+        viewModelScope.launch {
+            // las lecturas esperan los guardados anteriores para no reabrir una versión vieja
+            for (request in requests) {
+                when (request) {
+                    is DraftRequest.Save -> save(request)
+                    is DraftRequest.Load -> load(request)
+                }
+            }
+        }
+        val pendingId = savedStateHandle.get<String>(ID_KEY)
+        if (savedStateHandle.get<Boolean>(LOADING_KEY) == true && pendingId != null) {
+            openDraft(pendingId)
+        } else if (savedStateHandle.contains(TITLE_KEY)) {
+            // recuperamos también las ediciones que android conservó antes de terminar una escritura
+            if (!savedStateHandle.contains(CREATED_AT_KEY)) createdAt = now()
+            updateState(mutableUiState.value.copy(draftId = pendingId ?: newId()))
+        }
+    }
 
     fun startDraft(title: String, templateType: TemplateType?) {
         // la ui pasa la selección y aquí obtenemos los datos para iniciar el editor
         val fields = templateType?.let(templateRepository::getInitialFields).orEmpty()
         // entrar desde una plantilla crea un borrador nuevo, aunque el título sea el mismo
+        createdAt = now()
         updateState(EditFormUiState(
             title = title,
-            fields = fields.map { it.copy(options = it.options.toList()) }
+            fields = fields.map { it.copy(options = it.options.toList()) },
+            draftId = newId()
         ))
+    }
+
+    fun openDraft(id: String) {
+        revision++
+        mutableUiState.value = EditFormUiState(draftId = id, isLoading = true)
+        savedStateHandle[ID_KEY] = id
+        savedStateHandle[LOADING_KEY] = true
+        savedStateHandle.remove<String>(TITLE_KEY)
+        savedStateHandle.remove<ArrayList<FormFieldDraft>>(FIELDS_V2_KEY)
+        savedStateHandle.remove<ArrayList<String>>(FIELDS_KEY)
+        requests.trySend(DraftRequest.Load(id, revision))
+    }
+
+    fun retrySave() {
+        val current = mutableUiState.value
+        if (current.saveStatus == DraftSaveStatus.ERROR) updateState(current)
+    }
+
+    fun retryLoad() {
+        val current = mutableUiState.value
+        if (current.loadError != null) current.draftId?.let(::openDraft)
     }
 
     fun onAction(action: EditFormAction) {
         val current = mutableUiState.value
+        if (current.isLoading || current.loadError != null || current.draftId == null) return
         val updated = when (action) {
             is EditFormAction.ChangeTitle -> current.copy(title = action.title)
             is EditFormAction.AddField -> current.copy(
@@ -101,31 +158,99 @@ class EditFormViewModel(
     }
 
     private fun updateState(updated: EditFormUiState) {
+        val id = updated.draftId ?: return
+        revision++
+        val saving = updated.copy(saveStatus = DraftSaveStatus.SAVING, isLoading = false, loadError = null)
+        rememberDraft(saving)
+        mutableUiState.value = saving
+        requests.trySend(DraftRequest.Save(
+            FormDraft(id, saving.title, saving.fields, createdAt, now()), revision
+        ))
+    }
+
+    private fun rememberDraft(updated: EditFormUiState) {
+        savedStateHandle[ID_KEY] = updated.draftId
+        savedStateHandle[CREATED_AT_KEY] = createdAt
+        savedStateHandle[LOADING_KEY] = false
         savedStateHandle[TITLE_KEY] = updated.title
         // el modelo ya es serializable y así no perdemos opciones ni ajustes al restaurar
         savedStateHandle[FIELDS_V2_KEY] = ArrayList(
             updated.fields.map { it.copy(options = it.options.toList()) }
         )
         savedStateHandle.remove<ArrayList<String>>(FIELDS_KEY)
-        mutableUiState.value = updated
+    }
+
+    private suspend fun save(request: DraftRequest.Save) {
+        val result = try {
+            formRepository.saveDraft(request.draft)
+            DraftSaveStatus.SAVED
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            DraftSaveStatus.ERROR
+        }
+        // una escritura anterior no puede marcar como guardada una edición más reciente
+        if (revision == request.revision && mutableUiState.value.draftId == request.draft.id) {
+            mutableUiState.value = mutableUiState.value.copy(saveStatus = result)
+        }
+    }
+
+    private suspend fun load(request: DraftRequest.Load) {
+        try {
+            val draft = formRepository.getDraft(request.id)
+            if (revision != request.revision) return
+            if (draft == null) {
+                mutableUiState.value = mutableUiState.value.copy(
+                    isLoading = false, loadError = DraftLoadError.NOT_FOUND
+                )
+            } else {
+                createdAt = draft.createdAt
+                val loaded = EditFormUiState(
+                    title = draft.title, fields = draft.fields, draftId = draft.id,
+                    saveStatus = DraftSaveStatus.SAVED
+                )
+                rememberDraft(loaded)
+                mutableUiState.value = loaded
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            if (revision == request.revision) {
+                mutableUiState.value = mutableUiState.value.copy(
+                    isLoading = false, loadError = DraftLoadError.FAILED
+                )
+            }
+        }
+    }
+
+    override fun onCleared() {
+        requests.close()
+    }
+
+    private fun newId() = "draft-${UUID.randomUUID()}"
+
+    private sealed interface DraftRequest {
+        data class Save(val draft: FormDraft, val revision: Long) : DraftRequest
+        data class Load(val id: String, val revision: Long) : DraftRequest
     }
 
     private fun restoreState(): EditFormUiState {
         val title = savedStateHandle.get<String>(TITLE_KEY).orEmpty()
+        val id = savedStateHandle.get<String>(ID_KEY)
         if (savedStateHandle.contains(FIELDS_V2_KEY)) {
             val savedFields = savedStateHandle.get<ArrayList<*>>(FIELDS_V2_KEY).orEmpty()
             val fields = savedFields.filterIsInstance<FormFieldDraft>()
-            return EditFormUiState(title = title, fields = fields)
+            return EditFormUiState(title = title, fields = fields, draftId = id)
         }
         // todavía aceptamos los borradores de cuatro valores de la versión anterior
         val values = savedStateHandle.get<ArrayList<String>>(FIELDS_KEY).orEmpty()
-        if (values.size % FIELD_VALUE_COUNT != 0) return EditFormUiState(title = title)
+        if (values.size % FIELD_VALUE_COUNT != 0) return EditFormUiState(title = title, draftId = id)
 
         val fields = values.chunked(FIELD_VALUE_COUNT).map { fieldValues ->
             val type = FormFieldType.entries.firstOrNull { it.name == fieldValues[1] }
-                ?: return EditFormUiState(title = title)
+                ?: return EditFormUiState(title = title, draftId = id)
             val required = fieldValues[3].toBooleanStrictOrNull()
-                ?: return EditFormUiState(title = title)
+                ?: return EditFormUiState(title = title, draftId = id)
             FormFieldDraft(
                 id = fieldValues[0],
                 type = type,
@@ -133,7 +258,7 @@ class EditFormViewModel(
                 required = required
             )
         }
-        return EditFormUiState(title = title, fields = fields)
+        return EditFormUiState(title = title, fields = fields, draftId = id)
     }
 
     companion object {
@@ -141,9 +266,12 @@ class EditFormViewModel(
         private const val FIELDS_KEY = "editor_fields"
         private const val FIELDS_V2_KEY = "editor_fields_v2"
         private const val FIELD_VALUE_COUNT = 4
+        private const val ID_KEY = "editor_draft_id"
+        private const val CREATED_AT_KEY = "editor_created_at"
+        private const val LOADING_KEY = "editor_loading_draft"
 
-        fun factory(templateRepository: TemplateRepository): ViewModelProvider.Factory = viewModelFactory {
-            initializer { EditFormViewModel(templateRepository, createSavedStateHandle()) }
+        fun factory(templateRepository: TemplateRepository, formRepository: FormRepository): ViewModelProvider.Factory = viewModelFactory {
+            initializer { EditFormViewModel(templateRepository, createSavedStateHandle(), formRepository) }
         }
     }
 }

@@ -15,7 +15,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class FormsViewModel(
     repository: FormRepository,
     private val savedStateHandle: SavedStateHandle
@@ -25,11 +33,20 @@ class FormsViewModel(
         FormFilter.ALL.name
     )
 
+    private val reloadRequests = MutableStateFlow(0)
+    private val sourceState = reloadRequests.flatMapLatest {
+        repository.observeForms()
+            .map { forms -> FormsUiState(forms = forms) }
+            .onStart { emit(FormsUiState(isLoading = true)) }
+            .catch { emit(FormsUiState(hasLoadError = true)) }
+    }
+
     // si cambia la lista o el filtro, calculamos un solo estado para la pantalla
     val uiState: StateFlow<FormsUiState> = combine(
-        repository.observeForms(),
+        sourceState,
         savedFilter
-    ) { forms, filterName ->
+    ) { source, filterName ->
+        val forms = source.forms
         val selectedFilter = restoreFilter(filterName)
         val visibleForms = when (selectedFilter) {
             FormFilter.ALL -> forms
@@ -37,12 +54,16 @@ class FormsViewModel(
             FormFilter.DRAFT -> forms.filter { it.status == FormStatus.DRAFT }
         }
 
-        FormsUiState(forms = visibleForms, selectedFilter = selectedFilter)
+        source.copy(forms = visibleForms, selectedFilter = selectedFilter)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value))
+        initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value), isLoading = true)
     )
+
+    fun retryLoading() {
+        reloadRequests.update { it + 1 }
+    }
 
     fun selectFilter(filter: FormFilter) {
         // guardamos el nombre estable para recuperar la selección al recrear la app

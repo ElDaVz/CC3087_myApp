@@ -1,22 +1,27 @@
 package com.uvg.cc3087.myapp.di
 
+import android.content.Context
+import com.uvg.cc3087.myapp.data.local.FormLinkDatabase
 import com.uvg.cc3087.myapp.data.repository.FormRepository
-import com.uvg.cc3087.myapp.data.repository.SampleFormRepository
+import com.uvg.cc3087.myapp.data.repository.RoomFormRepository
 import com.uvg.cc3087.myapp.data.repository.SampleTemplateRepository
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
-import com.uvg.cc3087.myapp.data.model.FormSummary
 
 // aquí elegimos la fuente de datos sin hacer que las pantallas la construyan
 object AppContainer {
-    private val sampleForms by lazy { SampleFormRepository() }
+    private var localForms: FormRepository? = null
     private val sampleTemplates by lazy { SampleTemplateRepository() }
-    val formRepository: FormRepository get() = sampleForms
+    @Synchronized
+    fun formRepository(context: Context): FormRepository {
+        return localForms ?: RoomFormRepository(FormLinkDatabase.open(context).drafts()).also {
+            localForms = it
+        }
+    }
     val templateRepository: TemplateRepository get() = sampleTemplates
 
     // solo los ejemplos reciben traducciones desde la raíz, no los viewmodels
-    fun updateSampleData(forms: List<FormSummary>, fields: List<FormFieldDraft>) {
-        sampleForms.updateSampleForms(forms)
+    fun updateTemplateFields(fields: List<FormFieldDraft>) {
         sampleTemplates.updateSampleFields(fields)
     }
 }
