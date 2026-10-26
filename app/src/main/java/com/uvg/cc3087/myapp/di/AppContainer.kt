@@ -11,10 +11,13 @@ import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 // aquí elegimos la fuente de datos sin hacer que las pantallas la construyan
 object AppContainer {
     private var localForms: FormRepository? = null
+    private lateinit var appContext: Context
+    private val database by lazy { FormLinkDatabase.open(appContext) }
     private val sampleTemplates by lazy { SampleTemplateRepository() }
     @Synchronized
     fun formRepository(context: Context): FormRepository {
-        return localForms ?: RoomFormRepository(FormLinkDatabase.open(context).drafts()).also {
+        if (!::appContext.isInitialized) appContext = context.applicationContext
+        return localForms ?: RoomFormRepository(database.drafts()).also {
             localForms = it
         }
     }

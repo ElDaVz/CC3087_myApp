@@ -7,6 +7,7 @@ import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.testing.MainDispatcherRule
 import com.uvg.cc3087.myapp.ui.state.FormFilter
+import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -157,15 +158,33 @@ class FormsViewModelTest {
         observe(viewModel)
         viewModel.selectFilter(FormFilter.DRAFT)
         runCurrent()
-        assertTrue(viewModel.uiState.value.hasLoadError)
+        assertEquals(FormsLoadStatus.ERROR, viewModel.uiState.value.status)
         failRead = false
         viewModel.retryLoading()
         runCurrent()
 
-        assertEquals(false, viewModel.uiState.value.hasLoadError)
-        assertEquals(false, viewModel.uiState.value.isLoading)
+        assertEquals(FormsLoadStatus.CONTENT, viewModel.uiState.value.status)
         assertEquals(FormFilter.DRAFT, viewModel.uiState.value.selectedFilter)
         assertEquals(listOf(forms[1]), viewModel.uiState.value.forms)
+    }
+
+    @Test
+    fun listExposesLoadingEmptyContentAndErrorStates() = runTest {
+        val emptyModel = FormsViewModel(FakeFormRepository(emptyList()), SavedStateHandle())
+        assertEquals(FormsLoadStatus.LOADING, emptyModel.uiState.value.status)
+        observe(emptyModel)
+        assertEquals(FormsLoadStatus.EMPTY, emptyModel.uiState.value.status)
+
+        val contentModel = FormsViewModel(FakeFormRepository(forms), SavedStateHandle())
+        observe(contentModel)
+        assertEquals(FormsLoadStatus.CONTENT, contentModel.uiState.value.status)
+
+        val broken = object : FormRepository by FakeFormRepository(forms) {
+            override fun observeForms(): Flow<List<FormSummary>> = flow { throw IOException("read failed") }
+        }
+        val errorModel = FormsViewModel(broken, SavedStateHandle())
+        observe(errorModel)
+        assertEquals(FormsLoadStatus.ERROR, errorModel.uiState.value.status)
     }
 
     private fun TestScope.observe(viewModel: FormsViewModel) {

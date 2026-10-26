@@ -64,7 +64,10 @@ fun EditForm(
     modifier: Modifier = Modifier,
     onRetrySave: () -> Unit = {},
     onRetryLoad: () -> Unit = {},
-    onSaveForm: (() -> Unit)? = null
+    onSaveForm: (() -> Unit)? = null,
+    configurationErrors: () -> Map<String, Set<com.uvg.cc3087.myapp.data.model.FieldError>> = { emptyMap() },
+    validatePreviewAnswers: (Map<String, com.uvg.cc3087.myapp.data.model.FormAnswer>, Boolean, java.util.Locale) -> Map<String, com.uvg.cc3087.myapp.data.model.FieldError> = { _, _, _ -> emptyMap() },
+    canAdvanceToSaveShare: () -> Boolean = { false }
 ) {
     val resources = LocalResources.current
     val focusManager = LocalFocusManager.current
@@ -104,7 +107,9 @@ fun EditForm(
             onClose = { showPreview = false },
             onSaveForm = onSaveForm,
             saveStatus = uiState.saveStatus,
-            onRetrySave = onRetrySave
+            onRetrySave = onRetrySave,
+            configurationErrors = configurationErrors(),
+            validateAnswers = validatePreviewAnswers
         )
         return
     }

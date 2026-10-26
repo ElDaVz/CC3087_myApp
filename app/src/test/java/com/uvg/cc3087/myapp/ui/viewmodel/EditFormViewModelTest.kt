@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.model.FormAnswer
+import com.uvg.cc3087.myapp.data.model.FieldError
 import com.uvg.cc3087.myapp.data.model.FieldOption
 import com.uvg.cc3087.myapp.data.model.withSelectionMode
 import com.uvg.cc3087.myapp.data.model.TemplateType
@@ -50,6 +52,34 @@ class EditFormViewModelTest {
         assertEquals("Sin título", viewModel.uiState.value.title)
         assertTrue(viewModel.uiState.value.fields.isEmpty())
         assertTrue(repository.requestedTemplateTypes.isEmpty())
+    }
+
+    @Test
+    fun previewValidationIsOwnedByTheViewModel() {
+        val viewModel = editor()
+        viewModel.onAction(EditFormAction.DeleteField("first"))
+        viewModel.onAction(EditFormAction.DeleteField("middle"))
+        viewModel.onAction(EditFormAction.DeleteField("last"))
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.MULTIPLE_CHOICE, ""))
+        val broken = viewModel.uiState.value.fields.single()
+        viewModel.onAction(EditFormAction.UpdateField(broken.copy(options = emptyList())))
+        val configErrors = viewModel.previewConfigurationErrors()
+        assertEquals(setOf(FieldError.MISSING_QUESTION, FieldError.TOO_FEW_OPTIONS), configErrors[broken.id])
+
+        viewModel.onAction(EditFormAction.UpdateField(broken.copy(type = FormFieldType.TEXT, title = "Pregunta", required = true)))
+        val fieldId = viewModel.uiState.value.fields.single().id
+        val errors = viewModel.validatePreviewAnswers(mapOf(fieldId to FormAnswer()), true, java.util.Locale.US)
+        assertEquals(FieldError.REQUIRED, errors[fieldId])
+        assertTrue(viewModel.validatePreviewAnswers(mapOf(fieldId to FormAnswer(text = "ok")), true, java.util.Locale.US).isEmpty())
+    }
+
+    @Test
+    fun saveAndShareRequiresAValidDraftThatIsAlreadySaved() {
+        val viewModel = editor()
+        assertFalse(viewModel.canAdvanceToSaveShare())
+        viewModel.onAction(EditFormAction.ChangeTitle("Pedido"))
+        viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Nombre"))
+        assertFalse(viewModel.canAdvanceToSaveShare())
     }
 
     @Test

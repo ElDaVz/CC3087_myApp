@@ -50,6 +50,7 @@ import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.ui.components.FormListItem
 import com.uvg.cc3087.myapp.ui.state.FormFilter
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
+import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
@@ -121,21 +122,21 @@ fun Forms(
                 )
             }
 
-            if (uiState.isLoading || uiState.hasLoadError || uiState.forms.isEmpty()) {
+            if (uiState.status != FormsLoadStatus.CONTENT) {
                 item(key = "forms-status") {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        if (uiState.isLoading) CircularProgressIndicator()
+                        if (uiState.status == FormsLoadStatus.LOADING) CircularProgressIndicator()
                         Text(stringResource(when {
-                            uiState.isLoading -> R.string.forms_loading
-                            uiState.hasLoadError -> R.string.forms_load_error
+                            uiState.status == FormsLoadStatus.LOADING -> R.string.forms_loading
+                            uiState.status == FormsLoadStatus.ERROR -> R.string.forms_load_error
                             uiState.selectedFilter == FormFilter.ALL -> R.string.forms_empty
                             else -> R.string.forms_filter_empty
                         }))
-                        if (uiState.hasLoadError) {
+                        if (uiState.status == FormsLoadStatus.ERROR) {
                             OutlinedButton(onClick = onRetryLoad) { Text(stringResource(R.string.retry)) }
                         }
                     }

@@ -95,6 +95,9 @@ internal fun FormLinkRoute(formRepository: FormRepository, templateRepository: T
         },
         onEditorAction = editFormViewModel::onAction,
         onValidateEditor = editFormViewModel::validate,
+        onPreviewConfigurationErrors = editFormViewModel::previewConfigurationErrors,
+        onValidatePreviewAnswers = editFormViewModel::validatePreviewAnswers,
+        onCanAdvanceToSaveShare = editFormViewModel::canAdvanceToSaveShare,
         onOpenDraft = editFormViewModel::openDraft,
         onRetrySave = editFormViewModel::retrySave,
         onRetryEditorLoad = editFormViewModel::retryLoad,
@@ -116,6 +119,9 @@ private fun FormLinkContent(
     onStartEditor: (FormTemplate?) -> Unit,
     onEditorAction: (EditFormAction) -> Unit,
     onValidateEditor: () -> FormValidationResult,
+    onPreviewConfigurationErrors: () -> Map<String, Set<com.uvg.cc3087.myapp.data.model.FieldError>>,
+    onValidatePreviewAnswers: (Map<String, com.uvg.cc3087.myapp.data.model.FormAnswer>, Boolean, java.util.Locale) -> Map<String, com.uvg.cc3087.myapp.data.model.FieldError>,
+    onCanAdvanceToSaveShare: () -> Boolean,
     onOpenDraft: (String) -> Unit = {},
     onRetrySave: () -> Unit = {},
     onRetryEditorLoad: () -> Unit = {},
@@ -200,10 +206,12 @@ private fun FormLinkContent(
                 onBackClick = leaveEditor,
                 onRetrySave = onRetrySave,
                 onRetryLoad = onRetryEditorLoad,
+                configurationErrors = onPreviewConfigurationErrors,
+                validatePreviewAnswers = onValidatePreviewAnswers,
+                canAdvanceToSaveShare = onCanAdvanceToSaveShare,
                 onSaveForm = {
                     val id = editFormUiState.draftId
-                    if (id != null && editFormUiState.saveStatus == DraftSaveStatus.SAVED &&
-                        onValidateEditor() == FormValidationResult.READY) {
+                    if (id != null && onCanAdvanceToSaveShare()) {
                         onOpenSaveShare(id)
                         saveShareReturnDestination = AppDestination.EDIT_FORM
                         currentDestination = AppDestination.SAVE_SHARE
@@ -237,7 +245,10 @@ private fun FormLinkAppPreview() {
             onFilterSelected = {},
             onStartEditor = {},
             onEditorAction = {},
-            onValidateEditor = { FormValidationResult.READY }
+            onValidateEditor = { FormValidationResult.READY },
+            onPreviewConfigurationErrors = { emptyMap() },
+            onValidatePreviewAnswers = { _, _, _ -> emptyMap() },
+            onCanAdvanceToSaveShare = { false }
         )
     }
 }

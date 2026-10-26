@@ -11,6 +11,7 @@ import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.ui.state.FormFilter
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
+import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,9 +37,9 @@ class FormsViewModel(
     private val reloadRequests = MutableStateFlow(0)
     private val sourceState = reloadRequests.flatMapLatest {
         repository.observeForms()
-            .map { forms -> FormsUiState(forms = forms) }
-            .onStart { emit(FormsUiState(isLoading = true)) }
-            .catch { emit(FormsUiState(hasLoadError = true)) }
+            .map { forms -> FormsUiState(forms = forms, status = if (forms.isEmpty()) FormsLoadStatus.EMPTY else FormsLoadStatus.CONTENT) }
+            .onStart { emit(FormsUiState(status = FormsLoadStatus.LOADING)) }
+            .catch { emit(FormsUiState(status = FormsLoadStatus.ERROR)) }
     }
 
     // si cambia la lista o el filtro, calculamos un solo estado para la pantalla
@@ -58,7 +59,7 @@ class FormsViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value), isLoading = true)
+        initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value), status = FormsLoadStatus.LOADING)
     )
 
     fun retryLoading() {

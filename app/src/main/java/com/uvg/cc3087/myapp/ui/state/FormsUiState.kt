@@ -6,6 +6,7 @@ import com.uvg.cc3087.myapp.data.model.FormSummary
 data class FormsUiState(
     val forms: List<FormSummary> = emptyList(),
     val selectedFilter: FormFilter = FormFilter.ALL,
-    val isLoading: Boolean = false,
-    val hasLoadError: Boolean = false
+    val status: FormsLoadStatus = FormsLoadStatus.LOADING
 )
+
+enum class FormsLoadStatus { LOADING, EMPTY, CONTENT, ERROR }

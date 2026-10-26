@@ -34,7 +34,13 @@ fun FormPreviewScreen(
     onClose: () -> Unit,
     onSaveForm: (() -> Unit)? = null,
     saveStatus: DraftSaveStatus = DraftSaveStatus.IDLE,
-    onRetrySave: () -> Unit = {}
+    onRetrySave: () -> Unit = {},
+    configurationErrors: Map<String, Set<com.uvg.cc3087.myapp.data.model.FieldError>> = fields.associate { it.id to it.configurationErrors() }.filterValues { it.isNotEmpty() },
+    validateAnswers: (Map<String, FormAnswer>, Boolean, java.util.Locale) -> Map<String, com.uvg.cc3087.myapp.data.model.FieldError> = { submittedAnswers, wasAttempted, answerLocale ->
+        if (!wasAttempted) emptyMap() else fields.mapNotNull { field ->
+            field.answerError(submittedAnswers[field.id] ?: FormAnswer(), locale = answerLocale)?.let { field.id to it }
+        }.toMap()
+    }
 ) {
     var answers by rememberSaveable { mutableStateOf(hashMapOf<String, FormAnswer>()) }
     var attempted by rememberSaveable { mutableStateOf(false) }
@@ -43,13 +49,14 @@ fun FormPreviewScreen(
     val scope = rememberCoroutineScope()
     val locale = currentFormLocale()
     val focusManager = LocalFocusManager.current
-    val configurationValid = title.isNotBlank() && fields.isNotEmpty() &&
-        fields.all { it.configurationErrors().isEmpty() }
+    val answerErrors = remember(answers, attempted, fields, locale) { validateAnswers(answers, attempted, locale) }
+    val configurationValid = title.isNotBlank() && fields.isNotEmpty() && configurationErrors.isEmpty()
 
     fun testSubmission() {
         attempted = true
         focusManager.clearFocus()
-        val firstError = fields.indexOfFirst { it.answerError(answers[it.id] ?: FormAnswer(), locale = locale) != null }
+        val errors = validateAnswers(answers, true, locale)
+        val firstError = fields.indexOfFirst { it.id in errors }
         submitted = firstError == -1
         if (firstError >= 0) scope.launch { listState.animateScrollToItem(firstError + 1) }
     }
@@ -91,7 +98,7 @@ fun FormPreviewScreen(
             }
             itemsIndexed(fields, key = { _, field -> field.id }) { index, field ->
                 val answer = answers[field.id] ?: FormAnswer()
-                val error = if (attempted) field.answerError(answer, locale = locale) else null
+                val error = answerErrors[field.id]
                 val question = stringResource(R.string.numbered_question, index + 1,
                     field.title.ifBlank { stringResource(R.string.untitled_question) })
                 val questionLabel = if (field.required) stringResource(R.string.required_question, question) else question
@@ -101,7 +108,7 @@ fun FormPreviewScreen(
                             Text(questionLabel, style = MaterialTheme.typography.titleMedium)
                             if (field.helpText.isNotBlank()) Text(field.helpText, style = MaterialTheme.typography.bodySmall)
                         }
-                        field.configurationErrors().forEach { issue ->
+                        configurationErrors[field.id].orEmpty().forEach { issue ->
                             Text(fieldErrorText(issue, field), color = MaterialTheme.colorScheme.error)
                         }
                         if (field.type.hasOptions) {
