@@ -124,6 +124,46 @@ class FormDraftFlowTest {
         runBlocking { assertEquals(1, repository.observeForms().first().size) }
     }
 
+    @Test fun aFilterWithoutMatchesShowsAnEmptyMessageAndCanReturnToAll() {
+        runBlocking {
+            repository.saveDraft(FormDraft("stored", "Pedido guardado", emptyList(), 1, 1))
+        }
+        launchApp(repository)
+        compose.onNodeWithText("Pedido guardado").assertExists()
+        compose.onNodeWithText("Activos").performClick()
+        compose.onNodeWithText("No hay formularios que coincidan con este filtro").assertExists()
+        compose.onNodeWithText("Pedido guardado").assertDoesNotExist()
+        compose.onNodeWithText("Todos").performClick()
+        compose.onNodeWithText("Pedido guardado").assertExists()
+        compose.onNodeWithText("No hay formularios que coincidan con este filtro").assertDoesNotExist()
+    }
+
+    @Test fun aFailedEditSurvivesReturningToFormsAndReopening() {
+        runBlocking {
+            repository.saveDraft(FormDraft("stored", "Pedido guardado", emptyList(), 1, 1))
+        }
+        val failSaves = AtomicBoolean(true)
+        val failingRepository = object : FormRepository by repository {
+            override suspend fun saveDraft(draft: FormDraft) {
+                if (failSaves.get()) throw IOException("test write failure")
+                repository.saveDraft(draft)
+            }
+        }
+        launchApp(failingRepository)
+        compose.onNodeWithText("Editar").performClick()
+        compose.onNode(hasSetTextAction() and hasText("Pedido guardado"))
+            .performTextReplacement("Edición pendiente")
+        compose.onNodeWithText("No se pudieron guardar los cambios en este dispositivo").assertExists()
+        compose.onNodeWithContentDescription("Volver").performClick()
+        compose.onNodeWithText("Pedido guardado").assertExists()
+        compose.onNodeWithText("Editar").performClick()
+        compose.onNode(hasSetTextAction() and hasText("Edición pendiente")).assertExists()
+        failSaves.set(false)
+        compose.onNodeWithText("Reintentar").performClick()
+        waitForSaved()
+        runBlocking { assertEquals("Edición pendiente", repository.getDraft("stored")!!.title) }
+    }
+
     private fun launchApp(forms: FormRepository) {
         val templates = object : TemplateRepository {
             override fun observeTemplates() = flowOf(TemplateSampleData.templates)

@@ -264,6 +264,6 @@ private fun FormsBottomBar(onMessage: (Int) -> Unit) {
 @Composable
 private fun FormsPreview() {
     MyappTheme(dynamicColor = false) {
-        Forms(uiState = FormsUiState(forms = FormSampleData.forms))
+        Forms(uiState = FormsUiState(forms = FormSampleData.forms, status = FormsLoadStatus.CONTENT))
     }
 }
