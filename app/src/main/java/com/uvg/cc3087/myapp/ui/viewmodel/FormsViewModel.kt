@@ -12,12 +12,12 @@ import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.ui.state.FormFilter
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -37,7 +37,7 @@ class FormsViewModel(
     private val reloadRequests = MutableStateFlow(0)
     private val sourceState = reloadRequests.flatMapLatest {
         repository.observeForms()
-            .map { forms -> FormsUiState(forms = forms, status = if (forms.isEmpty()) FormsLoadStatus.EMPTY else FormsLoadStatus.CONTENT) }
+            .map { forms -> FormsUiState(forms = forms, status = FormsLoadStatus.CONTENT) }
             .onStart { emit(FormsUiState(status = FormsLoadStatus.LOADING)) }
             .catch { emit(FormsUiState(status = FormsLoadStatus.ERROR)) }
     }
@@ -55,11 +55,17 @@ class FormsViewModel(
             FormFilter.DRAFT -> forms.filter { it.status == FormStatus.DRAFT }
         }
 
-        source.copy(forms = visibleForms, selectedFilter = selectedFilter)
+        // una lista con datos también puede quedar vacía al aplicar el filtro
+        val status = when (source.status) {
+            FormsLoadStatus.LOADING, FormsLoadStatus.ERROR -> source.status
+            FormsLoadStatus.EMPTY, FormsLoadStatus.CONTENT ->
+                if (visibleForms.isEmpty()) FormsLoadStatus.EMPTY else FormsLoadStatus.CONTENT
+        }
+        source.copy(forms = visibleForms, selectedFilter = selectedFilter, status = status)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value), status = FormsLoadStatus.LOADING)
+        initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value))
     )
 
     fun retryLoading() {

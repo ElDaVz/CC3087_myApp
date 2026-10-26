@@ -111,6 +111,40 @@ class FormsViewModelTest {
 
         assertEquals(FormFilter.DRAFT, viewModel.uiState.value.selectedFilter)
         assertTrue(viewModel.uiState.value.forms.isEmpty())
+        assertEquals(FormsLoadStatus.EMPTY, viewModel.uiState.value.status)
+    }
+
+    @Test
+    fun switchingAwayFromAnEmptyFilterRestoresContent() = runTest {
+        val viewModel = FormsViewModel(FakeFormRepository(listOf(forms[0])), SavedStateHandle())
+        observe(viewModel)
+
+        viewModel.selectFilter(FormFilter.DRAFT)
+        runCurrent()
+        assertEquals(FormsLoadStatus.EMPTY, viewModel.uiState.value.status)
+
+        viewModel.selectFilter(FormFilter.ALL)
+        runCurrent()
+        assertEquals(FormsLoadStatus.CONTENT, viewModel.uiState.value.status)
+        assertEquals(listOf(forms[0]), viewModel.uiState.value.forms)
+    }
+
+    @Test
+    fun removingTheLastMatchingFormEmitsEmptyWithoutReloading() = runTest {
+        val repository = FakeFormRepository(forms)
+        val viewModel = FormsViewModel(repository, SavedStateHandle())
+        observe(viewModel)
+        viewModel.selectFilter(FormFilter.DRAFT)
+        runCurrent()
+
+        repository.forms.value = listOf(forms[0])
+        runCurrent()
+        assertEquals(FormsLoadStatus.EMPTY, viewModel.uiState.value.status)
+
+        repository.forms.value = forms
+        runCurrent()
+        assertEquals(FormsLoadStatus.CONTENT, viewModel.uiState.value.status)
+        assertEquals(listOf(forms[1]), viewModel.uiState.value.forms)
     }
 
     @Test
