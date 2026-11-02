@@ -29,7 +29,8 @@ fun ChooseTemplate(
     uiState: ChooseTemplateUiState,
     onBackClick: () -> Unit = {},
     onBlankFormClick: () -> Unit = {},
-    onTemplateClick: (FormTemplate) -> Unit = {}
+    onTemplateClick: (FormTemplate) -> Unit = {},
+    onResponsesClick: () -> Unit = {}
 ) {
 
     Scaffold(
@@ -80,7 +81,7 @@ fun ChooseTemplate(
 
                 NavigationBarItem(
                     selected = false,
-                    onClick = {},
+                    onClick = onResponsesClick,
                     icon = { Icon(Icons.AutoMirrored.Outlined.List, null) },
                     label = { Text(stringResource(R.string.responses)) }
                 )

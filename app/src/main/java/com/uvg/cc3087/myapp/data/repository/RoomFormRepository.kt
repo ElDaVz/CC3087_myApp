@@ -5,11 +5,14 @@ import com.uvg.cc3087.myapp.data.local.toDraft
 import com.uvg.cc3087.myapp.data.local.toEntity
 import com.uvg.cc3087.myapp.data.local.toFieldEntities
 import com.uvg.cc3087.myapp.data.model.FormDraft
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import com.uvg.cc3087.myapp.data.local.RequestDao
 
-class RoomFormRepository(private val dao: FormDraftDao) : FormRepository {
-    override fun observeForms() = dao.observeDrafts().map { drafts ->
-        drafts.map { it.toDraft().toSummary() }
+class RoomFormRepository(private val dao: FormDraftDao, private val requests: RequestDao? = null) : FormRepository {
+    override fun observeForms() = combine(dao.observeDrafts(), requests?.observeCounts() ?: flowOf(emptyList())) { drafts, counts ->
+        val byForm = counts.associate { it.formId to it.count }
+        drafts.map { it.toDraft().toSummary().copy(responseCount = byForm[it.form.id] ?: 0) }
     }
 
     override suspend fun getDraft(id: String): FormDraft? = dao.getDraft(id)?.toDraft()

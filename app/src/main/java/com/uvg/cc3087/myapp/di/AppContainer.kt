@@ -17,11 +17,13 @@ object AppContainer {
     @Synchronized
     fun formRepository(context: Context): FormRepository {
         if (!::appContext.isInitialized) appContext = context.applicationContext
-        return localForms ?: RoomFormRepository(database.drafts()).also {
+        return localForms ?: RoomFormRepository(database.drafts(), database.requests()).also {
             localForms = it
         }
     }
     val templateRepository: TemplateRepository get() = sampleTemplates
+    val requestRepository by lazy { com.uvg.cc3087.myapp.data.repository.RoomRequestRepository(database) }
+    val requestsAreDemo get() = false
 
     // solo los ejemplos reciben traducciones desde la raíz, no los viewmodels
     fun updateTemplateFields(fields: List<FormFieldDraft>) {

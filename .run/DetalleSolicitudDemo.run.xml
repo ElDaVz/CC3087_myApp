@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Detalle de solicitud (demo)" type="AndroidRunConfigurationType" factoryName="Android App">
+    <module name="myapp.app" />
+    <option name="MODE" value="specific_activity" />
+    <option name="ACTIVITY_CLASS" value="com.uvg.cc3087.myapp.debug.RequestDetailDemoActivity" />
+    <method v="2">
+      <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>

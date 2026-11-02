@@ -64,7 +64,9 @@ fun Forms(
     onFormClick: (FormSummary) -> Unit = {},
     onRetryLoad: () -> Unit = {},
     onShareFormClick: (FormSummary) -> Unit = {},
-    unsavedDraftId: String? = null
+    unsavedDraftId: String? = null,
+    onResponsesClick: () -> Unit = {},
+    onRespondFormClick: (FormSummary) -> Unit = {}
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -101,7 +103,7 @@ fun Forms(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            FormsBottomBar(onMessage = ::showMessage)
+            FormsBottomBar(onMessage = ::showMessage, onResponsesClick = onResponsesClick)
         }
     ) { innerPadding ->
         LazyColumn(
@@ -153,7 +155,7 @@ fun Forms(
                     onClick = { onFormClick(form) },
                     onShareClick = { onShareFormClick(form) },
                     onEditClick = { onFormClick(form) },
-                    onViewClick = { showMessage(R.string.view_form, form.title) },
+                    onViewClick = { onRespondFormClick(form) },
                     shareEnabled = form.id != unsavedDraftId
                 )
             }
@@ -217,11 +219,16 @@ private fun FormsControls(
 
 // la barra inferior también queda aislada para poder ajustarla sin tocar la lista
 @Composable
-private fun FormsBottomBar(onMessage: (Int) -> Unit) {
+internal fun FormsBottomBar(
+    onMessage: (Int) -> Unit,
+    onResponsesClick: () -> Unit,
+    onFormsClick: () -> Unit = { onMessage(R.string.forms_selected) },
+    responsesSelected: Boolean = false
+) {
     NavigationBar {
         NavigationBarItem(
-            selected = true,
-            onClick = { onMessage(R.string.forms_selected) },
+            selected = !responsesSelected,
+            onClick = onFormsClick,
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Description,
@@ -231,8 +238,8 @@ private fun FormsBottomBar(onMessage: (Int) -> Unit) {
             label = { Text(text = stringResource(R.string.forms)) }
         )
         NavigationBarItem(
-            selected = false,
-            onClick = { onMessage(R.string.responses_selected) },
+            selected = responsesSelected,
+            onClick = onResponsesClick,
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.ChatBubbleOutline,

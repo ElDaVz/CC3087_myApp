@@ -35,6 +35,9 @@ fun FormPreviewScreen(
     onSaveForm: (() -> Unit)? = null,
     saveStatus: DraftSaveStatus = DraftSaveStatus.IDLE,
     onRetrySave: () -> Unit = {},
+    onSubmitLocal: ((Map<String, FormAnswer>, java.util.Locale) -> Unit)? = null,
+    submitting: Boolean = false,
+    submitFailed: Boolean = false,
     configurationErrors: Map<String, Set<com.uvg.cc3087.myapp.data.model.FieldError>> = fields.associate { it.id to it.configurationErrors() }.filterValues { it.isNotEmpty() },
     validateAnswers: (Map<String, FormAnswer>, Boolean, java.util.Locale) -> Map<String, com.uvg.cc3087.myapp.data.model.FieldError> = { submittedAnswers, wasAttempted, answerLocale ->
         if (!wasAttempted) emptyMap() else fields.mapNotNull { field ->
@@ -57,21 +60,22 @@ fun FormPreviewScreen(
         focusManager.clearFocus()
         val errors = validateAnswers(answers, true, locale)
         val firstError = fields.indexOfFirst { it.id in errors }
-        submitted = firstError == -1
+        submitted = firstError == -1 && onSubmitLocal == null
+        if (firstError == -1 && onSubmitLocal != null) onSubmitLocal(answers, locale)
         if (firstError >= 0) scope.launch { listState.animateScrollToItem(firstError + 1) }
     }
 
     BackHandler(onBack = onClose)
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(stringResource(R.string.preview)) },
+            title = { Text(stringResource(if (onSubmitLocal == null) R.string.preview else R.string.request_fill_form)) },
             navigationIcon = {
                 IconButton(onClick = onClose) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back_to_editor))
                 }
             },
             actions = {
-                TextButton(onClick = { answers = hashMapOf(); attempted = false; submitted = false }) {
+                TextButton(enabled = !submitting, onClick = { answers = hashMapOf(); attempted = false; submitted = false }) {
                     Text(stringResource(R.string.reset))
                 }
             }
@@ -86,7 +90,7 @@ fun FormPreviewScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(title.ifBlank { stringResource(R.string.untitled_form) }, style = MaterialTheme.typography.headlineMedium)
-                    Text(stringResource(R.string.preview_notice))
+                    Text(stringResource(if (onSubmitLocal == null) R.string.preview_notice else R.string.request_local_notice))
                     Text(stringResource(R.string.required_legend), style = MaterialTheme.typography.bodySmall)
                     if (!configurationValid) {
                         Text(
@@ -118,8 +122,10 @@ fun FormPreviewScreen(
                             )
                         }
                         FormAnswerInput(field, answer, onChange = {
+                            if (!submitting) {
                             answers = HashMap(answers).apply { put(field.id, it) }
                             submitted = false
+                            }
                         }, isError = error != null, questionLabel = questionLabel)
                         if (field.type == FormFieldType.CHECKBOX && field.helpText.isNotBlank()) {
                             Text(field.helpText, style = MaterialTheme.typography.bodySmall)
@@ -148,9 +154,11 @@ fun FormPreviewScreen(
                         Text(stringResource(R.string.preview_success),
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     }
+                    if (submitFailed) Text(stringResource(R.string.request_submit_error), color = MaterialTheme.colorScheme.error)
+                    if (submitting) CircularProgressIndicator()
                     if (onSaveForm == null) {
-                        Button(enabled = configurationValid, onClick = ::testSubmission, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.test_submit))
+                        Button(enabled = configurationValid && !submitting, onClick = ::testSubmission, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(if (onSubmitLocal == null) R.string.test_submit else R.string.request_submit_local))
                         }
                     } else {
                         TextButton(enabled = configurationValid, onClick = ::testSubmission, modifier = Modifier.fillMaxWidth()) {

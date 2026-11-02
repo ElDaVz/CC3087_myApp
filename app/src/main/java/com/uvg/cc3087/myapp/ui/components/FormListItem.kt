@@ -129,7 +129,7 @@ fun FormListItem(
                 icon = Icons.Outlined.Edit
             )
             FormActionButton(
-                label = stringResource(R.string.view),
+                label = stringResource(R.string.request_respond),
                 onClick = onViewClick,
                 icon = Icons.Outlined.Visibility
             )

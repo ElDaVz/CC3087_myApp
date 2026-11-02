@@ -1,6 +1,7 @@
 package com.uvg.cc3087.myapp.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +21,8 @@ import com.uvg.cc3087.myapp.data.TemplateSampleData
 import com.uvg.cc3087.myapp.data.model.FormTemplate
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
+import com.uvg.cc3087.myapp.data.repository.RequestRepository
+import com.uvg.cc3087.myapp.data.repository.UnavailableRequestRepository
 import com.uvg.cc3087.myapp.di.AppContainer
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.resources.titleResId
@@ -46,7 +49,10 @@ private enum class AppDestination {
     FORMS,
     CHOOSE_TEMPLATE,
     EDIT_FORM,
-    SAVE_SHARE
+    SAVE_SHARE,
+    REQUESTS,
+    REQUEST_DETAIL,
+    SUBMIT_REQUEST
 }
 
 @Composable
@@ -58,11 +64,17 @@ fun FormLinkApp() {
     LaunchedEffect(languageTags) {
         AppContainer.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
-    FormLinkRoute(formRepository, AppContainer.templateRepository)
+    FormLinkRoute(formRepository, AppContainer.templateRepository,
+        AppContainer.requestRepository, AppContainer.requestsAreDemo)
 }
 
 @Composable
-internal fun FormLinkRoute(formRepository: FormRepository, templateRepository: TemplateRepository) {
+internal fun FormLinkRoute(
+    formRepository: FormRepository,
+    templateRepository: TemplateRepository,
+    requestRepository: RequestRepository = UnavailableRequestRepository,
+    requestsAreDemo: Boolean = false
+) {
     val resources = LocalResources.current
     // los viewmodels comparten el repositorio, no una copia de los formularios
     val formsViewModel: FormsViewModel = viewModel(
@@ -82,6 +94,9 @@ internal fun FormLinkRoute(formRepository: FormRepository, templateRepository: T
     val context = LocalContext.current
 
     FormLinkContent(
+        formRepository = formRepository,
+        requestRepository = requestRepository,
+        requestsAreDemo = requestsAreDemo,
         formsUiState = formsUiState,
         chooseTemplateUiState = chooseTemplateUiState,
         editFormUiState = editFormUiState,
@@ -130,7 +145,10 @@ private fun FormLinkContent(
     onOpenSaveShare: (String) -> Unit = {},
     onRetrySaveShareLoad: () -> Unit = {},
     onCopyLink: (String) -> Boolean = { false },
-    onWhatsAppShare: (String) -> Boolean = { false }
+    onWhatsAppShare: (String) -> Boolean = { false },
+    requestRepository: RequestRepository = UnavailableRequestRepository,
+    requestsAreDemo: Boolean = false,
+    formRepository: FormRepository? = null
 ) {
     // cada pantalla recibe su estado y la navegación sigue aquí
     var currentDestination by rememberSaveable {
@@ -142,6 +160,10 @@ private fun FormLinkContent(
     var saveShareReturnDestination by rememberSaveable {
         mutableStateOf(AppDestination.EDIT_FORM)
     }
+    var selectedRequestFormId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedResponseId by rememberSaveable { mutableStateOf<String?>(null) }
+    val requestListState = rememberLazyListState()
+    val showRequests = { currentDestination = AppDestination.REQUESTS }
 
     val showForms = {
         currentDestination = AppDestination.FORMS
@@ -163,12 +185,21 @@ private fun FormLinkContent(
             AppDestination.EDIT_FORM -> leaveEditor()
             AppDestination.SAVE_SHARE -> { currentDestination = saveShareReturnDestination }
             AppDestination.FORMS -> Unit
+            AppDestination.REQUESTS -> showForms()
+            AppDestination.REQUEST_DETAIL -> showRequests()
+            AppDestination.SUBMIT_REQUEST -> showForms()
         }
     }
 
     when (currentDestination) {
         AppDestination.FORMS -> {
             Forms(
+                onRespondFormClick = { form ->
+                    selectedRequestFormId = form.id
+                    selectedResponseId = java.util.UUID.randomUUID().toString()
+                    currentDestination = AppDestination.SUBMIT_REQUEST
+                },
+                onResponsesClick = showRequests,
                 uiState = formsUiState,
                 onFilterSelected = onFilterSelected,
                 onNewFormClick = {
@@ -191,6 +222,7 @@ private fun FormLinkContent(
 
         AppDestination.CHOOSE_TEMPLATE -> {
             ChooseTemplate(
+                onResponsesClick = showRequests,
                 uiState = chooseTemplateUiState,
                 onBackClick = showForms,
                 onBlankFormClick = { showEditor(null) },
@@ -228,6 +260,38 @@ private fun FormLinkContent(
                 onRetry = onRetrySaveShareLoad,
                 onCopyLink = onCopyLink,
                 onWhatsAppShare = onWhatsAppShare
+            )
+        }
+
+        AppDestination.REQUESTS -> {
+            RequestListRoute(
+                repository = requestRepository,
+                onOpenRequest = { request ->
+                    selectedRequestFormId = request.formId
+                    selectedResponseId = request.responseId
+                    currentDestination = AppDestination.REQUEST_DETAIL
+                },
+                onBack = showForms,
+                listState = requestListState,
+                isDemo = requestsAreDemo
+            )
+        }
+
+        AppDestination.SUBMIT_REQUEST -> {
+            if (formRepository != null) SubmitRequestRoute(
+                formId = selectedRequestFormId.orEmpty(), responseId = selectedResponseId.orEmpty(),
+                forms = formRepository, requests = requestRepository, onBack = showForms,
+                onViewRequest = { currentDestination = AppDestination.REQUEST_DETAIL }
+            )
+        }
+
+        AppDestination.REQUEST_DETAIL -> {
+            RequestDetailRoute(
+                formId = selectedRequestFormId.orEmpty(),
+                responseId = selectedResponseId.orEmpty(),
+                repository = requestRepository,
+                onBack = showRequests,
+                isDemo = requestsAreDemo
             )
         }
     }
