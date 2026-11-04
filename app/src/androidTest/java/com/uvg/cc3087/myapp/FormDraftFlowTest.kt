@@ -42,6 +42,21 @@ class FormDraftFlowTest {
     // cerramos la base después de que la actividad de prueba haya liberado sus viewmodels
     @get:Rule val rules = RuleChain.outerRule(databaseRule).around(compose)
 
+    @Test fun continueValidatesThenOpensTheSavedFormWithoutPreview() {
+        launchApp(repository)
+        compose.onNodeWithText("Nuevo formulario").performClick()
+        compose.onNodeWithText("Formulario en blanco").performClick()
+        compose.onNodeWithTag("editor-list").performScrollToNode(hasText("Continuar"))
+        compose.onNodeWithText("Continuar").performClick()
+        compose.onNodeWithText("¡Formulario guardado!").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Volver").performClick()
+        compose.onNodeWithText("Formulario de pedido").performClick()
+        compose.onNodeWithTag("editor-list").performScrollToNode(hasText("Continuar"))
+        compose.onNodeWithText("Continuar").performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("¡Formulario guardado!").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Copiar enlace").assertIsNotEnabled()
+    }
+
     @Test fun createEditAndReopenFromFormsKeepsTheSameDraft() {
         launchApp(repository)
         compose.onNodeWithText("Nuevo formulario").performClick()

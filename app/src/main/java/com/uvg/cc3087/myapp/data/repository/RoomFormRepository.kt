@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import com.uvg.cc3087.myapp.data.local.RequestDao
 
-class RoomFormRepository(private val dao: FormDraftDao, private val requests: RequestDao? = null) : FormRepository {
+class RoomFormRepository(private val dao: FormDraftDao, private val requests: RequestDao? = null, private val covers: CoverStorage? = null) : FormRepository {
     override fun observeForms() = combine(dao.observeDrafts(), requests?.observeCounts() ?: flowOf(emptyList())) { drafts, counts ->
         val byForm = counts.associate { it.formId to it.count }
         drafts.map { it.toDraft().toSummary().copy(responseCount = byForm[it.form.id] ?: 0) }
@@ -22,8 +22,22 @@ class RoomFormRepository(private val dao: FormDraftDao, private val requests: Re
         require(draft.fields.map { it.id }.distinct().size == draft.fields.size) {
             "Field ids must be unique within a draft"
         }
+        val oldCover = dao.getDraft(draft.id)?.form?.coverPath
         dao.saveDraft(draft.toEntity(), draft.toFieldEntities())
+        if (oldCover != null && oldCover != draft.coverPath) cleanupCover(oldCover)
     }
 
-    override suspend fun deleteDraft(id: String) = dao.deleteDraft(id)
+    override suspend fun deleteDraft(id: String) {
+        val oldCover = dao.getDraft(id)?.form?.coverPath
+        dao.deleteDraft(id)
+        oldCover?.let { cleanupCover(it) }
+    }
+
+    private suspend fun cleanupCover(path: String) {
+        if (dao.coverReferences(path) == 0) {
+            try { covers?.delete(path) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { /* File cleanup must not turn a committed save into a failure. */ }
+        }
+    }
 }

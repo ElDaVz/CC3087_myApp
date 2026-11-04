@@ -31,6 +31,38 @@ class EditFormPersistenceTest {
 
     @After fun clearViewModels() { viewModels.clear() }
 
+    @Test fun continueWaitsForTheLatestSaveAndIsConsumedOnce() = runTest {
+        val repository = FakeFormRepository().apply { saveDelayMillis = 100 }
+        val editor = editor(repository)
+        editor.startDraft("Pedido", null)
+        editor.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Nombre"))
+        assertEquals(com.uvg.cc3087.myapp.domain.validation.FormValidationResult.READY, editor.requestContinue())
+        assertFalse(editor.uiState.value.readyToContinue)
+        advanceUntilIdle()
+        assertTrue(editor.uiState.value.readyToContinue)
+        assertEquals("Nombre", repository.savedDrafts.last().fields.single().title)
+        editor.consumeContinue()
+        assertFalse(editor.uiState.value.readyToContinue)
+        editor.onAction(EditFormAction.ChangeTitle(""))
+        advanceUntilIdle()
+        assertEquals(com.uvg.cc3087.myapp.domain.validation.FormValidationResult.TITLE_REQUIRED, editor.requestContinue())
+        assertFalse(editor.uiState.value.readyToContinue)
+    }
+
+    @Test fun failedSaveCannotContinueUntilSuccessfulRetry() = runTest {
+        val repository = FakeFormRepository().apply { saveFailure = IOException() }
+        val editor = editor(repository)
+        editor.startDraft("Pedido", null)
+        editor.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Nombre"))
+        editor.requestContinue()
+        advanceUntilIdle()
+        assertFalse(editor.uiState.value.readyToContinue)
+        repository.saveFailure = null
+        editor.retrySave()
+        advanceUntilIdle()
+        assertTrue(editor.uiState.value.readyToContinue)
+    }
+
     @Test fun enteringTheAppDoesNotCreateAnEmptyDraft() = runTest {
         val repository = FakeFormRepository()
         val editor = editor(repository)

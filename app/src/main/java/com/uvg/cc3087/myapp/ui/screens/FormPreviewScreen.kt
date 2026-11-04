@@ -41,6 +41,7 @@ fun FormPreviewScreen(
     saveStatus: DraftSaveStatus = DraftSaveStatus.IDLE,
     onRetrySave: () -> Unit = {},
     canSaveForm: Boolean = false,
+    coverPath: String? = null,
     onSubmitLocal: ((Map<String, FormAnswer>, Locale) -> Unit)? = null,
     submitting: Boolean = false,
     submitFailed: Boolean = false
@@ -90,7 +91,7 @@ fun FormPreviewScreen(
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(title.ifBlank { stringResource(R.string.untitled_form) }, style = MaterialTheme.typography.headlineMedium)
+                    com.uvg.cc3087.myapp.ui.components.FormBanner(title, coverPath)
                     Text(stringResource(if (onSubmitLocal == null) R.string.preview_notice else R.string.request_local_notice))
                     Text(stringResource(R.string.required_legend), style = MaterialTheme.typography.bodySmall)
                     if (!configurationValid) {

@@ -68,7 +68,7 @@ fun FormLinkApp() {
         AppContainer.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
     FormLinkRoute(formRepository, AppContainer.templateRepository,
-        AppContainer.requestRepository, AppContainer.requestsAreDemo)
+        AppContainer.requestRepository, AppContainer.requestsAreDemo, AppContainer.coverStorage)
 }
 
 @Composable
@@ -76,7 +76,8 @@ internal fun FormLinkRoute(
     formRepository: FormRepository,
     templateRepository: TemplateRepository,
     requestRepository: RequestRepository = UnavailableRequestRepository,
-    requestsAreDemo: Boolean = false
+    requestsAreDemo: Boolean = false,
+    coverStorage: com.uvg.cc3087.myapp.data.repository.CoverStorage? = null
 ) {
     val resources = LocalResources.current
     // los viewmodels comparten el repositorio, no una copia de los formularios
@@ -89,7 +90,7 @@ internal fun FormLinkRoute(
     )
     val chooseTemplateUiState by chooseTemplateViewModel.uiState.collectAsStateWithLifecycle()
     val editFormViewModel: EditFormViewModel = viewModel(
-        factory = EditFormViewModel.factory(templateRepository, formRepository)
+        factory = EditFormViewModel.factory(templateRepository, formRepository, coverStorage)
     )
     val editFormUiState by editFormViewModel.uiState.collectAsStateWithLifecycle()
     val saveShareViewModel: SaveShareViewModel = viewModel(factory = SaveShareViewModel.factory(formRepository))
@@ -111,6 +112,10 @@ internal fun FormLinkRoute(
             )
         },
         onEditorAction = editFormViewModel::onAction,
+        onImportCover = editFormViewModel::importCover,
+        onRemoveCover = editFormViewModel::removeCover,
+        onContinue = editFormViewModel::requestContinue,
+        onConsumeContinue = editFormViewModel::consumeContinue,
         onValidateEditor = editFormViewModel::validate,
         onPreviewConfigurationErrors = editFormViewModel::previewConfigurationErrors,
         onValidatePreviewAnswers = editFormViewModel::validatePreviewAnswers,
@@ -139,6 +144,10 @@ private fun FormLinkContent(
     onPreviewConfigurationErrors: () -> Map<String, Set<FieldError>>,
     onValidatePreviewAnswers: (Map<String, FormAnswer>, Boolean, Locale) -> Map<String, FieldError>,
     onCanAdvanceToSaveShare: () -> Boolean,
+    onImportCover: (String) -> Unit = {},
+    onRemoveCover: () -> Unit = {},
+    onContinue: (() -> FormValidationResult)? = null,
+    onConsumeContinue: () -> Unit = {},
     onOpenDraft: (String) -> Unit = {},
     onRetrySave: () -> Unit = {},
     onRetryEditorLoad: () -> Unit = {},
@@ -229,6 +238,10 @@ private fun FormLinkContent(
             EditForm(
                 uiState = editFormUiState,
                 onAction = onEditorAction,
+                onImportCover = onImportCover,
+                onRemoveCover = onRemoveCover,
+                onContinue = onContinue,
+                onConsumeContinue = onConsumeContinue,
                 onValidate = onValidateEditor,
                 onBackClick = leaveEditor,
                 onRetrySave = onRetrySave,

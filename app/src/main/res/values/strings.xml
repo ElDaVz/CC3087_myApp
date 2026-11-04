@@ -255,4 +255,10 @@
     <string name="request_view_saved">View saved request</string>
     <string name="request_form_load_error">Could not open the form. It may have been deleted.</string>
     <string name="request_submit_error">Could not save the request. Retry; if the form was edited, go back and reopen it.</string>
+    <string name="editor_continue">Continue</string>
+    <string name="cover_add">Add cover (optional)</string>
+    <string name="cover_change">Change cover</string>
+    <string name="cover_remove">Remove cover</string>
+    <string name="cover_importing">Importing image…</string>
+    <string name="cover_error">Could not import the image. Choose a valid image up to 10 MiB.</string>
 </resources>

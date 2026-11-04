@@ -74,7 +74,7 @@ fun FormListItem(
             // coil carga la miniatura y deja un color suave mientras espera
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(form.imageUrl)
+                    .data(if (form.imageUrl.startsWith("covers/")) java.io.File(LocalContext.current.filesDir, form.imageUrl) else form.imageUrl)
                     .crossfade(true)
                     .build(),
                 contentDescription = stringResource(R.string.thumbnail_for_form, displayTitle),

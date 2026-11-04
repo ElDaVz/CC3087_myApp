@@ -55,6 +55,12 @@ Compose UI → ViewModel → FormRepository → Room
 
 Compose presenta estado y envía acciones. Los ViewModels coordinan filtros, validación y edición; `FormRepository` define el acceso a los formularios y `RoomFormRepository` conserva los borradores en Room. La base `formlink-drafts.db` se abre como instancia única desde `AppContainer`. Room es la fuente de verdad local para títulos, configuración y orden de campos. La lista observa un `Flow`, por lo que refleja altas, ediciones y eliminaciones sin recarga manual. Firebase, autenticación y sincronización remota aún no forman parte de esta entrega.
 
+## Portada opcional y Continuar
+
+El editor permite agregar, reemplazar o quitar una portada mediante el selector de imágenes del sistema. Se conserva una copia privada normalizada (hasta 10 MiB de entrada y 2048 píxeles por lado) y un fondo desenfocado compatible con Android 26+. Room v3 guarda solo la referencia relativa; la migración v2→v3 conserva formularios y solicitudes. La portada no es obligatoria y aparece en el editor, Preview y miniatura del listado.
+
+**Continuar** valida el título y la configuración de todas las preguntas. Solo abre **Guardar y compartir** cuando la última edición ya está confirmada en Room; un fallo conserva los cambios y permite reintentar. Guardar no equivale a publicar: los controles de copiar un enlace público siguen deshabilitados hasta implementar publicación real. Preview continúa sin crear solicitudes.
+
 ## Demo reproducible de persistencia
 
 1. Abrir la app y crear un formulario o editar uno existente.

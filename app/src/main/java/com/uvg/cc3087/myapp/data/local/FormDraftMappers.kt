@@ -3,7 +3,7 @@ package com.uvg.cc3087.myapp.data.local
 import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 
-internal fun FormDraft.toEntity() = FormDraftEntity(id, title, createdAt, updatedAt)
+internal fun FormDraft.toEntity() = FormDraftEntity(id, title, createdAt, updatedAt, coverPath)
 
 internal fun FormDraft.toFieldEntities(): List<FormFieldEntity> = fields.mapIndexed { index, field ->
     FormFieldEntity(
@@ -19,6 +19,7 @@ internal fun FormDraft.toFieldEntities(): List<FormFieldEntity> = fields.mapInde
 internal fun FormDraftWithFields.toDraft() = FormDraft(
     id = form.id,
     title = form.title,
+    coverPath = form.coverPath,
     createdAt = form.createdAt,
     updatedAt = form.updatedAt,
     // las relaciones de room no garantizan el orden de los campos
