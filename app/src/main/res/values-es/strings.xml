@@ -261,4 +261,24 @@
     <string name="cover_remove">Quitar portada</string>
     <string name="cover_importing">Importando imagen…</string>
     <string name="cover_error">No se pudo importar la imagen. Elige una imagen válida de hasta 10 MiB.</string>
+    <string name="account_title">Cuenta</string>
+    <string name="auth_register">Crear cuenta</string>
+    <string name="auth_sign_in">Iniciar sesión</string>
+    <string name="auth_email">Correo electrónico</string>
+    <string name="auth_password">Contraseña</string>
+    <string name="auth_invalid">Ingresa un correo y contraseña válidos. Las contraseñas nuevas necesitan al menos 6 caracteres.</string>
+    <string name="auth_failed">No se pudo autenticar. Revisa tus credenciales y conexión y vuelve a intentar.</string>
+    <string name="backend_not_configured">Firebase no está configurado. Puedes utilizar borradores locales como invitado.</string>
+    <string name="auth_have_account">Ya tengo una cuenta</string>
+    <string name="auth_need_account">Crear una cuenta nueva</string>
+    <string name="auth_continue_guest">Continuar como invitado</string>
+    <string name="auth_sign_out">Cerrar sesión</string>
+    <string name="import_guest_notice">Los borradores de invitado permanecen locales hasta que los selecciones e importes a tu cuenta. Las portadas siguen siendo locales.</string>
+    <string name="import_selected">Importar borradores seleccionados</string>
+    <string name="account_failed">No se pudo completar la operación. Tus borradores siguen guardados; vuelve a intentar.</string>
+    <string name="sync_retry">Sincronizar / reintentar</string>
+    <string name="sync_error">Guardado localmente. Falló la sincronización; reintenta desde Cuenta.</string>
+    <string name="sync_running">Sincronizando…</string>
+    <string name="sync_pending">Guardado en este dispositivo; pendiente de sincronizar</string>
+    <string name="sync_complete">Sincronizado con tu cuenta</string>
 </resources>

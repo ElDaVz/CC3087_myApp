@@ -61,14 +61,14 @@ private enum class AppDestination {
 @Composable
 fun FormLinkApp() {
     val context = LocalContext.current.applicationContext
-    val formRepository = remember(context) { AppContainer.formRepository(context) }
+    remember(context) { AppContainer.initialize(context) }
     val resources = LocalResources.current
     val languageTags = resources.configuration.locales.toLanguageTags()
     LaunchedEffect(languageTags) {
         AppContainer.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
-    FormLinkRoute(formRepository, AppContainer.templateRepository,
-        AppContainer.requestRepository, AppContainer.requestsAreDemo, AppContainer.coverStorage)
+    BackendRoot(AppContainer.backend, AppContainer.templateRepository,
+        AppContainer.requestRepository, AppContainer.coverStorage)
 }
 
 @Composable
@@ -77,7 +77,9 @@ internal fun FormLinkRoute(
     templateRepository: TemplateRepository,
     requestRepository: RequestRepository = UnavailableRequestRepository,
     requestsAreDemo: Boolean = false,
-    coverStorage: com.uvg.cc3087.myapp.data.repository.CoverStorage? = null
+    coverStorage: com.uvg.cc3087.myapp.data.repository.CoverStorage? = null,
+    onAccountClick: (() -> Unit)? = null,
+    syncMessage: String? = null
 ) {
     val resources = LocalResources.current
     // los viewmodels comparten el repositorio, no una copia de los formularios
@@ -99,6 +101,8 @@ internal fun FormLinkRoute(
 
     FormLinkContent(
         requestRepository = requestRepository,
+        onAccountClick = onAccountClick,
+        syncMessage = syncMessage,
         requestsAreDemo = requestsAreDemo,
         formsUiState = formsUiState,
         chooseTemplateUiState = chooseTemplateUiState,
@@ -158,7 +162,9 @@ private fun FormLinkContent(
     onCopyLink: (String) -> Boolean = { false },
     onWhatsAppShare: (String) -> Boolean = { false },
     requestRepository: RequestRepository = UnavailableRequestRepository,
-    requestsAreDemo: Boolean = false
+    requestsAreDemo: Boolean = false,
+    onAccountClick: (() -> Unit)? = null,
+    syncMessage: String? = null
 ) {
     // cada pantalla recibe su estado y la navegación sigue aquí
     var currentDestination by rememberSaveable {
@@ -203,6 +209,8 @@ private fun FormLinkContent(
     when (currentDestination) {
         AppDestination.FORMS -> {
             Forms(
+                onAccountClick = onAccountClick,
+                syncMessage = syncMessage,
                 onResponsesClick = showRequests,
                 uiState = formsUiState,
                 onFilterSelected = onFilterSelected,
@@ -237,6 +245,7 @@ private fun FormLinkContent(
         AppDestination.EDIT_FORM -> {
             EditForm(
                 uiState = editFormUiState,
+                syncMessage = syncMessage,
                 onAction = onEditorAction,
                 onImportCover = onImportCover,
                 onRemoveCover = onRemoveCover,

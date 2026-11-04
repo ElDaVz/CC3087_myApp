@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Description
@@ -65,7 +66,9 @@ fun Forms(
     onRetryLoad: () -> Unit = {},
     onShareFormClick: (FormSummary) -> Unit = {},
     unsavedDraftId: String? = null,
-    onResponsesClick: () -> Unit = {}
+    onResponsesClick: () -> Unit = {},
+    onAccountClick: (() -> Unit)? = null,
+    syncMessage: String? = null
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -83,8 +86,14 @@ fun Forms(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(R.string.formlink)) },
+                title = { Column {
+                    Text(text = stringResource(R.string.formlink))
+                    syncMessage?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
+                } },
                 actions = {
+                    if (onAccountClick != null) IconButton(onClick = onAccountClick) {
+                        Icon(Icons.Outlined.AccountCircle, stringResource(R.string.account_title))
+                    }
                     IconButton(onClick = { showMessage(R.string.search_selected) }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
