@@ -32,3 +32,17 @@ Los registros pertenecen a esta instalación de la app. No hay backend, autentic
 - `FormDraftFlowTest`: regresión del editor y guardado de borradores.
 
 Compilación y pruebas unitarias: `./gradlew compileDebugKotlin testDebugUnitTest compileDebugAndroidTestKotlin assembleDebug` con JDK 21. Ejecutar las instrumentadas con `./gradlew connectedDebugAndroidTest` en emulador o dispositivo; compilar su código no sustituye su ejecución. En Windows usar `gradlew.bat`.
+
+
+## Verificación de integración — 3 de noviembre de 2026
+
+Se integró primero [correcciones básicas, PR #13](https://github.com/ElDaVz/CC3087_myApp/pull/13) y luego se incorporó ese resultado a Ventura para resolver Preview conservando su API de validación centralizada. [Ventura, PR #14](https://github.com/ElDaVz/CC3087_myApp/pull/14) conserva solicitudes, migración, estados y conteos, con el envío desconectado de la navegación normal.
+
+En ambas integraciones finalizaron correctamente `compileDebugKotlin`, `testDebugUnitTest`, `compileDebugAndroidTestKotlin` y `assembleDebug`.
+
+- Correcciones: 25 pruebas instrumentadas aprobadas en Pixel_9 (Android 17 / API 37).
+- Ventura integrada: 119 pruebas unitarias y 38 instrumentadas aprobadas, sin omisiones, en el mismo emulador.
+- Se ejecutó la migración desde una base v1 construida con el esquema exportado: el borrador y su pregunta sobreviven en v2 y se puede escribir en la nueva tabla de solicitudes.
+- Se ejecutaron las pruebas de borradores sin envío, Preview sin registros nuevos, captura aislada, reintentos, persistencia, instantáneas, estados y conteos.
+
+Comando instrumentado ejecutado: `./gradlew connectedDebugAndroidTest`. Los informes locales se generan en `app/build/reports/tests/testDebugUnitTest/` y `app/build/reports/androidTests/connected/debug/`.
