@@ -18,6 +18,8 @@ import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.TemplateSampleData
 import com.uvg.cc3087.myapp.data.model.FormTemplate
+import com.uvg.cc3087.myapp.data.model.FieldError
+import com.uvg.cc3087.myapp.data.model.FormAnswer
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.di.AppContainer
@@ -36,11 +38,13 @@ import com.uvg.cc3087.myapp.ui.state.EditFormAction
 import com.uvg.cc3087.myapp.ui.state.EditFormUiState
 import com.uvg.cc3087.myapp.ui.state.FormFilter
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
+import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.SaveShareViewModel
+import java.util.Locale
 
 private enum class AppDestination {
     FORMS,
@@ -119,8 +123,8 @@ private fun FormLinkContent(
     onStartEditor: (FormTemplate?) -> Unit,
     onEditorAction: (EditFormAction) -> Unit,
     onValidateEditor: () -> FormValidationResult,
-    onPreviewConfigurationErrors: () -> Map<String, Set<com.uvg.cc3087.myapp.data.model.FieldError>>,
-    onValidatePreviewAnswers: (Map<String, com.uvg.cc3087.myapp.data.model.FormAnswer>, Boolean, java.util.Locale) -> Map<String, com.uvg.cc3087.myapp.data.model.FieldError>,
+    onPreviewConfigurationErrors: () -> Map<String, Set<FieldError>>,
+    onValidatePreviewAnswers: (Map<String, FormAnswer>, Boolean, Locale) -> Map<String, FieldError>,
     onCanAdvanceToSaveShare: () -> Boolean,
     onOpenDraft: (String) -> Unit = {},
     onRetrySave: () -> Unit = {},
@@ -239,7 +243,7 @@ private fun FormLinkAppPreview() {
     MyappTheme(dynamicColor = false) {
         // la preview usa un estado de ejemplo y no necesita crear un viewmodel
         FormLinkContent(
-            formsUiState = FormsUiState(forms = FormSampleData.forms),
+            formsUiState = FormsUiState(forms = FormSampleData.forms, status = FormsLoadStatus.CONTENT),
             chooseTemplateUiState = ChooseTemplateUiState(templates = TemplateSampleData.templates),
             editFormUiState = EditFormUiState(),
             onFilterSelected = {},

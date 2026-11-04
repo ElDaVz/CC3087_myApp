@@ -3,7 +3,12 @@ package com.uvg.cc3087.myapp.domain.validation
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.data.model.FieldOption
+import com.uvg.cc3087.myapp.data.model.FieldError
+import com.uvg.cc3087.myapp.data.model.FormAnswer
+import java.time.LocalDate
+import java.util.Locale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FormDraftValidatorTest {
@@ -78,5 +83,55 @@ class FormDraftValidatorTest {
             FormDraftValidator.validate("Pedido", listOf(number)))
         assertEquals(FormValidationResult.READY,
             FormDraftValidator.validate("Pedido", listOf(number.copy(maximum = "20"))))
+    }
+
+    @Test
+    fun previewConfigurationOnlyIncludesFieldsWithErrors() {
+        val invalid = FormFieldDraft("choice", FormFieldType.DROPDOWN, "", options = emptyList())
+
+        assertEquals(
+            mapOf("choice" to setOf(FieldError.MISSING_QUESTION, FieldError.TOO_FEW_OPTIONS)),
+            FormDraftValidator.configurationErrors(listOf(validField, invalid))
+        )
+    }
+
+    @Test
+    fun previewDoesNotShowAnswerErrorsBeforeAnAttempt() {
+        assertTrue(FormDraftValidator.validateAnswers(
+            listOf(validField.copy(required = true)), emptyMap(), false,
+            LocalDate.of(2026, 10, 26), Locale.US
+        ).isEmpty())
+    }
+
+    @Test
+    fun previewUsesFieldIdentityAndIgnoresAnswersForRemovedFields() {
+        assertEquals(
+            mapOf("name" to FieldError.REQUIRED),
+            FormDraftValidator.validateAnswers(
+                listOf(validField.copy(required = true)),
+                mapOf("removed" to FormAnswer(text = "Ana")), true,
+                LocalDate.of(2026, 10, 26), Locale.US
+            )
+        )
+    }
+
+    @Test
+    fun previewUsesTheSuppliedDateAndLocale() {
+        val fields = listOf(
+            FormFieldDraft("date", FormFieldType.DATE, "Fecha", includeTime = false, disallowPastDates = true),
+            FormFieldDraft("number", FormFieldType.NUMBER, "Cantidad")
+        )
+        val answers = mapOf(
+            "date" to FormAnswer(date = "2026-10-25"),
+            "number" to FormAnswer(text = "1,5")
+        )
+
+        assertEquals(
+            mapOf("date" to FieldError.PAST_DATE),
+            FormDraftValidator.validateAnswers(fields, answers, true, LocalDate.of(2026, 10, 26), Locale.GERMANY)
+        )
+        assertTrue(FormDraftValidator.validateAnswers(
+            fields, answers, true, LocalDate.of(2026, 10, 25), Locale.GERMANY
+        ).isEmpty())
     }
 }
