@@ -46,11 +46,13 @@ class FormDraftFlowTest {
         launchApp(repository)
         compose.onNodeWithText("Nuevo formulario").performClick()
         compose.onNodeWithText("Formulario en blanco").performClick()
-        compose.onNodeWithText("Continuar").performScrollTo().performClick()
+        compose.onNodeWithTag("editor-list").performScrollToNode(hasText("Continuar"))
+        compose.onNodeWithText("Continuar").performClick()
         compose.onNodeWithText("¡Formulario guardado!").assertDoesNotExist()
         compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Formulario de pedido").performClick()
-        compose.onNodeWithText("Continuar").performScrollTo().performClick()
+        compose.onNodeWithTag("editor-list").performScrollToNode(hasText("Continuar"))
+        compose.onNodeWithText("Continuar").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("¡Formulario guardado!").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Copiar enlace").assertIsNotEnabled()
     }
