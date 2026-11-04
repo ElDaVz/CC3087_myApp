@@ -13,7 +13,7 @@ data class FormSyncState(val owner: String? = null, val phase: SyncPhase = SyncP
 enum class SyncResult { SUCCESS, RETRY, SESSION_CHANGED }
 
 class FormSyncEngine(private val local: LocalFormStore, private val remote: RemoteFormSource,
-    private val currentOwner: () -> String?) {
+    private val timeoutMillis: Long = 30_000, private val currentOwner: () -> String?) {
     private val mutex = Mutex()
     private val mutableState = MutableStateFlow(FormSyncState())
     val state = mutableState.asStateFlow()
@@ -25,7 +25,7 @@ class FormSyncEngine(private val local: LocalFormStore, private val remote: Remo
         try {
             checkSession(owner)
             mutableState.value = FormSyncState(owner, SyncPhase.SYNCING)
-            withTimeout(30_000) {
+            withTimeout(timeoutMillis) {
                 for (pending in local.pending(owner)) {
                     checkSession(owner)
                     if (pending.deleted) remote.delete(owner, pending.draft.id)
@@ -46,7 +46,10 @@ class FormSyncEngine(private val local: LocalFormStore, private val remote: Remo
         catch (_: TimeoutCancellationException) {
             if (currentOwner() == owner) mutableState.value = FormSyncState(owner, SyncPhase.ERROR)
             SyncResult.RETRY
-        } catch (cancelled: CancellationException) { throw cancelled }
+        } catch (cancelled: CancellationException) {
+            if (currentOwner() == owner) mutableState.value = FormSyncState(owner, SyncPhase.IDLE)
+            throw cancelled
+        }
         catch (_: Exception) {
             if (currentOwner() == owner) mutableState.value = FormSyncState(owner, SyncPhase.ERROR)
             SyncResult.RETRY
