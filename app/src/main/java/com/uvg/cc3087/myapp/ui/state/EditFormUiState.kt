@@ -11,6 +11,7 @@ data class EditFormUiState(
     val draftId: String? = null,
     val isLoading: Boolean = false,
     val loadError: DraftLoadError? = null,
+    val ownerId: String? = null,
     val coverPath: String? = null,
     val importingCover: Boolean = false,
     val coverError: Boolean = false,

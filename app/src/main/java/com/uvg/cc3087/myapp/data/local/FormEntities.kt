@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -15,7 +16,11 @@ data class FormDraftEntity(
     val title: String,
     val createdAt: Long,
     val updatedAt: Long,
-    val coverPath: String? = null
+    val coverPath: String? = null,
+    val ownerId: String? = null,
+    @ColumnInfo(defaultValue = "0") val revision: Long = 0,
+    @ColumnInfo(defaultValue = "0") val syncedRevision: Long = 0,
+    @ColumnInfo(defaultValue = "0") val deleted: Boolean = false
 )
 
 @Entity(
