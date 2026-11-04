@@ -30,3 +30,8 @@ Thumbs.db
 # Signing keys
 *.jks
 *.keystore
+# Firebase project-specific configuration and local emulators
+app/google-services.json
+.firebase/
+node_modules/
+*-debug.log
