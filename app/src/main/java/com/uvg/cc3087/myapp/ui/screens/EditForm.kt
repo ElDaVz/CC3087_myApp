@@ -1,6 +1,11 @@
 package com.uvg.cc3087.myapp.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
+import com.uvg.cc3087.myapp.ui.components.FormBanner
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,8 +77,21 @@ fun EditForm(
     modifier: Modifier = Modifier,
     onRetrySave: () -> Unit = {},
     onRetryLoad: () -> Unit = {},
-    onSaveForm: (() -> Unit)? = null
+    onSaveForm: (() -> Unit)? = null,
+    onImportCover: (String) -> Unit = {},
+    onRemoveCover: () -> Unit = {},
+    onContinue: (() -> FormValidationResult)? = null,
+    onConsumeContinue: () -> Unit = {}
 ) {
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let { onImportCover(it.toString()) }
+    }
+    LaunchedEffect(uiState.readyToContinue) {
+        if (uiState.readyToContinue) {
+            onConsumeContinue()
+            onSaveForm?.invoke()
+        }
+    }
     val resources = LocalResources.current
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
@@ -108,6 +126,7 @@ fun EditForm(
     if (showPreview && canEdit) {
         FormPreviewScreen(
             title = uiState.title,
+            coverPath = uiState.coverPath,
             fields = uiState.fields,
             onClose = { showPreview = false },
             onSaveForm = onSaveForm,
@@ -181,6 +200,17 @@ fun EditForm(
         ) {
             item(key = "form-details") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FormBanner(uiState.title, uiState.coverPath)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(enabled = !uiState.importingCover, onClick = {
+                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }) { Text(stringResource(if (uiState.coverPath == null) R.string.cover_add else R.string.cover_change)) }
+                        if (uiState.coverPath != null) OutlinedButton(onClick = onRemoveCover) {
+                            Text(stringResource(R.string.cover_remove))
+                        }
+                    }
+                    if (uiState.importingCover) Text(stringResource(R.string.cover_importing))
+                    if (uiState.coverError) Text(stringResource(R.string.cover_error), color = MaterialTheme.colorScheme.error)
                     Text(
                         stringResource(R.string.form_details),
                         style = MaterialTheme.typography.titleMedium
@@ -221,18 +251,25 @@ fun EditForm(
                     onTitleFocusRequested = { focusedFieldId = null }
                 )
             }
-            item(key = "validate-draft") {
+            item(key = "continue-draft") {
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.importingCover && !uiState.continueRequested,
                     onClick = {
-                        val message = resources.getString(onValidate().messageResId)
-                        scope.launch {
+                        focusManager.clearFocus()
+                        val result = (onContinue ?: onValidate).invoke()
+                        if (result != FormValidationResult.READY) scope.launch {
+                            val index = uiState.fields.indexOfFirst {
+                                it.title.isBlank() || configurationErrors()[it.id].orEmpty().isNotEmpty()
+                            }
+                            listState.animateScrollToItem(if (uiState.hasTitleError || index < 0) 0 else index + 1)
+                            if (index >= 0) focusedFieldId = uiState.fields[index].id
                             snackbarHostState.currentSnackbarData?.dismiss()
-                            snackbarHostState.showSnackbar(message)
+                            snackbarHostState.showSnackbar(resources.getString(result.messageResId))
                         }
                     }
                 ) {
-                    Text(stringResource(R.string.editor_validate))
+                    Text(stringResource(R.string.editor_continue))
                 }
             }
         }

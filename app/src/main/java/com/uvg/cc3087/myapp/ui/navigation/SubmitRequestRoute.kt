@@ -24,7 +24,7 @@ internal fun SubmitRequestRoute(formId: String, responseId: String, forms: FormR
     BackHandler(onBack = onBack)
     val form = state.form
     if (!state.loading && !state.loadFailed && !state.saved && form != null) {
-        FormPreviewScreen(title = form.title, fields = form.fields, onClose = onBack,
+        FormPreviewScreen(title = form.title, coverPath = form.coverPath, fields = form.fields, onClose = onBack,
             validationResult = model.validationResult(),
             configurationErrors = model.configurationErrors(),
             validateAnswers = model::validateAnswers,

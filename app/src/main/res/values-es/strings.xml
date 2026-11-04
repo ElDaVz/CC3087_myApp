@@ -255,4 +255,10 @@
     <string name="request_view_saved">Ver solicitud guardada</string>
     <string name="request_form_load_error">No se pudo abrir el formulario. Es posible que se haya eliminado.</string>
     <string name="request_submit_error">No se pudo guardar la solicitud. Reintenta; si editaste el formulario, vuelve atrás y ábrelo de nuevo.</string>
+    <string name="editor_continue">Continuar</string>
+    <string name="cover_add">Agregar portada (opcional)</string>
+    <string name="cover_change">Cambiar portada</string>
+    <string name="cover_remove">Quitar portada</string>
+    <string name="cover_importing">Importando imagen…</string>
+    <string name="cover_error">No se pudo importar la imagen. Elige una imagen válida de hasta 10 MiB.</string>
 </resources>
