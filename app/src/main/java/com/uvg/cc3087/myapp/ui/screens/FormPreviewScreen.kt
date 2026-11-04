@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.data.model.*
+import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.components.FormAnswerInput
 import com.uvg.cc3087.myapp.ui.components.DraftSaveNotice
 import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
@@ -25,6 +26,7 @@ import com.uvg.cc3087.myapp.ui.components.currentFormLocale
 import com.uvg.cc3087.myapp.ui.components.fieldErrorText
 import com.uvg.cc3087.myapp.R
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,18 +34,16 @@ fun FormPreviewScreen(
     title: String,
     fields: List<FormFieldDraft>,
     onClose: () -> Unit,
+    validationResult: FormValidationResult,
+    configurationErrors: Map<String, Set<FieldError>>,
+    validateAnswers: (Map<String, FormAnswer>, Boolean, Locale) -> Map<String, FieldError>,
     onSaveForm: (() -> Unit)? = null,
     saveStatus: DraftSaveStatus = DraftSaveStatus.IDLE,
     onRetrySave: () -> Unit = {},
-    onSubmitLocal: ((Map<String, FormAnswer>, java.util.Locale) -> Unit)? = null,
+    canSaveForm: Boolean = false,
+    onSubmitLocal: ((Map<String, FormAnswer>, Locale) -> Unit)? = null,
     submitting: Boolean = false,
-    submitFailed: Boolean = false,
-    configurationErrors: Map<String, Set<com.uvg.cc3087.myapp.data.model.FieldError>> = fields.associate { it.id to it.configurationErrors() }.filterValues { it.isNotEmpty() },
-    validateAnswers: (Map<String, FormAnswer>, Boolean, java.util.Locale) -> Map<String, com.uvg.cc3087.myapp.data.model.FieldError> = { submittedAnswers, wasAttempted, answerLocale ->
-        if (!wasAttempted) emptyMap() else fields.mapNotNull { field ->
-            field.answerError(submittedAnswers[field.id] ?: FormAnswer(), locale = answerLocale)?.let { field.id to it }
-        }.toMap()
-    }
+    submitFailed: Boolean = false
 ) {
     var answers by rememberSaveable { mutableStateOf(hashMapOf<String, FormAnswer>()) }
     var attempted by rememberSaveable { mutableStateOf(false) }
@@ -52,10 +52,11 @@ fun FormPreviewScreen(
     val scope = rememberCoroutineScope()
     val locale = currentFormLocale()
     val focusManager = LocalFocusManager.current
-    val answerErrors = remember(answers, attempted, fields, locale) { validateAnswers(answers, attempted, locale) }
-    val configurationValid = title.isNotBlank() && fields.isNotEmpty() && configurationErrors.isEmpty()
+    val answerErrors = validateAnswers(answers, attempted, locale)
+    val configurationValid = validationResult == FormValidationResult.READY
 
     fun testSubmission() {
+        if (!configurationValid || submitting) return
         attempted = true
         focusManager.clearFocus()
         val errors = validateAnswers(answers, true, locale)
@@ -123,8 +124,8 @@ fun FormPreviewScreen(
                         }
                         FormAnswerInput(field, answer, onChange = {
                             if (!submitting) {
-                            answers = HashMap(answers).apply { put(field.id, it) }
-                            submitted = false
+                                answers = HashMap(answers).apply { put(field.id, it) }
+                                submitted = false
                             }
                         }, isError = error != null, questionLabel = questionLabel)
                         if (field.type == FormFieldType.CHECKBOX && field.helpText.isNotBlank()) {
@@ -142,7 +143,7 @@ fun FormPreviewScreen(
                     if (onSaveForm != null) {
                         DraftSaveNotice(saveStatus, onRetrySave)
                         Button(
-                            enabled = configurationValid && saveStatus == DraftSaveStatus.SAVED,
+                            enabled = canSaveForm,
                             onClick = onSaveForm,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text(stringResource(R.string.save_form)) }
@@ -150,7 +151,7 @@ fun FormPreviewScreen(
                             Text(stringResource(R.string.back_to_editing))
                         }
                     }
-                    if (submitted) {
+                    if (submitted && configurationValid && answerErrors.isEmpty()) {
                         Text(stringResource(R.string.preview_success),
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     }

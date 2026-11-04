@@ -1,16 +1,14 @@
 # Solicitudes guardadas en el dispositivo
 
-## Recorrido para probar
+## Disponibilidad y recorrido
 
-1. Ejecutar la configuración normal **app** de Android Studio.
-2. Crear un formulario con título y una pregunta obligatoria. Esperar a que indique que está guardado y volver a **Mis formularios**.
-3. Pulsar **Responder**, llenar los campos y seleccionar **Guardar solicitud en este dispositivo**. La pantalla avisa que no se envía a otra persona.
-4. Abrir **Ver solicitud guardada**. Revisar título, fecha, identificador, preguntas y respuestas.
-5. Cambiar **Pendiente** a **En proceso** o **Completada**. Un fallo al guardar mantiene el estado anterior y permite reintentar.
-6. Volver a **Respuestas**: total y conteos por estado se actualizan automáticamente. Volver a **Formularios** para comprobar el número de respuestas del formulario.
-7. Cerrar y volver a abrir la app: las solicitudes siguen en **Respuestas**. Editar el formulario original no cambia lo que se respondió antes.
+Room solo tiene borradores; no hay estado ni flujo de publicación. **Responder** está deshabilitado en las tarjetas y la navegación normal no conecta con `SubmitRequestRoute`. Habilitarlo requiere primero implementar publicación y comprobar que el formulario está publicado. El envío público queda fuera de esta integración.
 
-La vista previa del editor y su botón de prueba siguen sin crear solicitudes. Una nueva entrada por **Responder** inicia una solicitud distinta; reintentar el mismo envío usa el mismo identificador y no duplica registros.
+La app normal permite abrir **Respuestas**, consultar solicitudes ya almacenadas y cambiar entre **Pendiente**, **En proceso** y **Completada**. Una instalación sin solicitudes muestra la bandeja vacía, sin inyectar datos de ejemplo. Los conteos se calculan desde Room.
+
+Para comprobar captura y persistencia se usa exclusivamente el fixture de `LocalRequestFlowTest`: entra directamente en `SubmitRequestRoute` con una base en memoria, valida una respuesta obligatoria, guarda con un ID estable y abre la app normal para comprobar detalle, estados y conteos. No habilita botones ni rutas de envío en la app normal. Los tests de repositorio también usan datos aislados.
+
+La configuración debug **DetalleSolicitudDemo** abre ejemplos de lectura identificados como demo, fuera del recorrido normal. La vista previa del editor y **Probar envío** solo validan; nunca crean solicitudes.
 
 ## Decisiones de almacenamiento
 
@@ -27,10 +25,10 @@ Los registros pertenecen a esta instalación de la app. No hay backend, autentic
 
 ## Pruebas
 
-- `LocalRequestFlowTest`: responder desde la app, guardar, abrir detalle, cambiar estado y comprobar conteos.
+- `LocalRequestFlowTest`: confirmar que **Responder** está deshabilitado para un borrador y que Preview no crea registros; capturar desde un fixture aislado, validar, guardar, abrir detalle, cambiar estado y comprobar conteos.
 - `LocalRequestRepositoryTest`: persistencia al reabrir la base en disco, instantáneas tras editar/eliminar el borrador, validación, IDs compuestos, reintentos sin duplicados y migración v1 → v2 conservando formularios y preguntas.
-- `SubmitRequestViewModelTest`: doble toque, fallo/reintento y restauración de un envío ya guardado.
+- `SubmitRequestViewModelTest`: API de validación centralizada, doble toque, fallo/reintento y restauración de un envío ya guardado.
 - `RequestDetailViewModelTest`, `RequestListViewModelTest`, `RequestNavigationTest`, `RequestDetailScreenTest`: estados de carga/error, selección, restauración y navegación.
 - `FormDraftFlowTest`: regresión del editor y guardado de borradores.
 
-Compilación y pruebas unitarias: `gradlew.bat compileDebugKotlin testDebugUnitTest assembleDebug assembleDebugAndroidTest compileReleaseKotlin` con JDK 21. Las pruebas instrumentadas requieren un emulador o dispositivo.
+Compilación y pruebas unitarias: `./gradlew compileDebugKotlin testDebugUnitTest compileDebugAndroidTestKotlin assembleDebug` con JDK 21. Ejecutar las instrumentadas con `./gradlew connectedDebugAndroidTest` en emulador o dispositivo; compilar su código no sustituye su ejecución. En Windows usar `gradlew.bat`.

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
+import java.time.LocalDate
 import java.util.Locale
 
 class RoomRequestRepository(private val database: FormLinkDatabase) : RequestRepository {
@@ -25,7 +26,7 @@ class RoomRequestRepository(private val database: FormLinkDatabase) : RequestRep
             check(database.drafts().getDraft(form.id)?.toDraft() == form) { "The form changed; reopen it before submitting" }
             require(FormDraftValidator.validate(form.title, form.fields) == FormValidationResult.READY)
             require(answers.keys.all { id -> form.fields.any { it.id == id } })
-            require(form.fields.all { it.answerError(answers[it.id] ?: FormAnswer(), locale = locale) == null })
+            require(FormDraftValidator.validateAnswers(form.fields, answers, true, LocalDate.now(), locale).isEmpty())
             val snapshot = JSONArray()
             form.fields.forEach { field ->
                 val answer = answers[field.id] ?: FormAnswer()

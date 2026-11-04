@@ -28,6 +28,8 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.time.LocalDate
+import java.util.Locale
 
 class EditFormViewModelTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
@@ -80,6 +82,24 @@ class EditFormViewModelTest {
         viewModel.onAction(EditFormAction.ChangeTitle("Pedido"))
         viewModel.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Nombre"))
         assertFalse(viewModel.canAdvanceToSaveShare())
+    }
+
+    @Test
+    fun previewValidatesPastDatesUsingTheInjectedCalendar() {
+        val date = FormFieldDraft("date", FormFieldType.DATE, "Fecha", includeTime = false, disallowPastDates = true)
+        val viewModel = EditFormViewModel(
+            templateRepository(listOf(date)), SavedStateHandle(), FakeFormRepository(),
+            today = { LocalDate.of(2026, 10, 26) }
+        ).also { viewModels.put("calendar-editor", it) }
+        viewModel.startDraft("Reserva", TemplateType.ORDER_FORM)
+
+        assertEquals(
+            mapOf("date" to FieldError.PAST_DATE),
+            viewModel.validatePreviewAnswers(mapOf("date" to FormAnswer(date = "2026-10-25")), true, Locale.US)
+        )
+        assertTrue(viewModel.validatePreviewAnswers(
+            mapOf("date" to FormAnswer(date = "2026-10-26")), true, Locale.US
+        ).isEmpty())
     }
 
     @Test

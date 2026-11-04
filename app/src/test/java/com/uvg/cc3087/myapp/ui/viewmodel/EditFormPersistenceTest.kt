@@ -76,14 +76,15 @@ class EditFormPersistenceTest {
         assertEquals(DraftSaveStatus.SAVED, editor.uiState.value.saveStatus)
     }
 
-    @Test fun reopeningFromFormsWaitsForPendingEditsInsteadOfLoadingStaleContent() = runTest {
+    @Test fun reopeningFromFormsKeepsPendingEditsInsteadOfLoadingStaleContent() = runTest {
         val repository = FakeFormRepository().apply { saveDelayMillis = 100 }
         val editor = editor(repository)
         editor.startDraft("Antes", null)
         val id = editor.uiState.value.draftId!!
         editor.onAction(EditFormAction.ChangeTitle("Después"))
         editor.openDraft(id)
-        assertTrue(editor.uiState.value.isLoading)
+        assertFalse(editor.uiState.value.isLoading)
+        assertEquals("Después", editor.uiState.value.title)
         advanceUntilIdle()
 
         assertEquals(id, editor.uiState.value.draftId)
@@ -135,6 +136,66 @@ class EditFormPersistenceTest {
 
         assertEquals("Sin perder", repository.getDraft(id)!!.title)
         assertEquals(DraftSaveStatus.SAVED, editor.uiState.value.saveStatus)
+    }
+
+    @Test fun reopeningAfterAFailedSaveKeepsTheUnsavedChanges() = runTest {
+        val repository = FakeFormRepository(listOf(storedDraft()))
+        val editor = editor(repository)
+        editor.openDraft("stored")
+        runCurrent()
+        repository.saveFailure = IOException("disk full")
+        editor.onAction(EditFormAction.ChangeTitle("Cambio sin guardar"))
+        runCurrent()
+
+        editor.openDraft("stored")
+        runCurrent()
+
+        assertEquals("Cambio sin guardar", editor.uiState.value.title)
+        assertEquals(DraftSaveStatus.ERROR, editor.uiState.value.saveStatus)
+        assertEquals("Guardado", repository.getDraft("stored")!!.title)
+        repository.saveFailure = null
+        editor.retrySave()
+        runCurrent()
+        assertEquals("Cambio sin guardar", repository.getDraft("stored")!!.title)
+    }
+
+    @Test fun reopeningDuringAFailingWriteDoesNotReplaceTheLatestEdits() = runTest {
+        val repository = FakeFormRepository(listOf(storedDraft()))
+        val editor = editor(repository)
+        editor.openDraft("stored")
+        runCurrent()
+        repository.saveDelayMillis = 100
+        repository.saveFailure = IOException("disk full")
+        editor.onAction(EditFormAction.ChangeTitle("Última edición"))
+        editor.openDraft("stored")
+        advanceUntilIdle()
+
+        assertEquals("Última edición", editor.uiState.value.title)
+        assertEquals(DraftSaveStatus.ERROR, editor.uiState.value.saveStatus)
+    }
+
+    @Test fun saveAndShareRequiresValidFieldsAndTheLatestSuccessfulWrite() = runTest {
+        val repository = FakeFormRepository().apply { saveDelayMillis = 100 }
+        val editor = editor(repository)
+        editor.startDraft("Pedido", null)
+        editor.onAction(EditFormAction.AddField(FormFieldType.TEXT, "Nombre"))
+        assertFalse(editor.canAdvanceToSaveShare())
+        advanceUntilIdle()
+        assertTrue(editor.canAdvanceToSaveShare())
+
+        editor.onAction(EditFormAction.ChangeTitle(""))
+        advanceUntilIdle()
+        assertFalse(editor.canAdvanceToSaveShare())
+
+        repository.saveFailure = IOException("disk full")
+        editor.onAction(EditFormAction.ChangeTitle("Pedido corregido"))
+        advanceUntilIdle()
+        assertFalse(editor.canAdvanceToSaveShare())
+
+        repository.saveFailure = null
+        editor.retrySave()
+        advanceUntilIdle()
+        assertTrue(editor.canAdvanceToSaveShare())
     }
 
     @Test fun aMissingOrUnreadableDraftNeverTurnsIntoANewBlankForm() = runTest {

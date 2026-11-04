@@ -29,7 +29,7 @@
 
 - Firebase below is a future contract, not a configured backend. The current app saves requests locally through `RequestRepository` / `RoomRequestRepository` in both build variants.
 - Room schema v2 adds `local_requests` with an explicit non-destructive migration from v1. Keep existing form data and exported schemas.
-- `Responder` submits an existing valid local form. Editor preview remains a validation-only action. Do not silently turn preview tests into saved submissions.
+- Room stores drafts only; publication is not implemented. Keep `Responder` disabled and submission disconnected from normal app navigation until publication exists. Exercise capture only through isolated test fixtures; debug examples must be labeled as demos. Editor preview remains validation-only and must never save submissions.
 - Requests store immutable title/question/answer snapshots and survive source draft edits or deletion. Status is `PENDING`, `IN_PROGRESS`, or `COMPLETED`; local transitions allow reopening requests.
 - Use a stable submission ID for retry/process restoration, validate before insertion, and derive counts from stored requests. UI depends on repository interfaces, not Room DAOs.
 

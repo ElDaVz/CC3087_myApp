@@ -65,8 +65,7 @@ fun Forms(
     onRetryLoad: () -> Unit = {},
     onShareFormClick: (FormSummary) -> Unit = {},
     unsavedDraftId: String? = null,
-    onResponsesClick: () -> Unit = {},
-    onRespondFormClick: (FormSummary) -> Unit = {}
+    onResponsesClick: () -> Unit = {}
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -155,7 +154,6 @@ fun Forms(
                     onClick = { onFormClick(form) },
                     onShareClick = { onShareFormClick(form) },
                     onEditClick = { onFormClick(form) },
-                    onViewClick = { onRespondFormClick(form) },
                     shareEnabled = form.id != unsavedDraftId
                 )
             }
@@ -271,6 +269,6 @@ internal fun FormsBottomBar(
 @Composable
 private fun FormsPreview() {
     MyappTheme(dynamicColor = false) {
-        Forms(uiState = FormsUiState(forms = FormSampleData.forms))
+        Forms(uiState = FormsUiState(forms = FormSampleData.forms, status = FormsLoadStatus.CONTENT))
     }
 }

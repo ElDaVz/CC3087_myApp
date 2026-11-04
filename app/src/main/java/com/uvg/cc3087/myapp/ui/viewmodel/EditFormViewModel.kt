@@ -11,8 +11,6 @@ import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormAnswer
 import com.uvg.cc3087.myapp.data.model.FieldError
-import com.uvg.cc3087.myapp.data.model.answerError
-import com.uvg.cc3087.myapp.data.model.configurationErrors
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.data.model.TemplateType
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
@@ -38,7 +36,8 @@ class EditFormViewModel(
     private val templateRepository: TemplateRepository,
     private val savedStateHandle: SavedStateHandle,
     private val formRepository: FormRepository,
-    private val now: () -> Long = System::currentTimeMillis
+    private val now: () -> Long = System::currentTimeMillis,
+    private val today: () -> LocalDate = LocalDate::now
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(restoreState())
     val uiState: StateFlow<EditFormUiState> = mutableUiState.asStateFlow()
@@ -79,6 +78,11 @@ class EditFormViewModel(
     }
 
     fun openDraft(id: String) {
+        val current = mutableUiState.value
+        // volver desde forms no debe reemplazar una edición pendiente por la copia de room
+        if (current.draftId == id &&
+            (current.saveStatus == DraftSaveStatus.SAVING || current.saveStatus == DraftSaveStatus.ERROR)
+        ) return
         revision++
         mutableUiState.value = EditFormUiState(draftId = id, isLoading = true)
         savedStateHandle[ID_KEY] = id
@@ -146,29 +150,22 @@ class EditFormViewModel(
         return FormDraftValidator.validate(current.title, current.fields)
     }
 
-    fun previewConfigurationErrors(): Map<String, Set<FieldError>> {
-        val current = mutableUiState.value
-        return buildMap {
-            current.fields.forEach { field ->
-                val errors = field.configurationErrors()
-                if (errors.isNotEmpty()) put(field.id, errors)
-            }
-        }
-    }
+    fun previewConfigurationErrors(): Map<String, Set<FieldError>> =
+        FormDraftValidator.configurationErrors(mutableUiState.value.fields)
 
     fun validatePreviewAnswers(
         answers: Map<String, FormAnswer>,
         attempted: Boolean,
         locale: Locale = Locale.getDefault()
-    ): Map<String, FieldError> {
-        if (!attempted) return emptyMap()
-        return mutableUiState.value.fields.mapNotNull { field ->
-            field.answerError(answers[field.id] ?: FormAnswer(), LocalDate.now(), locale)?.let { field.id to it }
-        }.toMap()
-    }
+    ): Map<String, FieldError> = FormDraftValidator.validateAnswers(
+        mutableUiState.value.fields, answers, attempted, today(), locale
+    )
 
-    fun canAdvanceToSaveShare(): Boolean =
-        mutableUiState.value.saveStatus == DraftSaveStatus.SAVED && validate() == FormValidationResult.READY
+    fun canAdvanceToSaveShare(): Boolean {
+        val current = mutableUiState.value
+        return current.draftId != null && !current.isLoading && current.loadError == null &&
+            current.saveStatus == DraftSaveStatus.SAVED && validate() == FormValidationResult.READY
+    }
 
     private fun moveField(
         fields: List<FormFieldDraft>,

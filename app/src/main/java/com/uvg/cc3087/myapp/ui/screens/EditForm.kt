@@ -42,6 +42,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
+import com.uvg.cc3087.myapp.data.model.FieldError
+import com.uvg.cc3087.myapp.data.model.FormAnswer
+import com.uvg.cc3087.myapp.domain.validation.FormDraftValidator
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.components.AddFieldBottomSheet
 import com.uvg.cc3087.myapp.ui.components.FormFieldEditorCard
@@ -53,6 +56,8 @@ import com.uvg.cc3087.myapp.ui.state.EditFormUiState
 import com.uvg.cc3087.myapp.ui.state.FieldMoveDirection
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,13 +66,13 @@ fun EditForm(
     onAction: (EditFormAction) -> Unit,
     onValidate: () -> FormValidationResult,
     onBackClick: () -> Unit,
+    configurationErrors: () -> Map<String, Set<FieldError>>,
+    validatePreviewAnswers: (Map<String, FormAnswer>, Boolean, Locale) -> Map<String, FieldError>,
+    canAdvanceToSaveShare: () -> Boolean,
     modifier: Modifier = Modifier,
     onRetrySave: () -> Unit = {},
     onRetryLoad: () -> Unit = {},
-    onSaveForm: (() -> Unit)? = null,
-    configurationErrors: () -> Map<String, Set<com.uvg.cc3087.myapp.data.model.FieldError>> = { emptyMap() },
-    validatePreviewAnswers: (Map<String, com.uvg.cc3087.myapp.data.model.FormAnswer>, Boolean, java.util.Locale) -> Map<String, com.uvg.cc3087.myapp.data.model.FieldError> = { _, _, _ -> emptyMap() },
-    canAdvanceToSaveShare: () -> Boolean = { false }
+    onSaveForm: (() -> Unit)? = null
 ) {
     val resources = LocalResources.current
     val focusManager = LocalFocusManager.current
@@ -108,8 +113,10 @@ fun EditForm(
             onSaveForm = onSaveForm,
             saveStatus = uiState.saveStatus,
             onRetrySave = onRetrySave,
+            validationResult = onValidate(),
             configurationErrors = configurationErrors(),
-            validateAnswers = validatePreviewAnswers
+            validateAnswers = validatePreviewAnswers,
+            canSaveForm = canAdvanceToSaveShare()
         )
         return
     }
@@ -247,15 +254,19 @@ fun EditForm(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun EditFormPreview() {
+    val fields = FormEditorSampleData.templateFields(LocalResources.current)
+    val title = stringResource(R.string.template_job_application)
     MyappTheme(dynamicColor = false) {
         EditForm(
-            uiState = EditFormUiState(
-                title = stringResource(R.string.template_job_application),
-                fields = FormEditorSampleData.templateFields(LocalResources.current)
-            ),
+            uiState = EditFormUiState(title = title, fields = fields),
             onAction = {},
-            onValidate = { FormValidationResult.READY },
-            onBackClick = {}
+            onValidate = { FormDraftValidator.validate(title, fields) },
+            onBackClick = {},
+            configurationErrors = { FormDraftValidator.configurationErrors(fields) },
+            validatePreviewAnswers = { answers, attempted, locale ->
+                FormDraftValidator.validateAnswers(fields, answers, attempted, LocalDate.now(), locale)
+            },
+            canAdvanceToSaveShare = { false }
         )
     }
 }

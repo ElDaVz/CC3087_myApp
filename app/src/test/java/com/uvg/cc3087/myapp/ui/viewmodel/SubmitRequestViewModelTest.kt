@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.repository.*
 import com.uvg.cc3087.myapp.testing.MainDispatcherRule
+import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -17,7 +18,9 @@ import java.util.Locale
 class SubmitRequestViewModelTest {
     @get:Rule val dispatcher = MainDispatcherRule()
     private val store = ViewModelStore()
-    private val form = FormDraft("f", "Pedido", emptyList(), 1, 1)
+    private val form = FormDraft("f", "Pedido", listOf(
+        FormFieldDraft("name", FormFieldType.TEXT, "Nombre", required = true)
+    ), 1, 1)
     private val detail = RequestDetail("f", "r", "Pedido", null, emptyList(), requestStatus = RequestStatus.PENDING)
     private val forms = object : FormRepository {
         override fun observeForms() = flowOf(emptyList<FormSummary>())
@@ -27,6 +30,18 @@ class SubmitRequestViewModelTest {
     }
     @After fun cleanup() { store.clear() }
     private fun model(repo: RequestRepository) = SubmitRequestViewModel(forms, repo, "f", "r").also { store.put("submission", it) }
+
+    @Test fun captureUsesCentralValidationAndDoesNotPersistWhileValidating() = runTest {
+        val model = model(RequestRepository { _, _ -> null })
+        runCurrent()
+        assertEquals(FormValidationResult.READY, model.validationResult())
+        assertTrue(model.configurationErrors().isEmpty())
+        assertTrue(model.validateAnswers(emptyMap(), false, Locale.US).isEmpty())
+        assertEquals(mapOf("name" to FieldError.REQUIRED), model.validateAnswers(emptyMap(), true, Locale.US))
+        assertTrue(model.validateAnswers(mapOf("name" to FormAnswer(text = "Ana")), true, Locale.US).isEmpty())
+        assertFalse(model.uiState.value.saved)
+        assertFalse(model.uiState.value.saving)
+    }
 
     @Test fun doubleTapAndRetryUseOneStableRequestIdAndSuccessOnlyAfterPersistence() = runTest {
         val gate = CompletableDeferred<Unit>()

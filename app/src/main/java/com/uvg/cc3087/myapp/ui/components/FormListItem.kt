@@ -51,7 +51,6 @@ fun FormListItem(
     onClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    onViewClick: () -> Unit = {},
     shareEnabled: Boolean = true
 ) {
     val displayTitle = form.title.ifBlank { stringResource(R.string.untitled_form) }
@@ -130,8 +129,10 @@ fun FormListItem(
             )
             FormActionButton(
                 label = stringResource(R.string.request_respond),
-                onClick = onViewClick,
-                icon = Icons.Outlined.Visibility
+                // Room only stores drafts. Enable responses when publication exists.
+                onClick = {},
+                icon = Icons.Outlined.Visibility,
+                enabled = false
             )
         }
     }

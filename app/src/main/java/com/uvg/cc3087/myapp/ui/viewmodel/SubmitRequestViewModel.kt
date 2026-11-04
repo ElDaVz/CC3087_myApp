@@ -5,10 +5,12 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.repository.*
+import com.uvg.cc3087.myapp.domain.validation.FormDraftValidator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.util.Locale
 
 data class SubmitRequestUiState(
@@ -43,6 +45,19 @@ class SubmitRequestViewModel(
             catch (_: Exception) { mutableState.value = SubmitRequestUiState(loading = false, loadFailed = true) }
         }
     }
+
+    fun validationResult() = mutableState.value.form.let { form ->
+        FormDraftValidator.validate(form?.title.orEmpty(), form?.fields.orEmpty())
+    }
+
+    fun configurationErrors() = FormDraftValidator.configurationErrors(
+        mutableState.value.form?.fields.orEmpty()
+    )
+
+    fun validateAnswers(answers: Map<String, FormAnswer>, attempted: Boolean, locale: Locale) =
+        FormDraftValidator.validateAnswers(
+            mutableState.value.form?.fields.orEmpty(), answers, attempted, LocalDate.now(), locale
+        )
 
     fun submit(answers: Map<String, FormAnswer>, locale: Locale) {
         val state = mutableState.value

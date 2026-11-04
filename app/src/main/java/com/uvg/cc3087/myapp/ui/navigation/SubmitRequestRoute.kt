@@ -14,8 +14,9 @@ import com.uvg.cc3087.myapp.data.repository.*
 import com.uvg.cc3087.myapp.ui.screens.FormPreviewScreen
 import com.uvg.cc3087.myapp.ui.viewmodel.SubmitRequestViewModel
 
+// Isolated submission surface for fixtures; normal app navigation cannot reach it.
 @Composable
-fun SubmitRequestRoute(formId: String, responseId: String, forms: FormRepository,
+internal fun SubmitRequestRoute(formId: String, responseId: String, forms: FormRepository,
     requests: RequestRepository, onBack: () -> Unit, onViewRequest: () -> Unit) {
     val model: SubmitRequestViewModel = viewModel(key = "submission-$responseId",
         factory = SubmitRequestViewModel.factory(forms, requests, formId, responseId))
@@ -24,6 +25,9 @@ fun SubmitRequestRoute(formId: String, responseId: String, forms: FormRepository
     val form = state.form
     if (!state.loading && !state.loadFailed && !state.saved && form != null) {
         FormPreviewScreen(title = form.title, fields = form.fields, onClose = onBack,
+            validationResult = model.validationResult(),
+            configurationErrors = model.configurationErrors(),
+            validateAnswers = model::validateAnswers,
             onSubmitLocal = model::submit, submitting = state.saving, submitFailed = state.saveFailed)
     } else {
         Scaffold { padding ->
