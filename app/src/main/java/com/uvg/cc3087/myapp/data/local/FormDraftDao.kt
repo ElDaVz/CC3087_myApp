@@ -17,6 +17,9 @@ abstract class FormDraftDao {
     @Query("SELECT * FROM form_drafts WHERE id = :id")
     abstract suspend fun getDraft(id: String): FormDraftWithFields?
 
+    @Query("SELECT COUNT(*) FROM form_drafts WHERE coverPath = :path")
+    abstract suspend fun coverReferences(path: String): Int
+
     @Upsert
     protected abstract suspend fun upsertForm(form: FormDraftEntity)
 
