@@ -25,6 +25,14 @@
 
 ## Backend & Data Contract (v1)
 
+### Current local implementation
+
+- Firebase below is a future contract, not a configured backend. The current app saves requests locally through `RequestRepository` / `RoomRequestRepository` in both build variants.
+- Room schema v2 adds `local_requests` with an explicit non-destructive migration from v1. Keep existing form data and exported schemas.
+- Room stores drafts only; publication is not implemented. Keep `Responder` disabled and submission disconnected from normal app navigation until publication exists. Exercise capture only through isolated test fixtures; debug examples must be labeled as demos. Editor preview remains validation-only and must never save submissions.
+- Requests store immutable title/question/answer snapshots and survive source draft edits or deletion. Status is `PENDING`, `IN_PROGRESS`, or `COMPLETED`; local transitions allow reopening requests.
+- Use a stable submission ID for retry/process restoration, validate before insertion, and derive counts from stored requests. UI depends on repository interfaces, not Room DAOs.
+
 ### Architecture and ownership
 - **Backend stack**: Firebase Authentication, Cloud Firestore, and Firebase Storage. Room is the local source of truth for editable forms and drafts; DataStore is reserved for small app preferences.
 - **Offline-first behavior**: Save edits to Room immediately. When the owner is authenticated and connected, synchronize pending changes to Firestore. Until collaboration exists, the latest successful update wins.
@@ -59,7 +67,7 @@ forms/{formId}/responses/{responseId}
 ```
 
 - `fields` live in the form document for v1 so that the form editor can save and load one atomic document. Move them to a subcollection only if form size or collaboration requires it.
-- Response storage is defined now but response collection/submission UI is not part of the current implementation.
+- Remote response collection remains planned; local submission, list, detail and status UI are implemented independently of this cloud contract.
 - Files and digital signatures are stored in Firebase Storage; Firestore answers retain only their storage paths or references, never raw file bytes.
 
 ### Field contract

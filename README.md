@@ -41,6 +41,12 @@ La entrega actual cubre el flujo móvil de fase 2: lista de formularios, plantil
 
 La asistencia de IA se utilizó para apoyar revisión, documentación, implementación y pruebas. El equipo debe poder explicar cada cambio y verificarlo en el repositorio.
 
+### Solicitudes locales
+
+La app permite consultar solicitudes locales desde **Respuestas**, abrir su detalle y cambiar entre **Pendiente**, **En proceso** y **Completada**. Los conteos del listado y de cada formulario se calculan desde los registros locales. **Responder** está deshabilitado: Room solo guarda borradores y todavía no existe publicación. La captura permanece comprobable mediante fixtures aislados de pruebas, sin entrada desde la navegación normal. La vista previa del editor continúa siendo una prueba y no crea solicitudes.
+
+Los datos se guardan en Room tanto en debug como en release. No hay backend, envío a otros dispositivos ni recepción de respuestas mediante un enlace web. Los ejemplos solo están en la actividad de demostración de debug, fuera del recorrido normal. Ver [recorrido y pruebas de solicitudes](docs/SOLICITUDES_LOCALES.md).
+
 ## Arquitectura y datos locales
 
 ```text
