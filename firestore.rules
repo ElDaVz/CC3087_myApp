@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function ownsExisting() { return signedIn() && resource.data.ownerId == request.auth.uid; }
+    function validDraft() {
+      return request.resource.data.keys().hasAll(['ownerId', 'title', 'status', 'fields', 'createdAt', 'updatedAt', 'publishedAt', 'version'])
+        && request.resource.data.keys().hasOnly(['ownerId', 'title', 'status', 'fields', 'createdAt', 'updatedAt', 'publishedAt', 'version'])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.status == 'DRAFT'
+        && request.resource.data.fields is list
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.publishedAt == null
+        && request.resource.data.version is int && request.resource.data.version > 0;
+    }
+    match /forms/{formId} {
+      allow read: if ownsExisting();
+      allow create: if signedIn() && validDraft();
+      allow update: if ownsExisting() && validDraft()
+        && request.resource.data.ownerId == resource.data.ownerId;
+      // Repeating an acknowledged deletion after a lost response is harmless.
+      allow delete: if signedIn() && (!exists(/databases/$(database)/documents/forms/$(formId)) || ownsExisting());
+      match /responses/{responseId} { allow read, write: if false; }
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

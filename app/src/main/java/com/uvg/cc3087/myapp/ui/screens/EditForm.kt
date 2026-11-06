@@ -82,7 +82,8 @@ fun EditForm(
     onImportCover: (String) -> Unit = {},
     onRemoveCover: () -> Unit = {},
     onContinue: (() -> FormValidationResult)? = null,
-    onConsumeContinue: () -> Unit = {}
+    onConsumeContinue: () -> Unit = {},
+    syncMessage: String? = null
 ) {
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let { onImportCover(it.toString()) }
@@ -167,6 +168,7 @@ fun EditForm(
                         }
                     }
                 )
+                syncMessage?.let { Text(it, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall) }
                 if (canEdit) {
                     DraftSaveNotice(
                         uiState.saveStatus,

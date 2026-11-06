@@ -7,5 +7,6 @@ data class FormDraft(
     val fields: List<FormFieldDraft>,
     val createdAt: Long,
     val updatedAt: Long,
-    val coverPath: String? = null
+    val coverPath: String? = null,
+    val ownerId: String? = null
 )

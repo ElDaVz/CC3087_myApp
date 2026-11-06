@@ -27,7 +27,8 @@
 
 ### Current local implementation
 
-- Firebase below is a future contract, not a configured backend. The current app saves requests locally through `RequestRepository` / `RoomRequestRepository` in both build variants.
+- Firebase Auth and Firestore are optional integrations for owner-scoped form sync. Missing project configuration must leave guest editing usable and display an explicit unconfigured state. Room v4 adds owner and durable pending revisions through migration v3→v4. Local guest drafts require explicit import into an account; covers never sync.
+- The current app saves requests locally through `RequestRepository` / `RoomRequestRepository` in both build variants.
 - Room schema v3 adds an optional private cover path with non-destructive v2→v3 migration. Images live in app-private files, never database blobs. Continue must validate and wait for the latest Room save before navigation.
 - Room schema v2 adds `local_requests` with an explicit non-destructive migration from v1. Keep existing form data and exported schemas.
 - Room stores drafts only; publication is not implemented. Keep `Responder` disabled and submission disconnected from normal app navigation until publication exists. Exercise capture only through isolated test fixtures; debug examples must be labeled as demos. Editor preview remains validation-only and must never save submissions.
@@ -44,8 +45,8 @@
   - `ARCHIVED`: owner may read and edit; no responses are accepted.
 
 ### Authentication
-- Planned providers: email/password and Google Sign-In through Firebase Authentication.
-- Before sign-in is implemented, guests may create local-only drafts. Authenticated users own and synchronize their forms.
+- Email/password uses Firebase Authentication behind AuthRepository. Google Sign-In remains planned.
+- Guests may create local-only drafts. Authenticated users own and synchronize their forms. Clear session ViewModels on account changes; never reuse another account’s repository or sync job.
 - UI code accesses authentication through an `AuthRepository`; it must not call Firebase APIs directly.
 
 ### Cloud data model

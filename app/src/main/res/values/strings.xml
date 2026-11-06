@@ -261,4 +261,24 @@
     <string name="cover_remove">Remove cover</string>
     <string name="cover_importing">Importing image…</string>
     <string name="cover_error">Could not import the image. Choose a valid image up to 10 MiB.</string>
+    <string name="account_title">Account</string>
+    <string name="auth_register">Create account</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_invalid">Enter a valid email and password. New passwords need at least 6 characters.</string>
+    <string name="auth_failed">Could not authenticate. Check your credentials and connection, then retry.</string>
+    <string name="backend_not_configured">Firebase is not configured. Local guest drafts are available.</string>
+    <string name="auth_have_account">I already have an account</string>
+    <string name="auth_need_account">Create a new account</string>
+    <string name="auth_continue_guest">Continue as guest</string>
+    <string name="auth_sign_out">Sign out</string>
+    <string name="import_guest_notice">Guest drafts stay on this device until you select and import them into your account. Covers stay local.</string>
+    <string name="import_selected">Import selected drafts</string>
+    <string name="account_failed">Could not complete the operation. Your drafts remain stored; retry.</string>
+    <string name="sync_retry">Sync now / retry</string>
+    <string name="sync_error">Saved locally. Synchronization failed; retry from Account.</string>
+    <string name="sync_running">Synchronizing…</string>
+    <string name="sync_pending">Saved on this device; pending synchronization</string>
+    <string name="sync_complete">Synchronized with your account</string>
 </resources>

@@ -45,7 +45,24 @@ La asistencia de IA se utilizó para apoyar revisión, documentación, implement
 
 La app permite consultar solicitudes locales desde **Respuestas**, abrir su detalle y cambiar entre **Pendiente**, **En proceso** y **Completada**. Los conteos del listado y de cada formulario se calculan desde los registros locales. **Responder** está deshabilitado: Room solo guarda borradores y todavía no existe publicación. La captura permanece comprobable mediante fixtures aislados de pruebas, sin entrada desde la navegación normal. La vista previa del editor continúa siendo una prueba y no crea solicitudes.
 
-Los datos se guardan en Room tanto en debug como en release. No hay backend, envío a otros dispositivos ni recepción de respuestas mediante un enlace web. Los ejemplos solo están en la actividad de demostración de debug, fuera del recorrido normal. Ver [recorrido y pruebas de solicitudes](docs/SOLICITUDES_LOCALES.md).
+Las solicitudes se guardan en Room tanto en debug como en release. No se sincronizan solicitudes ni se reciben respuestas mediante un enlace web; el backend de esta entrega sincroniza únicamente formularios. Los ejemplos solo están en la actividad de demostración de debug, fuera del recorrido normal. Ver [recorrido y pruebas de solicitudes](docs/SOLICITUDES_LOCALES.md).
+
+## Datos persistentes en backend
+
+Firebase Authentication permite registro, inicio y cierre de sesión por correo/contraseña. Los formularios de la cuenta se guardan en Firestore y se recuperan en Room. El invitado sigue trabajando localmente; desde **Cuenta** puede importar explícitamente los borradores seleccionados. Las portadas permanecen locales.
+
+Room es la fuente de verdad de la UI. El repositorio guarda cada edición local y encola su revisión; WorkManager sincroniza al autenticarse, editar, recuperar conexión, volver a primer plano o reintentar. Los borrados quedan pendientes hasta confirmarse. Los errores remotos no borran ediciones locales; entre dispositivos gana la última escritura confirmada por el servidor. La UI distingue guardado local, pendientes, sincronización y error. Los ViewModels y pantallas no llaman a Firestore.
+
+El proyecto real Firebase todavía debe crearse/configurarse. Sin `app/google-services.json` la app compila y funciona como invitado, mostrando el estado de backend no configurado. Ver [configuración, sincronización, demo e inyección de dependencias](docs/FIREBASE_BACKEND.md).
+
+| Tarea de esta fase | Estado |
+| --- | --- |
+| Portadas locales y Continuar con validación | Implementada y verificada en emulador Android |
+| Authentication y coordinación Room ↔ Firestore | Implementada; validación local mediante Emulator Suite |
+| Configuración del proyecto real y demostración en su consola | No iniciada: requiere crear el proyecto del equipo |
+| Revisión ampliada de seguridad y feedback de Fase 2 | Fuera de esta entrega; no se presenta como completada |
+
+Se acota el backend a formularios; publicación web, imágenes remotas y solicitudes compartidas quedan pendientes. No se confunde guardar/sincronizar un borrador con publicar un enlace público.
 
 ## Arquitectura y datos locales
 
@@ -53,7 +70,7 @@ Los datos se guardan en Room tanto en debug como en release. No hay backend, env
 Compose UI → ViewModel → FormRepository → Room
 ```
 
-Compose presenta estado y envía acciones. Los ViewModels coordinan filtros, validación y edición; `FormRepository` define el acceso a los formularios y `RoomFormRepository` conserva los borradores en Room. La base `formlink-drafts.db` se abre como instancia única desde `AppContainer`. Room es la fuente de verdad local para títulos, configuración y orden de campos. La lista observa un `Flow`, por lo que refleja altas, ediciones y eliminaciones sin recarga manual. Firebase, autenticación y sincronización remota aún no forman parte de esta entrega.
+Compose presenta estado y envía acciones. Los ViewModels coordinan filtros, validación y edición; `FormRepository` define el acceso a los formularios y `RoomFormRepository` conserva los borradores en Room. La base `formlink-drafts.db` se abre como instancia única desde `AppContainer`. Room es la fuente de verdad local para títulos, configuración y orden de campos. La lista observa un `Flow`, por lo que refleja altas, ediciones y eliminaciones sin recarga manual. La integración opcional con Firebase Authentication y Firestore coordina formularios por cuenta manteniendo Room como fuente de lectura. Sin configuración Firebase se conserva el modo invitado.
 
 ## Portada opcional y Continuar
 
@@ -75,7 +92,7 @@ La prueba instrumentada `FormDraftFlowTest` cubre creación y edición dentro de
 | Compromiso | Estado | Evidencia / desviación |
 | --- | --- | --- |
 | Forms, edición, preview y borradores locales | Implementado en esta rama | Compose, ViewModels y Room; ver `docs/REVISION_ENTREGA_UI.md` y pruebas indicadas arriba |
-| Autenticación y publicación del formulario | Pendiente: 2–6 de noviembre de 2026 | No existe integración activa de Firebase Authentication/Firestore; guardar localmente no publica |
+| Autenticación y publicación del formulario | Autenticación implementada; publicación pendiente | Auth/Firestore integrados de forma opcional; falta proyecto real para demo. Guardar no publica |
 | Respuestas desde formulario web | Pendiente: 9–13 de noviembre de 2026 | No hay formulario web ni captura remota de respuestas |
 | Demo manual de persistencia tras cierre completo | Pendiente de dispositivo/emulador | El entorno de desarrollo actual no ofrece una demo presencial registrada |
 
