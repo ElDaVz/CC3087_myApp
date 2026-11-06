@@ -41,7 +41,8 @@ abstract class FormLinkDatabase : RoomDatabase() {
             context.applicationContext,
             FormLinkDatabase::class.java,
             "formlink-drafts.db"
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+        ).openHelperFactory(com.uvg.cc3087.myapp.data.security.EncryptedDatabase.factory(context, "formlink-drafts.db"))
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
         // no usamos migraciones destructivas para resolver cambios futuros borrando formularios
     }
 }

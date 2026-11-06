@@ -19,31 +19,31 @@ import kotlin.math.max
 class PrivateCoverStorage(private val context: Context) : CoverStorage {
     override suspend fun importImage(source: String): String = withContext(Dispatchers.IO) {
         val dir = File(context.filesDir, "covers").apply { mkdirs() }
-        val input = File.createTempFile("import-", ".tmp", dir)
+        val cipher = com.uvg.cc3087.myapp.data.security.DeviceCipher(context)
         val target = File(dir, "${UUID.randomUUID()}.jpg")
         try {
-            context.contentResolver.openInputStream(Uri.parse(source)).use { stream ->
+            val bytes = context.contentResolver.openInputStream(Uri.parse(source)).use { stream ->
                 requireNotNull(stream) { "Image is unavailable" }
-                input.outputStream().use { output ->
-                    val buffer = ByteArray(8192)
-                    var total = 0
-                    while (true) {
-                        val count = stream.read(buffer)
-                        if (count < 0) break
-                        total += count
-                        require(total <= 10 * 1024 * 1024) { "Image exceeds 10 MiB" }
-                        output.write(buffer, 0, count)
-                    }
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val count = stream.read(buffer)
+                    if (count < 0) break
+                    require(output.size() + count <= 10 * 1024 * 1024) { "Image exceeds 10 MiB" }
+                    output.write(buffer, 0, count)
                 }
+                val bytes = output.toByteArray()
+                require(bytes.size <= 10 * 1024 * 1024) { "Image exceeds 10 MiB" }
+                bytes
             }
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFile(input.path, bounds)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
             require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Invalid image" }
             var sample = 1
             while (max(bounds.outWidth, bounds.outHeight) / sample > 2048) sample *= 2
-            val decoded = requireNotNull(BitmapFactory.decodeFile(input.path,
+            val decoded = requireNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
                 BitmapFactory.Options().apply { inSampleSize = sample }))
-            val exif = runCatching { ExifInterface(input.path) }.getOrNull()
+            val exif = runCatching { ExifInterface(java.io.ByteArrayInputStream(bytes)) }.getOrNull()
             val matrix = Matrix().apply {
                 when (exif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)) {
                     2 -> setScale(-1f, 1f)
@@ -58,20 +58,20 @@ class PrivateCoverStorage(private val context: Context) : CoverStorage {
             val oriented = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
             val normalized = Bitmap.createBitmap(oriented.width, oriented.height, Bitmap.Config.ARGB_8888)
             Canvas(normalized).apply { drawColor(Color.WHITE); drawBitmap(oriented, 0f, 0f, null) }
-            target.outputStream().use { check(normalized.compress(Bitmap.CompressFormat.JPEG, 85, it)) }
+            target.writeBytes(cipher.encrypt(java.io.ByteArrayOutputStream().also { check(normalized.compress(Bitmap.CompressFormat.JPEG, 85, it)) }.toByteArray()))
             val small = Bitmap.createScaledBitmap(normalized, 96,
                 max(1, 96 * normalized.height / normalized.width).coerceAtMost(192), true)
             val blurred = blur(small)
-            File(target.path + ".blur.jpg").outputStream().use {
+            File(target.path + ".blur.jpg").writeBytes(cipher.encrypt(java.io.ByteArrayOutputStream().also {
                 check(blurred.compress(Bitmap.CompressFormat.JPEG, 85, it))
-            }
+            }.toByteArray()))
             setOf(decoded, oriented, normalized, small, blurred).forEach { it.recycle() }
             "covers/${target.name}"
         } catch (error: Exception) {
             target.delete()
             File(target.path + ".blur.jpg").delete()
             throw error
-        } finally { input.delete() }
+        }
     }
 
     override suspend fun delete(path: String) = withContext(Dispatchers.IO) {

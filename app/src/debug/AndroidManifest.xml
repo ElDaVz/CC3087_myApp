@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:usesCleartextTraffic="true">
+    <application>
         <!-- Explicit launch only; no extra launcher icon and no demo entry in release builds. -->
         <activity android:name=".debug.RequestDetailDemoActivity" android:exported="true" />
     </application>

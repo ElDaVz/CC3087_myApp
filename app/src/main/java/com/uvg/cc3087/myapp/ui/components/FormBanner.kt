@@ -24,8 +24,7 @@ fun FormBanner(title: String, coverPath: String?, modifier: Modifier = Modifier)
     Box(modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))
         .background(MaterialTheme.colorScheme.primaryContainer)) {
         if (coverPath != null) {
-            AsyncImage(File(LocalContext.current.filesDir, coverPath + ".blur.jpg"),
-                contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+            PrivateCoverImage(coverPath + ".blur.jpg", null, Modifier.matchParentSize())
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .25f), Color.Black.copy(alpha = .7f)))))
         }
         Text(title.ifBlank { stringResource(R.string.untitled_form) },

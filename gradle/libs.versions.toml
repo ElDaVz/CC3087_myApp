@@ -18,8 +18,10 @@ googleServices = "4.5.0"
 work = "2.10.1"
 
 [libraries]
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
+sqlcipher = { module = "net.zetetic:sqlcipher-android", version = "4.10.0" }
 firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }

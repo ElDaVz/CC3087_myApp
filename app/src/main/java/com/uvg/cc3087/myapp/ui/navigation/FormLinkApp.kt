@@ -1,5 +1,8 @@
 package com.uvg.cc3087.myapp.ui.navigation
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -67,7 +70,17 @@ fun FormLinkApp() {
     LaunchedEffect(languageTags) {
         AppContainer.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
-    BackendRoot(AppContainer.backend, AppContainer.templateRepository,
+    var initializationAttempt by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    val initialized = androidx.compose.runtime.remember(initializationAttempt) { runCatching { AppContainer.backend } }
+    if (initialized.isFailure) {
+        androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
+            androidx.compose.material3.Text("No se pudieron abrir los datos protegidos. No se ha borrado información. Si restauraste este dispositivo, vuelve al dispositivo original para recuperar los borradores locales.")
+            androidx.compose.material3.Button(onClick = { initializationAttempt++ }) { androidx.compose.material3.Text("Reintentar") }
+        }
+        return
+    }
+    BackendRoot(initialized.getOrThrow(), AppContainer.templateRepository,
         AppContainer.requestRepository, AppContainer.coverStorage)
 }
 

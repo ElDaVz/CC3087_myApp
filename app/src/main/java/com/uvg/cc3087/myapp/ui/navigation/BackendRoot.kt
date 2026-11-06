@@ -38,7 +38,8 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
     }
     key(uid) {
         val owner = rememberSaveable(saver = Saver<SessionViewModelOwner, android.os.Bundle>(
-            save = { it.save() }, restore = { SessionViewModelOwner(it) })) { SessionViewModelOwner() }
+            save = { android.os.Bundle().apply { putByteArray("encrypted", services.deviceCipher.encrypt(it.save().toBytes())) } },
+            restore = { SessionViewModelOwner(it.getByteArray("encrypted")?.let { bytes -> androidBundle(services.deviceCipher.decrypt(bytes)) }) })) { SessionViewModelOwner() }
         val forms = remember(uid) { services.repository(uid) }
         val lifecycleOwner = LocalLifecycleOwner.current
         DisposableEffect(owner) { onDispose { owner.clear() } }
@@ -84,4 +85,12 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
 private object EmptyAccountRequests : RequestRepository {
     override suspend fun getRequests() = emptyList<RequestSummary>()
     override suspend fun getDetail(formId: String, responseId: String): RequestDetail? = null
+}
+
+private fun android.os.Bundle.toBytes(): ByteArray = android.os.Parcel.obtain().let { parcel ->
+    try { parcel.writeBundle(this); parcel.marshall() } finally { parcel.recycle() }
+}
+private fun androidBundle(bytes: ByteArray): android.os.Bundle? = android.os.Parcel.obtain().let { parcel ->
+    try { parcel.unmarshall(bytes, 0, bytes.size); parcel.setDataPosition(0); parcel.readBundle(SessionViewModelOwner::class.java.classLoader) }
+    finally { parcel.recycle() }
 }

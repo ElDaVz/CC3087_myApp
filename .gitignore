@@ -35,3 +35,12 @@ app/google-services.json
 .firebase/
 node_modules/
 *-debug.log
+
+# Local secrets and generated client configuration
+.env
+.env.*
+!.env.example
+*service-account*.json
+web/dist/
+web/playwright-report/
+web/test-results/

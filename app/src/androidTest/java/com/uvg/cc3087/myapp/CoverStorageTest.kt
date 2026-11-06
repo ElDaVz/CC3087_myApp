@@ -32,7 +32,8 @@ class CoverStorageTest {
         try {
             path = storage.importImage(android.net.Uri.fromFile(source).toString())
             assertTrue(File(context.filesDir, path + ".blur.jpg").exists())
-            val normalized = BitmapFactory.decodeFile(File(context.filesDir, path).path)
+            val bytes = com.uvg.cc3087.myapp.data.security.DeviceCipher(context).decrypt(File(context.filesDir, path).readBytes())
+            val normalized = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             assertEquals(40, normalized.width); assertEquals(80, normalized.height); normalized.recycle()
             var database = Room.databaseBuilder(context, FormLinkDatabase::class.java, name).build()
             try { RoomFormRepository(database.drafts(), covers = storage).saveDraft(FormDraft("f", "Cover", emptyList(), 1, 1, path)) }
