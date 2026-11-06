@@ -46,7 +46,15 @@ fun FormPreviewScreen(
     submitting: Boolean = false,
     submitFailed: Boolean = false
 ) {
-    var answers by rememberSaveable { mutableStateOf(hashMapOf<String, FormAnswer>()) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val cipher = androidx.compose.runtime.remember(context) { com.uvg.cc3087.myapp.data.security.DeviceCipher(context) }
+    var answers by rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver<HashMap<String, FormAnswer>, ByteArray>(
+        save = { values -> cipher.encrypt(java.io.ByteArrayOutputStream().also { bytes -> java.io.ObjectOutputStream(bytes).use { it.writeObject(values) } }.toByteArray()) },
+        restore = { bytes -> runCatching {
+            @Suppress("UNCHECKED_CAST")
+            (java.io.ObjectInputStream(java.io.ByteArrayInputStream(cipher.decrypt(bytes))).use { it.readObject() } as HashMap<String, FormAnswer>)
+        }.getOrDefault(hashMapOf()) }
+    )) { mutableStateOf(hashMapOf<String, FormAnswer>()) }
     var attempted by rememberSaveable { mutableStateOf(false) }
     var submitted by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()

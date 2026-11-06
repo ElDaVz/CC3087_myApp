@@ -19,7 +19,7 @@ object EncryptedDatabase {
         if (file.exists() && file.inputStream().use { String(ByteArray(16).also { header -> it.read(header) }) }.startsWith("SQLite format 3")) {
             val target = File(file.path + ".encrypted")
             if (target.exists()) check(target.delete())
-            val plain = SQLiteDatabase.openDatabase(file.path, "", null, SQLiteDatabase.OPEN_READWRITE, null)
+            val plain = SQLiteDatabase.openDatabase(file.path, "", null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.CREATE_IF_NECESSARY, null)
             try {
                 plain.rawQuery("PRAGMA wal_checkpoint(FULL)", null).use { it.moveToFirst() }
                 val version = plain.rawQuery("PRAGMA user_version", null).use { it.moveToFirst(); it.getInt(0) }

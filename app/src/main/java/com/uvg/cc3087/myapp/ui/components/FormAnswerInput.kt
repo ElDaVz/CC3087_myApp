@@ -147,7 +147,7 @@ private fun DropdownAnswerInput(field: FormFieldDraft, answer: FormAnswer, onCha
         }
     }
     if (expanded) {
-        var query by rememberSaveable { mutableStateOf("") }
+        var query by remember { mutableStateOf("") }
         val visible = field.options.filter { it.label.contains(query, ignoreCase = true) }
         ModalBottomSheet(onDismissRequest = { expanded = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
