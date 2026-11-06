@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 import {initializeApp,deleteApp} from 'firebase/app';
 import {initializeAuth,inMemoryPersistence,connectAuthEmulator,createUserWithEmailAndPassword} from 'firebase/auth';
-import {getFirestore,connectFirestoreEmulator,doc,setDoc,writeBatch,serverTimestamp,getDocs,collection} from 'firebase/firestore';
+import {getFirestore,connectFirestoreEmulator,doc,setDoc,writeBatch,serverTimestamp,getDocs,collection,query,where} from 'firebase/firestore';
 
 const id=`web-${crypto.randomUUID()}`;
 let owner:string;
@@ -20,12 +20,13 @@ test.beforeAll(async()=>{
 test.afterAll(async()=>{await deleteApp(app);});
 test('public client validates, retries offline, sends once and survives reload',async({page,context})=>{
  await page.goto(`/f/${id}`);await expect(page.getByRole('heading',{name:'Pedido web de prueba'})).toBeVisible();
+ await page.screenshot({path:'test-results/form-mobile.png',fullPage:true});
  await page.getByRole('button',{name:'Enviar solicitud'}).click();await expect(page.getByText('Completa este campo.')).toBeVisible();
  await page.getByLabel('Nombre del pedido').fill('Pedido de prueba');
  await context.setOffline(true);await page.getByRole('button',{name:'Enviar solicitud'}).click();await expect(page.getByRole('status')).toContainText('No se confirmó',{timeout:25000});
  await context.setOffline(false);await page.getByRole('button',{name:'Enviar solicitud'}).click();await expect(page.getByText('Tu solicitud se guardó correctamente. Gracias.')).toBeVisible({timeout:25000});
  await page.reload();await expect(page.getByText('Tu solicitud ya fue enviada. Gracias.')).toBeVisible();
- const responses=await getDocs(collection(db,'forms',id,'responses'));expect(responses.size).toBe(1);expect(responses.docs[0].data().answers[0].value).toBe('Pedido de prueba');
+ const responses=await getDocs(query(collection(db,'forms',id,'responses'),where('ownerId','==',owner)));expect(responses.size).toBe(1);expect(responses.docs[0].data().answers[0].value).toBe('Pedido de prueba');
 });
 test('unknown links show a clear error',async({page})=>{
  await page.goto('/f/missing-form');await expect(page.getByText('Este formulario no existe o ya no recibe solicitudes.')).toBeVisible();
