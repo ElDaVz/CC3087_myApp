@@ -50,7 +50,7 @@ service cloud.firestore {
       let c = f.config;
       let t = f.type;
       return v is string && v.size() <= 10000
-        && ((!f.required && v == '') || (v.matches('.*[^\\s].*')
+        && ((!f.required && v == '') || (v.matches('(?s).*[^\\s].*')
           && (t != 'EMAIL' || v.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$'))
           && (t != 'NUMBER' || (v.matches('^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)$')
             && (c.allowDecimals || float(v) == int(float(v)))
