@@ -79,14 +79,31 @@ class FormSyncEngineTest {
         assertFalse(local.acknowledged); assertFalse(local.merged)
         assertEquals(1, local.queue.size)
     }
-    @Test fun anEditDuringUploadKeepsItsNewRevisionPending() = runTest {
+    @Test fun anEditDuringUploadKeepsItsNewRevisionPendingAndUploadsItOnNextSync() = runTest {
         val local = Local(listOf(PendingForm(form, 1, false)))
+        val updatedForm = form.copy(title = "Nuevo pedido")
+        val uploaded = mutableListOf<FormDraft>()
+        val firstUpload = CompletableDeferred<Unit>()
         val remote = object : RemoteFormSource {
-            override suspend fun fetch(owner: String) = listOf(form)
-            override suspend fun put(owner: String, form: FormDraft) { local.queue = listOf(PendingForm(form.copy(title = "New"), 2, false)) }
+            override suspend fun fetch(owner: String) = listOf(uploaded.last())
+            override suspend fun put(owner: String, form: FormDraft) {
+                uploaded.add(form)
+                if (uploaded.size == 1) firstUpload.await()
+            }
             override suspend fun delete(owner: String, id: String) = Unit
         }
-        assertEquals(SyncResult.SUCCESS, FormSyncEngine(local, remote) { "a" }.sync("a"))
-        assertEquals(2L, local.queue.single().revision)
+        val engine = FormSyncEngine(local, remote) { "a" }
+        val job = launch { assertEquals(SyncResult.SUCCESS, engine.sync("a")) }
+        runCurrent()
+        assertEquals(listOf(form), uploaded)
+
+        local.queue = listOf(PendingForm(updatedForm, 2, false))
+        firstUpload.complete(Unit)
+        job.join()
+        assertEquals(PendingForm(updatedForm, 2, false), local.queue.single())
+
+        assertEquals(SyncResult.SUCCESS, engine.sync("a"))
+        assertEquals(listOf(form, updatedForm), uploaded)
+        assertTrue(local.queue.isEmpty())
     }
 }
