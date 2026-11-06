@@ -141,6 +141,7 @@ internal fun FormLinkRoute(
         onRetrySave = editFormViewModel::retrySave,
         onRetryEditorLoad = editFormViewModel::retryLoad,
         onRetryFormsLoad = formsViewModel::retryLoading,
+        onPublish = saveShareViewModel::publish, onArchive = saveShareViewModel::archive,
         saveShareUiState = saveShareUiState,
         onOpenSaveShare = saveShareViewModel::openDraft,
         onRetrySaveShareLoad = saveShareViewModel::retryLoading,
@@ -151,6 +152,7 @@ internal fun FormLinkRoute(
 
 @Composable
 private fun FormLinkContent(
+    onPublish: (() -> Unit)? = null, onArchive: (() -> Unit)? = null,
     formsUiState: FormsUiState,
     chooseTemplateUiState: ChooseTemplateUiState,
     editFormUiState: EditFormUiState,
@@ -288,6 +290,7 @@ private fun FormLinkContent(
                 onBack = { currentDestination = saveShareReturnDestination },
                 onBackToForms = showForms,
                 onRetry = onRetrySaveShareLoad,
+                onPublish = onPublish, onArchive = onArchive,
                 onCopyLink = onCopyLink,
                 onWhatsAppShare = onWhatsAppShare
             )

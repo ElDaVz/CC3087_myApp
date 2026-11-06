@@ -8,5 +8,8 @@ data class FormDraft(
     val createdAt: Long,
     val updatedAt: Long,
     val coverPath: String? = null,
-    val ownerId: String? = null
+    val ownerId: String? = null,
+    val creationAttemptId: String? = null,
+    val creationStartedAt: Long? = null,
+    val templateType: String? = null
 )

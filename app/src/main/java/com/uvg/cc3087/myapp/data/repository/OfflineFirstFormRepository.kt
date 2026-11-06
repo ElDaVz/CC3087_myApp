@@ -8,6 +8,7 @@ class OfflineFirstFormRepository(
     private val local: LocalFormStore,
     private val auth: AuthRepository,
     val owner: String?,
+    private val publisher: FormPublisher? = null,
     private val schedule: (String) -> Unit
 ) : FormRepository {
     private fun checkSession() {
@@ -20,6 +21,21 @@ class OfflineFirstFormRepository(
         checkSession()
         local.save(owner, draft)
         owner?.let { schedule(it) }
+    }
+    override suspend fun publication(id: String): FormPublication? {
+        checkSession()
+        val user = owner ?: return null
+        return getDraft(id)?.let { publisher?.publication(user, it) }
+    }
+    override suspend fun publish(id: String): FormPublication {
+        checkSession()
+        val user = owner ?: throw PublicationException("Inicia sesión para publicar")
+        val form = getDraft(id) ?: throw PublicationException("No se encontró el formulario")
+        return (publisher ?: throw PublicationException("Firebase no está configurado")).publish(user, form)
+    }
+    override suspend fun archive(id: String) {
+        checkSession()
+        checkNotNull(publisher).archive(checkNotNull(owner), id)
     }
     override suspend fun deleteDraft(id: String) {
         checkSession()

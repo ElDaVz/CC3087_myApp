@@ -8,11 +8,12 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [FormDraftEntity::class, FormFieldEntity::class, RequestEntity::class], version = 4, exportSchema = true)
+@Database(entities = [FormDraftEntity::class, FormFieldEntity::class, RequestEntity::class, PublicationEntity::class, RemoteRequestEntity::class], version = 5, exportSchema = true)
 @TypeConverters(FieldOptionConverters::class)
 abstract class FormLinkDatabase : RoomDatabase() {
     abstract fun drafts(): FormDraftDao
     abstract fun requests(): RequestDao
+    abstract fun cloud(): CloudDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -37,12 +38,21 @@ abstract class FormLinkDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE form_drafts ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
             }
         }
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE form_drafts ADD COLUMN creationAttemptId TEXT")
+                db.execSQL("ALTER TABLE form_drafts ADD COLUMN creationStartedAt INTEGER")
+                db.execSQL("ALTER TABLE form_drafts ADD COLUMN templateType TEXT")
+                db.execSQL("CREATE TABLE IF NOT EXISTS form_publications (formId TEXT NOT NULL PRIMARY KEY, ownerId TEXT NOT NULL, status TEXT NOT NULL, url TEXT NOT NULL, publishedAt INTEGER NOT NULL, version INTEGER NOT NULL, fingerprint TEXT NOT NULL, firstPublishedAt INTEGER NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS remote_requests (ownerId TEXT NOT NULL, formId TEXT NOT NULL, responseId TEXT NOT NULL, formTitle TEXT NOT NULL, submittedAt INTEGER NOT NULL, status TEXT NOT NULL, answersJson TEXT NOT NULL, statusRevision INTEGER NOT NULL DEFAULT 0, syncedStatusRevision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(ownerId, formId, responseId))")
+            }
+        }
         fun open(context: Context): FormLinkDatabase = Room.databaseBuilder(
             context.applicationContext,
             FormLinkDatabase::class.java,
             "formlink-drafts.db"
         ).openHelperFactory(com.uvg.cc3087.myapp.data.security.EncryptedDatabase.factory(context, "formlink-drafts.db"))
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
         // no usamos migraciones destructivas para resolver cambios futuros borrando formularios
     }
 }

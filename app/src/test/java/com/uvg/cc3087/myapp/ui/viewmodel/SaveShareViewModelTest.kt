@@ -91,6 +91,37 @@ class SaveShareViewModelTest {
         assertEquals(other, model.uiState.value.draft)
     }
 
-    private fun model(repository: FakeFormRepository, saved: SavedStateHandle = SavedStateHandle()) =
+    @Test fun publicationWaitsForBackendAndIgnoresDoubleTap() = runTest {
+        val pending = kotlinx.coroutines.CompletableDeferred<com.uvg.cc3087.myapp.data.repository.FormPublication>()
+        var calls = 0
+        val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
+            override suspend fun publish(id: String): com.uvg.cc3087.myapp.data.repository.FormPublication { calls++; return pending.await() }
+        }
+        val model = model(repository); model.openDraft(draft.id); runCurrent()
+        model.publish(); model.publish(); runCurrent()
+        assertTrue(model.uiState.value.publishing); assertFalse(model.uiState.value.canShare); assertEquals(1, calls)
+        pending.complete(com.uvg.cc3087.myapp.data.repository.FormPublication("https://example.web.app/f/stored", "PUBLISHED", 1, 100, true)); runCurrent()
+        assertTrue(model.uiState.value.canShare); assertFalse(model.uiState.value.publishing)
+    }
+    @Test fun failedPublicationRemainsRetryableWithoutInventingALink() = runTest {
+        val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
+            override suspend fun publish(id: String): com.uvg.cc3087.myapp.data.repository.FormPublication = throw IOException("network")
+        }
+        val model = model(repository); model.openDraft(draft.id); runCurrent(); model.publish(); runCurrent()
+        assertNotNull(model.uiState.value.publishError); assertFalse(model.uiState.value.canShare); assertFalse(model.uiState.value.publishing)
+    }
+    @Test fun aLatePublicationDoesNotAttachItsLinkToAnotherDraft() = runTest {
+        val pending = kotlinx.coroutines.CompletableDeferred<com.uvg.cc3087.myapp.data.repository.FormPublication>()
+        val other = draft.copy(id = "other")
+        val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft, other)) {
+            override suspend fun publish(id: String) = pending.await()
+        }
+        val model = model(repository); model.openDraft(draft.id); runCurrent(); model.publish(); runCurrent()
+        model.openDraft(other.id); runCurrent()
+        pending.complete(com.uvg.cc3087.myapp.data.repository.FormPublication("https://example.web.app/f/stored", "PUBLISHED", 1, 100, true)); runCurrent()
+        assertEquals("other", model.uiState.value.draft!!.id); assertFalse(model.uiState.value.canShare)
+    }
+
+    private fun model(repository: com.uvg.cc3087.myapp.data.repository.FormRepository, saved: SavedStateHandle = SavedStateHandle()) =
         SaveShareViewModel(repository, saved).also { viewModels.put("receipt-${viewModelNumber++}", it) }
 }

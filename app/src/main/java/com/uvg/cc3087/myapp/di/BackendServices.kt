@@ -12,7 +12,7 @@ import com.uvg.cc3087.myapp.data.model.userId
 import com.uvg.cc3087.myapp.data.repository.*
 
 /** Application-scoped construction only; repositories and workers receive interfaces. */
-class BackendServices(private val context: Context, database: FormLinkDatabase, covers: CoverStorage) {
+class BackendServices(private val context: Context, private val database: FormLinkDatabase, covers: CoverStorage) {
     private val firebase = if (BuildConfig.FIREBASE_EMULATORS) {
         FirebaseApp.getApps(context).find { it.name == "formlink-emulator" }
             ?: FirebaseApp.initializeApp(context, FirebaseOptions.Builder()
@@ -27,7 +27,11 @@ class BackendServices(private val context: Context, database: FormLinkDatabase, 
     val client = firebase?.let { com.uvg.cc3087.myapp.data.remote.http.FirestoreRest(it.options.projectId!!, auth, http, BuildConfig.FIREBASE_EMULATORS) }
     private val remote = client?.let { com.uvg.cc3087.myapp.data.remote.RestFormSource(it) }
     val sync = remote?.let { FormSyncEngine(local, it) { auth.state.value.userId } }
-    fun repository(owner: String?) = OfflineFirstFormRepository(local, auth, owner, ::schedule)
+    val publisher by lazy { client?.let { com.uvg.cc3087.myapp.data.remote.RestFormPublisher(it, checkNotNull(remote), database,
+        { auth.state.value.userId }, { block -> checkNotNull(sync).exclusive(block) }) } }
+    fun repository(owner: String?) = OfflineFirstFormRepository(local, auth, owner, publisher, ::schedule)
+    fun requests(owner: String) = client?.let { CloudRequestRepository(database, it, owner, { auth.state.value.userId }, ::schedule) }
+
     fun schedule(owner: String) {
         if (sync == null || auth.state.value.userId != owner) return
         val request = OneTimeWorkRequestBuilder<FormSyncWorker>()
@@ -50,7 +54,13 @@ class FormSyncWorker(context: Context, params: WorkerParameters, private val ser
         if (services.auth.state.value.userId != owner) return Result.success()
         return when (services.sync?.sync(owner)) {
             SyncResult.RETRY -> Result.retry()
-            else -> Result.success()
+            SyncResult.SESSION_CHANGED -> Result.success()
+            else -> try {
+                services.publisher?.refresh(owner)
+                services.requests(owner)?.sync()
+                Result.success()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { services.sync?.schedulingFailed(owner); Result.retry() }
         }
     }
 }

@@ -40,8 +40,10 @@ class SaveShareViewModel(
                 val draft = repository.getDraft(id)
                 if (revision == currentRevision) {
                     // confirmamos lo que está en room, no una copia pendiente del editor
+                    val publication = draft?.let { repository.publication(id) }
                     mutableUiState.value = SaveShareUiState(
-                        draft = draft,
+                        draft = draft, publication = publication,
+                        publicLink = publication?.takeIf { it.status == "PUBLISHED" }?.url,
                         loadError = if (draft == null) DraftLoadError.NOT_FOUND else null
                     )
                 }
@@ -55,6 +57,37 @@ class SaveShareViewModel(
         }
     }
 
+    fun publish() {
+        val state = mutableUiState.value
+        val id = state.draft?.id ?: return
+        if (state.publishing) return
+        val operationRevision = revision
+        mutableUiState.value = state.copy(publishing = true, publishError = null)
+        viewModelScope.launch {
+            try {
+                val published = repository.publish(id)
+                if (revision != operationRevision) return@launch
+                mutableUiState.value = mutableUiState.value.copy(publication = published, publicLink = published.url, publishing = false)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                if (revision != operationRevision) return@launch
+                mutableUiState.value = mutableUiState.value.copy(publishing = false,
+                    publishError = (error as? com.uvg.cc3087.myapp.data.repository.PublicationException)?.message
+                        ?: "No se pudo confirmar la publicación. Comprueba la conexión y reintenta.")
+            }
+        }
+    }
+    fun archive() {
+        val state = mutableUiState.value
+        if (state.publishing) return
+        val id = state.draft?.id ?: return
+        mutableUiState.value = state.copy(publishing = true, publishError = null)
+        viewModelScope.launch {
+            try { repository.archive(id); openDraft(id) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { mutableUiState.value = mutableUiState.value.copy(publishing = false, publishError = "No se pudo retirar la publicación. Reintenta con conexión.") }
+        }
+    }
     fun retryLoading() {
         savedStateHandle.get<String>(DRAFT_ID_KEY)?.let(::openDraft)
     }

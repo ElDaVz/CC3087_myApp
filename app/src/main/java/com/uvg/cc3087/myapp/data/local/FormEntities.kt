@@ -20,7 +20,8 @@ data class FormDraftEntity(
     val ownerId: String? = null,
     @ColumnInfo(defaultValue = "0") val revision: Long = 0,
     @ColumnInfo(defaultValue = "0") val syncedRevision: Long = 0,
-    @ColumnInfo(defaultValue = "0") val deleted: Boolean = false
+    @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
+    val creationAttemptId: String? = null, val creationStartedAt: Long? = null, val templateType: String? = null
 )
 
 @Entity(
