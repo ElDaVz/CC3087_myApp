@@ -3,7 +3,7 @@ package com.uvg.cc3087.myapp
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.local.*
@@ -17,6 +17,21 @@ import java.util.UUID
 
 class CoverStorageTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test fun interruptedLegacyCoverMigrationRestoresAndEncryptsItsBackup() {
+        val dir=File(context.filesDir,"covers").apply { mkdirs() }
+        val file=File(dir,"legacy-${UUID.randomUUID()}.jpg")
+        val backup=File(file.path+".bak")
+        try {
+            val bitmap=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+            backup.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG,85,it) };bitmap.recycle()
+            com.uvg.cc3087.myapp.data.security.CoverEncryptionMigration.migrate(context)
+            assertTrue(file.exists());assertFalse(backup.exists())
+            val bytes=com.uvg.cc3087.myapp.data.security.DeviceCipher(context).decrypt(file.readBytes())
+            val decoded=BitmapFactory.decodeByteArray(bytes,0,bytes.size)
+            assertEquals(8,decoded.width);decoded.recycle()
+        }finally{file.delete();backup.delete()}
+    }
 
     @Test fun importedCoverAndBlurSurviveRoomReopenAndCanBeRemoved() = runBlocking {
         val source = File(context.cacheDir, "source-${UUID.randomUUID()}.jpg")
@@ -32,7 +47,8 @@ class CoverStorageTest {
         try {
             path = storage.importImage(android.net.Uri.fromFile(source).toString())
             assertTrue(File(context.filesDir, path + ".blur.jpg").exists())
-            val normalized = BitmapFactory.decodeFile(File(context.filesDir, path).path)
+            val bytes = com.uvg.cc3087.myapp.data.security.DeviceCipher(context).decrypt(File(context.filesDir, path).readBytes())
+            val normalized = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             assertEquals(40, normalized.width); assertEquals(80, normalized.height); normalized.recycle()
             var database = Room.databaseBuilder(context, FormLinkDatabase::class.java, name).build()
             try { RoomFormRepository(database.drafts(), covers = storage).saveDraft(FormDraft("f", "Cover", emptyList(), 1, 1, path)) }

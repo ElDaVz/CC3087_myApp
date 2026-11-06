@@ -8,9 +8,12 @@ import kotlinx.coroutines.flow.combine
 /** Every access is scoped, including direct reads by ID and background acknowledgements. */
 class RoomFormStore(private val database: FormLinkDatabase, private val covers: CoverStorage? = null) : LocalFormStore {
     private val dao get() = database.drafts()
-    override fun observe(owner: String?) = combine(dao.observeOwned(owner), database.requests().observeCounts()) { rows, counts ->
-        val byId = if (owner == null) counts.associate { it.formId to it.count } else emptyMap()
-        rows.map { it.toDraft().toSummary().copy(responseCount = byId[it.form.id] ?: 0) }
+    override fun observe(owner: String?) = combine(dao.observeOwned(owner), database.requests().observeCounts(),
+        database.cloud().observeRequests(owner.orEmpty()), database.cloud().observePublications(owner.orEmpty())) { rows, counts, remoteRequests, publications ->
+        val byId = if (owner == null) counts.associate { it.formId to it.count } else remoteRequests.groupingBy { it.formId }.eachCount()
+        val active = publications.filter { it.status == "PUBLISHED" }.map { it.formId }.toSet()
+        rows.map { it.toDraft().toSummary().copy(responseCount = byId[it.form.id] ?: 0,
+            status = if (it.form.id in active) com.uvg.cc3087.myapp.data.model.FormStatus.ACTIVE else com.uvg.cc3087.myapp.data.model.FormStatus.DRAFT) }
     }
     override fun pendingCount(owner: String) = dao.observePendingCount(owner)
     override suspend fun get(owner: String?, id: String) = dao.getDraft(id)?.takeIf { it.form.ownerId == owner && !it.form.deleted }?.toDraft()

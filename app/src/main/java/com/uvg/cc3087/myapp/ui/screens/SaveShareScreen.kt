@@ -37,7 +37,8 @@ fun SaveShareScreen(
     onRetry: () -> Unit,
     onCopyLink: (String) -> Boolean,
     onWhatsAppShare: (String) -> Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPublish: (() -> Unit)? = null, onArchive: (() -> Unit)? = null
 ) {
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
@@ -110,6 +111,16 @@ fun SaveShareScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(24.dp))
+                    if (onPublish != null) {
+                        Button(onClick = onPublish, enabled = !uiState.publishing, modifier = Modifier.fillMaxWidth()) {
+                            if (uiState.publishing) CircularProgressIndicator(Modifier.size(20.dp))
+                            else Text(if (uiState.publication?.status == "PUBLISHED") "Actualizar publicación" else "Publicar")
+                        }
+                        Text("Publicar requiere conexión. Las ediciones no cambian el enlace público hasta actualizarlo.", style = MaterialTheme.typography.bodySmall)
+                        uiState.publishError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                        if (uiState.publication?.status == "PUBLISHED" && onArchive != null) TextButton(onClick = onArchive, enabled = !uiState.publishing) { Text("Retirar publicación") }
+                        Spacer(Modifier.height(16.dp))
+                    }
                     ShareableLinkCard(uiState.publicLink, uiState.canShare, ::copyLink)
                     Spacer(Modifier.height(24.dp))
                     Button(

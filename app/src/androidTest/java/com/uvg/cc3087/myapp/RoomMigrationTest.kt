@@ -39,7 +39,7 @@ class RoomMigrationTest {
                     old.version = version
                 }
                 val db = Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
-                    .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4).build()
+                    .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5).build()
                 try {
                     val draft = RoomFormRepository(db.drafts()).getDraft("old")!!
                     assertEquals("Conservar", draft.title)

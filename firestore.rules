@@ -2,27 +2,150 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function ownsExisting() { return signedIn() && resource.data.ownerId == request.auth.uid; }
-    function validDraft() {
-      return request.resource.data.keys().hasAll(['ownerId', 'title', 'status', 'fields', 'createdAt', 'updatedAt', 'publishedAt', 'version'])
-        && request.resource.data.keys().hasOnly(['ownerId', 'title', 'status', 'fields', 'createdAt', 'updatedAt', 'publishedAt', 'version'])
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.title is string
-        && request.resource.data.status == 'DRAFT'
-        && request.resource.data.fields is list
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp
-        && request.resource.data.publishedAt == null
-        && request.resource.data.version is int && request.resource.data.version > 0;
+    function owns(data) { return signedIn() && data.ownerId == request.auth.uid; }
+    function formPath(id) { return /databases/$(database)/documents/forms/$(id); }
+    function publicPath(id) { return /databases/$(database)/documents/publishedForms/$(id); }
+    function validForm(id) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['ownerId','title','status','fields','createdAt','updatedAt','publishedAt','version'])
+        && d.keys().hasOnly(['ownerId','title','status','fields','createdAt','updatedAt','publishedAt','version',
+          'creationAttemptId','creationStartedAt','templateType','publishedVersion','publishedFingerprint','firstPublishedAt','deleted'])
+        && owns(d) && d.title is string && d.fields is list
+        && d.status in ['DRAFT','PUBLISHED','ARCHIVED']
+        && d.createdAt is timestamp && d.updatedAt is timestamp
+        && (d.publishedAt == null || d.publishedAt is timestamp)
+        && d.version is int && d.version > 0
+        && (d.status != 'PUBLISHED' || (d.publishedAt is timestamp
+          && getAfter(publicPath(id)).data.ownerId == d.ownerId
+          && getAfter(publicPath(id)).data.active == true
+          && getAfter(publicPath(id)).data.version == d.get('publishedVersion', -1)));
     }
-    match /forms/{formId} {
-      allow read: if ownsExisting();
-      allow create: if signedIn() && validDraft();
-      allow update: if ownsExisting() && validDraft()
-        && request.resource.data.ownerId == resource.data.ownerId;
-      // Repeating an acknowledged deletion after a lost response is harmless.
-      allow delete: if signedIn() && (!exists(/databases/$(database)/documents/forms/$(formId)) || ownsExisting());
-      match /responses/{responseId} { allow read, write: if false; }
+    function live(id, p) {
+      let f = get(formPath(id)).data;
+      return p.active == true && f.status == 'PUBLISHED' && f.get('deleted', false) == false;
+    }
+    function validField(f) {
+      return f.id is string && f.label is string && f.label.size() > 0 && f.label.size() <= 200
+        && f.required is bool && f.config is map && f.optionIds is list
+        && f.type in ['SHORT_TEXT','PARAGRAPH','NUMBER','EMAIL','CHECKBOX','CHECKBOX_GROUP','DROPDOWN','MULTIPLE_CHOICE','DATE_TIME'];
+    }
+    function fieldAt(p, i) { return i >= p.fields.size() || validField(p.fields[i]); }
+    function validPublic(id) {
+      let d = request.resource.data;
+      let f = getAfter(formPath(id)).data;
+      return d.keys().hasAll(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt'])
+        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt'])
+        && owns(d) && f.ownerId == d.ownerId && d.active is bool && d.version is int && d.version > 0
+        && d.fingerprint is string && d.templateType is string && d.publishedAt is timestamp && d.firstPublishedAt is timestamp
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 200 && d.fields is list
+        && d.fields.size() > 0 && d.fields.size() <= 10
+        && (!d.active || (f.status == 'PUBLISHED' && d.fields == f.fields && d.title == f.title && d.version == f.publishedVersion))
+        && fieldAt(d,0) && fieldAt(d,1) && fieldAt(d,2) && fieldAt(d,3) && fieldAt(d,4)
+        && fieldAt(d,5) && fieldAt(d,6) && fieldAt(d,7) && fieldAt(d,8) && fieldAt(d,9);
+    }
+    function validText(f, v) {
+      let c = f.config;
+      let t = f.type;
+      return v is string && v.size() <= 10000
+        && ((!f.required && v == '') || (v.matches('(?s).*[^\\s].*')
+          && (t != 'EMAIL' || v.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$'))
+          && (t != 'NUMBER' || (v.matches('^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)$')
+            && (c.allowDecimals || float(v) == int(float(v)))
+            && (c.minimum == '' || float(v) >= float(c.minimum))
+            && (c.maximum == '' || float(v) <= float(c.maximum))))));
+    }
+    function validChoices(f,v) {
+      return v is list && v.size() <= f.optionIds.size() && v.toSet().size() == v.size()
+        && v.toSet().hasOnly(f.optionIds) && (!f.required || v.size() > 0)
+        && (f.config.allowMultipleAnswers || v.size() <= 1);
+    }
+    function validDate(f,v) {
+      return v is map && v.keys().hasAll(['date','minute']) && v.keys().hasOnly(['date','minute'])
+        && ((!f.required && v.date == null && v.minute == null)
+          || (v.date is timestamp && v.date.hours() == 0 && v.date.minutes() == 0 && v.date.seconds() == 0
+            && (!f.config.disallowPastDates || v.date >= timestamp.date(request.time.year(), request.time.month(), request.time.day()))
+            && ((f.config.includeTime && v.minute is int && v.minute >= 0 && v.minute < 1440)
+              || (!f.config.includeTime && v.minute == null))));
+    }
+    function validAnswer(f,a) {
+      let v = a.value;
+      let t = f.type;
+      return a.keys().hasOnly(['fieldId','value']) && a.fieldId == f.id
+        && (t == 'CHECKBOX' ? (v is bool && (!f.required || v))
+          : t == 'DATE_TIME' ? validDate(f,v)
+          : t in ['MULTIPLE_CHOICE','CHECKBOX_GROUP','DROPDOWN'] ? validChoices(f,v)
+          : validText(f,v));
+    }
+    function validResponse(id, responseId) {
+      let d = request.resource.data;
+      let p = get(publicPath(id)).data;
+      let receipt = getAfter(/databases/$(database)/documents/publishedForms/$(id)/receipts/$(responseId)).data;
+      return live(id,p) && responseId.matches('^[a-f0-9-]{36}$')
+        && d.keys().hasAll(['ownerId','formId','attemptId','title','fields','version','submittedAt','status','answers'])
+        && d.keys().hasOnly(['ownerId','formId','attemptId','title','fields','version','submittedAt','status','answers'])
+        && d.ownerId == p.ownerId && d.formId == id && d.attemptId == responseId && d.title == p.title
+        && d.fields == p.fields && d.version == p.version && d.submittedAt == request.time && d.status == 'PENDING'
+        && receipt.responseId == responseId && receipt.formId == id && receipt.version == p.version
+        && d.answers is list && d.answers.size() == p.fields.size()
+        && getAfter(/databases/$(database)/documents/forms/$(id)/responseChecks/$(responseId + '_0')).data.answers == d.answers
+        && getAfter(/databases/$(database)/documents/forms/$(id)/responseChecks/$(responseId + '_1')).data.answers == d.answers;
+    }
+    function validGroup(id, checkId) {
+      let d = request.resource.data;
+      let p = get(publicPath(id)).data;
+      let r = getAfter(/databases/$(database)/documents/forms/$(id)/responses/$(d.attemptId)).data;
+      return d.keys().hasOnly(['attemptId','part','answers']) && d.part in [0,1]
+        && checkId == d.attemptId + '_' + string(d.part)
+        && r.attemptId == d.attemptId && r.answers == d.answers
+        && d.answers.size() == p.fields.size() && live(id,p)
+        && (d.part == 0 ? (
+          (p.fields.size() <= 0 || validAnswer(p.fields[0],d.answers[0]))
+          && (p.fields.size() <= 1 || validAnswer(p.fields[1],d.answers[1]))
+          && (p.fields.size() <= 2 || validAnswer(p.fields[2],d.answers[2]))
+          && (p.fields.size() <= 3 || validAnswer(p.fields[3],d.answers[3]))
+          && (p.fields.size() <= 4 || validAnswer(p.fields[4],d.answers[4]))
+        ) : (
+          (p.fields.size() <= 5 || validAnswer(p.fields[5],d.answers[5]))
+          && (p.fields.size() <= 6 || validAnswer(p.fields[6],d.answers[6]))
+          && (p.fields.size() <= 7 || validAnswer(p.fields[7],d.answers[7]))
+          && (p.fields.size() <= 8 || validAnswer(p.fields[8],d.answers[8]))
+          && (p.fields.size() <= 9 || validAnswer(p.fields[9],d.answers[9]))
+        ));
+    }
+    match /forms/{id} {
+      allow get: if signedIn() && (!exists(formPath(id)) || owns(resource.data));
+      allow list: if owns(resource.data);
+      allow create: if validForm(id) && request.resource.data.status == 'DRAFT';
+      allow update: if owns(resource.data) && validForm(id) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if signedIn() && (!exists(formPath(id)) || (owns(resource.data) && !exists(publicPath(id))));
+      match /responseChecks/{checkId} {
+        allow create: if validGroup(id,checkId);
+        allow read, update, delete: if false;
+      }
+      match /responses/{responseId} {
+        allow create: if validResponse(id,responseId);
+        allow update: if owns(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status in ['PENDING','IN_PROGRESS','COMPLETED'];
+        allow delete: if false;
+      }
+    }
+    match /{path=**}/responses/{responseId} { allow read: if owns(resource.data); }
+    match /publishedForms/{id} {
+      allow get: if (resource != null && live(id,resource.data)) || (signedIn() && owns(get(formPath(id)).data));
+      allow list: if owns(resource.data);
+      allow create, update: if owns(getAfter(formPath(id)).data) && validPublic(id);
+      allow delete: if false;
+      match /receipts/{responseId} {
+        // A receipt discloses only a random operation ID, version and confirmation time.
+        allow get: if true;
+        allow list, update, delete: if false;
+        allow create: if request.resource.data.keys().hasAll(['responseId','formId','version','submittedAt'])
+          && request.resource.data.keys().hasOnly(['responseId','formId','version','submittedAt'])
+          && request.resource.data.responseId == responseId && request.resource.data.formId == id
+          && request.resource.data.submittedAt == request.time
+          && getAfter(/databases/$(database)/documents/forms/$(id)/responses/$(responseId)).data.attemptId == responseId
+          && getAfter(/databases/$(database)/documents/forms/$(id)/responses/$(responseId)).data.version == request.resource.data.version;
+      }
     }
     match /{document=**} { allow read, write: if false; }
   }

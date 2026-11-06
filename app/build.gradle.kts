@@ -2,8 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.google.services) apply false
     alias(libs.plugins.androidx.room)
+    alias(libs.plugins.google.services) apply false
 }
 
 if (file("google-services.json").exists()) apply(plugin = "com.google.gms.google-services")
@@ -53,8 +53,6 @@ android {
 
 dependencies {
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.androidx.work.runtime)
     implementation(platform(libs.androidx.compose.bom))
@@ -87,4 +85,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
     implementation(libs.coil.svg)
+    implementation(libs.sqlcipher)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.firebase.analytics)
 }

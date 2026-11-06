@@ -15,6 +15,7 @@ enum class SyncResult { SUCCESS, RETRY, SESSION_CHANGED }
 class FormSyncEngine(private val local: LocalFormStore, private val remote: RemoteFormSource,
     private val timeoutMillis: Long = 30_000, private val currentOwner: () -> String?) {
     private val mutex = Mutex()
+    suspend fun <T> exclusive(block: suspend () -> T): T = mutex.withLock { block() }
     private val mutableState = MutableStateFlow(FormSyncState())
     val state = mutableState.asStateFlow()
     fun schedulingFailed(owner: String) { mutableState.value = FormSyncState(owner, SyncPhase.ERROR) }

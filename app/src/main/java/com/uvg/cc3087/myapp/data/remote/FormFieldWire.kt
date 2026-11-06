@@ -10,6 +10,7 @@ object FormFieldWire {
             FormFieldType.DATE -> "DATE_TIME"
             else -> field.type.name
         },
+        "optionIds" to field.options.map { it.id },
         "label" to field.title, "description" to field.helpText, "required" to field.required,
         "position" to position, "config" to mapOf(
             "placeholder" to field.placeholder, "allowMultipleAnswers" to field.allowMultipleAnswers,

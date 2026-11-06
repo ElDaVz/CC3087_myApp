@@ -72,7 +72,9 @@ fun FormListItem(
             val placeholderColor = MaterialTheme.colorScheme.surfaceVariant
 
             // coil carga la miniatura y deja un color suave mientras espera
-            AsyncImage(
+            if (form.imageUrl.startsWith("covers/")) PrivateCoverImage(form.imageUrl,
+                stringResource(R.string.thumbnail_for_form, displayTitle), Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)))
+            else AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(if (form.imageUrl.startsWith("covers/")) java.io.File(LocalContext.current.filesDir, form.imageUrl) else form.imageUrl)
                     .crossfade(true)

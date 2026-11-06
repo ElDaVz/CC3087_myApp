@@ -8,6 +8,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.isActive
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -38,9 +40,18 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
     }
     key(uid) {
         val owner = rememberSaveable(saver = Saver<SessionViewModelOwner, android.os.Bundle>(
-            save = { it.save() }, restore = { SessionViewModelOwner(it) })) { SessionViewModelOwner() }
+            save = { android.os.Bundle().apply { putByteArray("encrypted", services.deviceCipher.encrypt(it.save().toBytes())) } },
+            restore = { SessionViewModelOwner(it.getByteArray("encrypted")?.let { bytes -> androidBundle(services.deviceCipher.decrypt(bytes)) }) })) { SessionViewModelOwner() }
         val forms = remember(uid) { services.repository(uid) }
         val lifecycleOwner = LocalLifecycleOwner.current
+        LaunchedEffect(uid, lifecycleOwner) {
+            if (uid != null) lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                    services.schedule(uid)
+                    kotlinx.coroutines.delay(15_000)
+                }
+            }
+        }
         DisposableEffect(owner) { onDispose { owner.clear() } }
         LaunchedEffect(uid) { uid?.let(services::schedule) }
         DisposableEffect(uid, lifecycleOwner) {
@@ -74,7 +85,7 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                 onSelect = accountModel::select, onImport = accountModel::importSelected,
                 onSignOut = accountModel::signOut, onSync = { uid?.let(services::schedule) })
             else FormLinkRoute(forms, templates,
-                if (uid == null) requests else EmptyAccountRequests,
+                if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests,
                 coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
         }
     }
@@ -84,4 +95,12 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
 private object EmptyAccountRequests : RequestRepository {
     override suspend fun getRequests() = emptyList<RequestSummary>()
     override suspend fun getDetail(formId: String, responseId: String): RequestDetail? = null
+}
+
+private fun android.os.Bundle.toBytes(): ByteArray = android.os.Parcel.obtain().let { parcel ->
+    try { parcel.writeBundle(this); parcel.marshall() } finally { parcel.recycle() }
+}
+private fun androidBundle(bytes: ByteArray): android.os.Bundle? = android.os.Parcel.obtain().let { parcel ->
+    try { parcel.unmarshall(bytes, 0, bytes.size); parcel.setDataPosition(0); parcel.readBundle(SessionViewModelOwner::class.java.classLoader) }
+    finally { parcel.recycle() }
 }

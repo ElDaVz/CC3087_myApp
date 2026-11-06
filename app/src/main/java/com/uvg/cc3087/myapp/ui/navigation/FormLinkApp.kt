@@ -1,5 +1,8 @@
 package com.uvg.cc3087.myapp.ui.navigation
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -61,14 +64,24 @@ private enum class AppDestination {
 @Composable
 fun FormLinkApp() {
     val context = LocalContext.current.applicationContext
-    remember(context) { AppContainer.initialize(context) }
+    val container = remember(context) { AppContainer.also { it.initialize(context) } }
     val resources = LocalResources.current
     val languageTags = resources.configuration.locales.toLanguageTags()
     LaunchedEffect(languageTags) {
-        AppContainer.updateTemplateFields(FormEditorSampleData.templateFields(resources))
+        container.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
-    BackendRoot(AppContainer.backend, AppContainer.templateRepository,
-        AppContainer.requestRepository, AppContainer.coverStorage)
+    var initializationAttempt by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    val initialized = androidx.compose.runtime.remember(initializationAttempt) { runCatching { container.backend } }
+    if (initialized.isFailure) {
+        androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
+            androidx.compose.material3.Text("No se pudieron abrir los datos protegidos. No se ha borrado información. Si restauraste este dispositivo, vuelve al dispositivo original para recuperar los borradores locales.")
+            androidx.compose.material3.Button(onClick = { initializationAttempt++ }) { androidx.compose.material3.Text("Reintentar") }
+        }
+        return
+    }
+    BackendRoot(initialized.getOrThrow(), container.templateRepository,
+        container.requestRepository, container.coverStorage)
 }
 
 @Composable
@@ -128,6 +141,7 @@ internal fun FormLinkRoute(
         onRetrySave = editFormViewModel::retrySave,
         onRetryEditorLoad = editFormViewModel::retryLoad,
         onRetryFormsLoad = formsViewModel::retryLoading,
+        onPublish = saveShareViewModel::publish, onArchive = saveShareViewModel::archive,
         saveShareUiState = saveShareUiState,
         onOpenSaveShare = saveShareViewModel::openDraft,
         onRetrySaveShareLoad = saveShareViewModel::retryLoading,
@@ -138,6 +152,7 @@ internal fun FormLinkRoute(
 
 @Composable
 private fun FormLinkContent(
+    onPublish: (() -> Unit)? = null, onArchive: (() -> Unit)? = null,
     formsUiState: FormsUiState,
     chooseTemplateUiState: ChooseTemplateUiState,
     editFormUiState: EditFormUiState,
@@ -275,6 +290,7 @@ private fun FormLinkContent(
                 onBack = { currentDestination = saveShareReturnDestination },
                 onBackToForms = showForms,
                 onRetry = onRetrySaveShareLoad,
+                onPublish = onPublish, onArchive = onArchive,
                 onCopyLink = onCopyLink,
                 onWhatsAppShare = onWhatsAppShare
             )
