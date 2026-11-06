@@ -17,12 +17,16 @@ class RestBackendIntegrationTest {
     @Test fun encryptedRestSessionCanSignOutSignInAndRecoverOwnerForm() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val auth = RestAuthRepository("demo-api-key", DeviceCipher(context), FirebaseHttp(true), true)
+        var clock = System.currentTimeMillis()
+        val auth = RestAuthRepository("demo-api-key", DeviceCipher(context), FirebaseHttp(true), true, now = { clock })
         auth.state.first { it !is AuthState.Initializing }
         auth.signOut()
         val email = "rest-${UUID.randomUUID()}@example.com"
         auth.signUp(email, "password123")
         val uid = auth.state.value.userId!!
+        clock += 3_700_000
+        assertTrue(auth.token(uid).isNotBlank())
+        assertEquals(uid, auth.state.value.userId)
         val client = FirestoreRest("demo-formlink", auth, FirebaseHttp(true), true)
         val source = RestFormSource(client)
         val id = "rest-${UUID.randomUUID()}"

@@ -11,7 +11,8 @@ import org.json.JSONObject
 
 /** Firebase Authentication via HTTPS; no SDK plaintext session store is created. */
 class RestAuthRepository(private val apiKey: String?, private val cipher: DeviceCipher,
-    private val http: FirebaseHttp, private val emulator: Boolean = false) : AuthRepository {
+    private val http: FirebaseHttp, private val emulator: Boolean = false,
+    private val now: () -> Long = System::currentTimeMillis) : AuthRepository {
     override val configured get() = apiKey != null
     private val mutableState = MutableStateFlow<AuthState>(AuthState.Initializing)
     override val state = mutableState.asStateFlow()
@@ -37,7 +38,7 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
             check(stamp == generation) { "Session changed" }
             persist(JSONObject().put("uid", result.getString("localId")).put("email", result.getString("email"))
                 .put("idToken", result.getString("idToken")).put("refreshToken", result.getString("refreshToken"))
-                .put("expiresAt", System.currentTimeMillis() + result.getString("expiresIn").toLong() * 1000))
+                .put("expiresAt", now() + result.getString("expiresIn").toLong() * 1000))
         }
     }
     private fun persist(value: JSONObject) {
@@ -48,13 +49,13 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
     suspend fun token(owner: String): String = mutex.withLock {
         val value = checkNotNull(session) { "Not authenticated" }
         check(value.getString("uid") == owner) { "Session changed" }
-        if (value.getLong("expiresAt") < System.currentTimeMillis() + 60_000) {
+        if (value.getLong("expiresAt") < now() + 60_000) {
             val host = if (emulator) "http://10.0.2.2:9099/securetoken.googleapis.com" else "https://securetoken.googleapis.com"
             try {
                 val result = http.request("$host/v1/token?key=$apiKey", JSONObject().put("grant_type", "refresh_token").put("refresh_token", value.getString("refreshToken")))
                 persist(JSONObject(value.toString()).put("idToken", result.getString("id_token"))
                     .put("refreshToken", result.getString("refresh_token"))
-                    .put("expiresAt", System.currentTimeMillis() + result.getString("expires_in").toLong() * 1000))
+                    .put("expiresAt", now() + result.getString("expires_in").toLong() * 1000))
             } catch (error: BackendHttpException) {
                 if (error.status == 400 || error.status == 401) { session = null; cipher.remove("auth-session"); mutableState.value = AuthState.Guest; generation++ }
                 throw error

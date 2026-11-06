@@ -25,7 +25,7 @@ export async function loadForm(db:ReturnType<typeof getFirestore>,id:string):Pro
 }
 export async function submit(db:ReturnType<typeof getFirestore>,id:string,attempt:string,form:PublishedForm,answers:Answer[]) {
  const receipt=doc(db,'publishedForms',id,'receipts',attempt);
- if((await getDocFromServer(receipt)).exists())return;
+ if((await withTimeout(getDocFromServer(receipt),10000)).exists())return;
  const batch=writeBatch(db);
  const wireAnswers=answers.map(a=>{const v=a.value;return {...a,value:typeof v==='object'&&!Array.isArray(v)?{...v,date:v.date?Timestamp.fromDate(v.date):null}:v};});
  for(const part of [0,1])batch.set(doc(db,'forms',id,'responseChecks',`${attempt}_${part}`),{attemptId:attempt,part,answers:wireAnswers});
@@ -33,7 +33,7 @@ export async function submit(db:ReturnType<typeof getFirestore>,id:string,attemp
   fields:form.fields,version:form.version,submittedAt:serverTimestamp(),status:'PENDING',answers:wireAnswers});
  batch.set(receipt,{responseId:attempt,formId:id,version:form.version,submittedAt:serverTimestamp()});
  try {await withTimeout(batch.commit());}
- catch(error) {if(!(await getDocFromServer(receipt)).exists())throw error;}
+ catch(error) {if(!(await withTimeout(getDocFromServer(receipt),10000)).exists())throw error;}
 }
 
 export async function withTimeout<T>(promise:Promise<T>,millis=15000):Promise<T>{

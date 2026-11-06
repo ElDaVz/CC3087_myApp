@@ -34,14 +34,17 @@ service cloud.firestore {
       let d = request.resource.data;
       let f = getAfter(formPath(id)).data;
       return d.keys().hasAll(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt'])
-        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt'])
+        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt','firstFieldCount','firstTemplateType'])
         && owns(d) && f.ownerId == d.ownerId && d.active is bool && d.version is int && d.version > 0
         && d.fingerprint is string && d.templateType is string && d.publishedAt is timestamp && d.firstPublishedAt is timestamp
         && d.title is string && d.title.size() > 0 && d.title.size() <= 200 && d.fields is list
         && d.fields.size() > 0 && d.fields.size() <= 10
         && (!d.active || (f.status == 'PUBLISHED' && d.fields == f.fields && d.title == f.title && d.version == f.publishedVersion))
         && fieldAt(d,0) && fieldAt(d,1) && fieldAt(d,2) && fieldAt(d,3) && fieldAt(d,4)
-        && fieldAt(d,5) && fieldAt(d,6) && fieldAt(d,7) && fieldAt(d,8) && fieldAt(d,9);
+        && fieldAt(d,5) && fieldAt(d,6) && fieldAt(d,7) && fieldAt(d,8) && fieldAt(d,9)
+        && (!exists(publicPath(id)) || (d.firstPublishedAt == resource.data.firstPublishedAt
+          && (!resource.data.keys().hasAny(['firstFieldCount']) || d.firstFieldCount == resource.data.firstFieldCount)
+          && (!resource.data.keys().hasAny(['firstTemplateType']) || d.firstTemplateType == resource.data.firstTemplateType)));
     }
     function validText(f, v) {
       let c = f.config;

@@ -86,7 +86,7 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                 onSignOut = accountModel::signOut, onSync = { uid?.let(services::schedule) })
             else FormLinkRoute(forms, templates,
                 if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests,
-                coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
+                analytics = services.analytics, coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
         }
     }
 }
