@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "firebase emulators:exec --config ../firebase.json --project demo-formlink --only firestore,auth \"node --test *.test.mjs\"",
-    "emulators": "firebase emulators:start --config ../firebase.json --project demo-formlink --only firestore,auth"
+    "emulators": "firebase emulators:start --config ../firebase.json --project demo-formlink --only firestore,auth",
+    "test:running": "node --test *.test.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",

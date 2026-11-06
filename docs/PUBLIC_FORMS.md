@@ -17,7 +17,7 @@ Room almacena las respuestas remotas por propietario, separadas de los fixtures 
 1. `npm ci --prefix backend-tests` y `npm ci --prefix web`.
 2. `backend-tests/node_modules/.bin/firebase emulators:start --project demo-formlink --only auth,firestore`.
 3. Crear `web/.env.local` con `VITE_FIREBASE_EMULATORS=true`; `npm run dev --prefix web`. Las pruebas E2E establecen la variable automáticamente.
-4. `npm test --prefix web`; con emuladores activos, `npm run test:e2e --prefix web`.
+4. `npm test --prefix web`; instalar Chromium con `web/node_modules/.bin/playwright install --no-shell chromium`. Con emuladores activos, `npm run test:e2e --prefix web`; en Linux con Chrome instalado también puede usarse `bash scripts/test-web-browser.sh`.
 5. Producción: registrar una app WEB en el proyecto Firebase, generar su configuración local si fuera necesaria y compilar `npm run build --prefix web` sin la variable de emuladores.
 6. Autenticarse en Firebase CLI y desplegar `firebase deploy --project formlink-9f735 --only firestore:rules,firestore:indexes,hosting`. Hosting entrega su configuración pública desde `/__/firebase/init.json`; la app web debe estar registrada.
 7. Confirmar el enlace `https://formlink-9f735.web.app/f/{id}` desde una publicación real. El enlace no se considera verificado solo porque el código lo construye.
