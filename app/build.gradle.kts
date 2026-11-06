@@ -86,5 +86,6 @@ dependencies {
     implementation(libs.coil.network)
     implementation(libs.coil.svg)
     implementation(libs.sqlcipher)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.firebase.analytics)
 }

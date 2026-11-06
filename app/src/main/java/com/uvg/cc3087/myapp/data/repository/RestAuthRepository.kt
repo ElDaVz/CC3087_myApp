@@ -11,18 +11,22 @@ import org.json.JSONObject
 
 /** Firebase Authentication via HTTPS; no SDK plaintext session store is created. */
 class RestAuthRepository(private val apiKey: String?, private val cipher: DeviceCipher,
-    private val http: FirebaseHttp, private val emulator: Boolean = false) : AuthRepository {
+    private val http: FirebaseHttp, private val emulator: Boolean = false,
+    private val now: () -> Long = System::currentTimeMillis) : AuthRepository {
     override val configured get() = apiKey != null
     private val mutableState = MutableStateFlow<AuthState>(AuthState.Initializing)
     override val state = mutableState.asStateFlow()
     private val mutex = Mutex()
     private var session: JSONObject? = null
     private var generation = 0L
+    private val projectBinding = apiKey?.let { key -> java.security.MessageDigest.getInstance("SHA-256")
+        .digest(key.toByteArray()).joinToString("") { "%02x".format(it) } }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val base get() = if (emulator) "http://10.0.2.2:9099/identitytoolkit.googleapis.com" else "https://identitytoolkit.googleapis.com"
     init { scope.launch {
         mutex.withLock {
-            session = try { cipher.read("auth-session")?.let { JSONObject(String(it)) } } catch (_: Exception) { null }
+            session = try { if (!configured) null else cipher.read("auth-session")?.let { JSONObject(String(it)) }
+                ?.takeIf { it.optString("projectBinding") == projectBinding } } catch (_: Exception) { null }
             mutableState.value = session?.let { AuthState.SignedIn(UserSession(it.getString("uid"), it.getString("email"))) } ?: AuthState.Guest
         }
     } }
@@ -37,10 +41,11 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
             check(stamp == generation) { "Session changed" }
             persist(JSONObject().put("uid", result.getString("localId")).put("email", result.getString("email"))
                 .put("idToken", result.getString("idToken")).put("refreshToken", result.getString("refreshToken"))
-                .put("expiresAt", System.currentTimeMillis() + result.getString("expiresIn").toLong() * 1000))
+                .put("expiresAt", now() + result.getString("expiresIn").toLong() * 1000))
         }
     }
     private fun persist(value: JSONObject) {
+        value.put("projectBinding", projectBinding)
         cipher.write("auth-session", value.toString().toByteArray())
         session = value
         mutableState.value = AuthState.SignedIn(UserSession(value.getString("uid"), value.getString("email")))
@@ -48,13 +53,13 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
     suspend fun token(owner: String): String = mutex.withLock {
         val value = checkNotNull(session) { "Not authenticated" }
         check(value.getString("uid") == owner) { "Session changed" }
-        if (value.getLong("expiresAt") < System.currentTimeMillis() + 60_000) {
+        if (value.getLong("expiresAt") < now() + 60_000) {
             val host = if (emulator) "http://10.0.2.2:9099/securetoken.googleapis.com" else "https://securetoken.googleapis.com"
             try {
                 val result = http.request("$host/v1/token?key=$apiKey", JSONObject().put("grant_type", "refresh_token").put("refresh_token", value.getString("refreshToken")))
                 persist(JSONObject(value.toString()).put("idToken", result.getString("id_token"))
                     .put("refreshToken", result.getString("refresh_token"))
-                    .put("expiresAt", System.currentTimeMillis() + result.getString("expires_in").toLong() * 1000))
+                    .put("expiresAt", now() + result.getString("expires_in").toLong() * 1000))
             } catch (error: BackendHttpException) {
                 if (error.status == 400 || error.status == 401) { session = null; cipher.remove("auth-session"); mutableState.value = AuthState.Guest; generation++ }
                 throw error

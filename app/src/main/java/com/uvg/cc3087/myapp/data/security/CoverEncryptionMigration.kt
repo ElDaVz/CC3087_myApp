@@ -7,7 +7,9 @@ import java.io.File
 object CoverEncryptionMigration {
     fun migrate(context: Context) {
         val cipher = DeviceCipher(context)
-        File(context.filesDir, "covers").listFiles()?.filter { it.name.endsWith(".jpg") }?.forEach { file ->
+        File(context.filesDir, "covers").listFiles()?.map {
+            File(it.parentFile, it.name.removeSuffix(".bak").removeSuffix(".new"))
+        }?.filter { it.name.endsWith(".jpg") }?.distinctBy { it.path }?.forEach { file ->
             val bytes = AtomicFile(file).readFully()
             if (bytes.size >= 2 && bytes[0] == 0xff.toByte() && bytes[1] == 0xd8.toByte()) {
                 val atomic = AtomicFile(file)
