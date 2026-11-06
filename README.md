@@ -1,116 +1,79 @@
-# CC3087_myApp
+# FormLink · CC3087
 
-Proyecto desarrollado con **Android Studio**, utilizando **Kotlin** y **Jetpack Compose**.
+Aplicación Android para crear formularios, compartirlos por enlace y gestionar solicitudes de clientes. Android usa Kotlin, Compose/Material 3, MVVM, Room y repositorios. El cliente web es una página móvil con TypeScript/Vite y Firebase.
 
-## Descripción
+## Estado de la fase 3
 
-Aplicación móvil dirigida a pequeños emprendedores que reciben pedidos, reservas o solicitudes mediante WhatsApp.
+La implementación incluye autenticación por correo/contraseña, formularios privados por propietario, guardado local cifrado, sincronización de borradores, publicación explícita, cliente web y bandeja de solicitudes remotas. La configuración de Hosting, Analytics, Crashlytics y CI debe distinguirse de su evidencia externa: un workflow escrito no equivale a una ejecución de GitHub ni la configuración local a un despliegue verificado.
 
-La aplicación permite crear formularios web y compartirlos con los clientes mediante un enlace. Las respuestas se reciben en la aplicación, donde el emprendedor puede consultar la información, gestionar sus solicitudes y actualizar su estado.
+| Inciso | Implementación | Evidencia externa |
+|---|---|---|
+| Planificación | Etapas, desviaciones y definición de terminado en `docs/PHASE3_DELIVERY.md` | Completar responsables/fechas e issues del equipo |
+| Backend | Firebase Auth, Firestore y coordinación Room ↔ remoto | Demo real de consola y recuperación entre sesiones |
+| Seguridad | Keystore, sesión/Room/portadas cifradas, reglas y HTTPS | Revisión del equipo y configuración de servicios |
+| Calidad | Pruebas, workflow por PR, QA manual y telemetría | CI visible, aprobación humana y paneles reales |
+| Feedback Fase 2 | Matriz preparada | Pendiente de recibir observaciones originales |
 
-## Funcionalidades principales
+## Flujo principal
 
-- Crear y compartir formularios web.
-- Recibir solicitudes de clientes.
-- Consultar el detalle de cada solicitud.
-- Cambiar el estado de una solicitud.
-- Gestionar productos o servicios.
-- Controlar inventario básico.
-- Compartir formularios mediante WhatsApp.
+1. Invitado o cuenta crea un formulario en blanco o desde plantilla. Las portadas son opcionales y permanecen en el dispositivo.
+2. Cada edición se guarda en Room. Preview valida sin guardar solicitudes.
+3. **Continuar** valida y espera el último guardado antes de abrir Guardar/Compartir.
+4. **Publicar** exige cuenta y conexión; confirma el backend antes de habilitar copiar/compartir el enlace HTTPS.
+5. El cliente abre `/f/{id}`, completa y envía. Se confirma únicamente tras guardarse en Firestore.
+6. Android sincroniza la solicitud a la bandeja y permite cambiar/reabrir su estado.
 
-## Plataformas
+La primera web admite diez preguntas y los nueve tipos actuales del editor. No admite archivos, firmas ni rating. Las ediciones privadas no cambian la copia pública: usar **Actualizar publicación**. **Retirar publicación** bloquea nuevos envíos. Las solicitudes conservan snapshots históricos. El botón móvil Responder sigue deshabilitado; el cliente responde desde el enlace web.
 
-- **Aplicación Android:** utilizada por el emprendedor.
-- **Formulario web:** utilizado por el cliente sin necesidad de instalar una aplicación.
+## Fuente de verdad y funcionamiento sin conexión
 
-## Requisitos
+**Room es la fuente de verdad de la UI y de los cambios pendientes**. Los repositorios escriben localmente y WorkManager coordina Auth/Firestore mediante adaptadores HTTPS. Pantallas y ViewModels no acceden a DAOs ni a Firebase directamente. Los SDK oficiales de Analytics y Crashlytics se encapsulan por separado.
 
-- Android Studio Meerkat o superior.
-- JDK 21.
-- Android SDK actualizado.
+- Formularios: guardar inmediatamente en Room; subir revisiones pendientes al autenticarse, editar, recuperar conexión, reintentar o volver a primer plano. Entre dispositivos gana la última escritura confirmada. Las confirmaciones no limpian revisiones nuevas.
+- Publicación: **Firestore conserva la copia pública confirmada** que consume la web. Guardar/sincronizar un borrador no publica. Publicar y retirar requieren conexión.
+- Solicitudes: **Firestore conserva el envío original**; Room mantiene su proyección por propietario. Android descarga al entrar/volver, reintentar y cada 15 segundos mientras está activo. Los cambios de estado se guardan localmente y se reintentan sin conexión. No se usa un listener push.
+- Sin conexión: editar y consultar lo ya descargado sigue disponible; la UI informa pendientes/errores. La web muestra error y conserva el intento en la pestaña; no anuncia un envío no confirmado ni guarda respuestas en almacenamiento persistente del navegador.
+- Invitados: borradores y solicitudes de fixtures locales separados de cuentas. Importar borradores a una cuenta es una selección explícita.
+- Portadas: archivos privados cifrados, nunca blobs de Room ni rutas transmitidas al backend.
 
-## Compilar
-| Sistema Operativo | Comando |
-|-------------------|----------|
-| macOS / Linux | `./gradlew assembleDebug` |
-| Windows | `gradlew.bat assembleDebug` |
+## Configuración
 
-## Estado de esta entrega
+Requiere JDK 21 y Android SDK indicado en `local.properties`; dependencias centralizadas en `gradle/libs.versions.toml`. Configurar Firebase Android mediante `app/google-services.json` ignorado por Git. Sin configuración, la edición como invitado sigue utilizable. Registrar además una app WEB y habilitar email/password y Firestore. No subir cuentas de servicio ni credenciales privadas.
 
-La entrega actual cubre el flujo móvil de fase 2: lista de formularios, plantillas, edición, vista previa de prueba y guardado/recuperación local de borradores. Las acciones de guardar y compartir confirman el guardado en este dispositivo; todavía no publican un formulario web ni crean un enlace público. La búsqueda, algunas opciones de menú y destinos de navegación muestran respuestas provisionales.
-
-La asistencia de IA se utilizó para apoyar revisión, documentación, implementación y pruebas. El equipo debe poder explicar cada cambio y verificarlo en el repositorio.
-
-### Solicitudes locales
-
-La app permite consultar solicitudes locales desde **Respuestas**, abrir su detalle y cambiar entre **Pendiente**, **En proceso** y **Completada**. Los conteos del listado y de cada formulario se calculan desde los registros locales. **Responder** está deshabilitado: Room solo guarda borradores y todavía no existe publicación. La captura permanece comprobable mediante fixtures aislados de pruebas, sin entrada desde la navegación normal. La vista previa del editor continúa siendo una prueba y no crea solicitudes.
-
-Las solicitudes se guardan en Room tanto en debug como en release. No se sincronizan solicitudes ni se reciben respuestas mediante un enlace web; el backend de esta entrega sincroniza únicamente formularios. Los ejemplos solo están en la actividad de demostración de debug, fuera del recorrido normal. Ver [recorrido y pruebas de solicitudes](docs/SOLICITUDES_LOCALES.md).
-
-## Datos persistentes en backend
-
-Firebase Authentication permite registro, inicio y cierre de sesión por correo/contraseña. Los formularios de la cuenta se guardan en Firestore y se recuperan en Room. El invitado sigue trabajando localmente; desde **Cuenta** puede importar explícitamente los borradores seleccionados. Las portadas permanecen locales.
-
-Room es la fuente de verdad de la UI. El repositorio guarda cada edición local y encola su revisión; WorkManager sincroniza al autenticarse, editar, recuperar conexión, volver a primer plano o reintentar. Los borrados quedan pendientes hasta confirmarse. Los errores remotos no borran ediciones locales; entre dispositivos gana la última escritura confirmada por el servidor. La UI distingue guardado local, pendientes, sincronización y error. Los ViewModels y pantallas no llaman a Firestore.
-
-El proyecto real Firebase todavía debe crearse/configurarse. Sin `app/google-services.json` la app compila y funciona como invitado, mostrando el estado de backend no configurado. Ver [configuración, sincronización, demo e inyección de dependencias](docs/FIREBASE_BACKEND.md).
-
-| Tarea de esta fase | Estado |
-| --- | --- |
-| Portadas locales y Continuar con validación | Implementada y verificada en emulador Android |
-| Authentication y coordinación Room ↔ Firestore | Implementada; validación local mediante Emulator Suite |
-| Configuración del proyecto real y demostración en su consola | No iniciada: requiere crear el proyecto del equipo |
-| Revisión ampliada de seguridad y feedback de Fase 2 | Fuera de esta entrega; no se presenta como completada |
-
-Se acota el backend a formularios; publicación web, imágenes remotas y solicitudes compartidas quedan pendientes. No se confunde guardar/sincronizar un borrador con publicar un enlace público.
-
-## Arquitectura y datos locales
-
-```text
-Compose UI → ViewModel → FormRepository → Room
+```sh
+./gradlew compileDebugKotlin testDebugUnitTest compileDebugAndroidTestKotlin assembleDebug
+./gradlew lintDebug
+npm ci --prefix backend-tests
+npm ci --prefix web
+npm run build --prefix web
+npm test --prefix web
+npm test --prefix backend-tests
 ```
 
-Compose presenta estado y envía acciones. Los ViewModels coordinan filtros, validación y edición; `FormRepository` define el acceso a los formularios y `RoomFormRepository` conserva los borradores en Room. La base `formlink-drafts.db` se abre como instancia única desde `AppContainer`. Room es la fuente de verdad local para títulos, configuración y orden de campos. La lista observa un `Flow`, por lo que refleja altas, ediciones y eliminaciones sin recarga manual. La integración opcional con Firebase Authentication y Firestore coordina formularios por cuenta manteniendo Room como fuente de lectura. Sin configuración Firebase se conserva el modo invitado.
+Con Firebase Emulator Suite activo:
 
-## Portada opcional y Continuar
+```sh
+web/node_modules/.bin/playwright install --no-shell chromium
+./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true
+npm run test:e2e --prefix web
+```
 
-El editor permite agregar, reemplazar o quitar una portada mediante el selector de imágenes del sistema. Se conserva una copia privada normalizada (hasta 10 MiB de entrada y 2048 píxeles por lado) y un fondo desenfocado compatible con Android 26+. Room v3 guarda solo la referencia relativa; la migración v2→v3 conserva formularios y solicitudes. La portada no es obligatoria y aparece en el editor, Preview y miniatura del listado.
+Debug desactiva telemetría por defecto. La demo real de Analytics/Crashlytics usa `-PtelemetryEnabled=true`, sin Firebase emulado. La variante con emuladores usa `demo-formlink` y no contacta servicios de producción.
 
-**Continuar** valida el título y la configuración de todas las preguntas. Solo abre **Guardar y compartir** cuando la última edición ya está confirmada en Room; un fallo conserva los cambios y permite reintentar. Guardar no equivale a publicar: los controles de copiar un enlace público siguen deshabilitados hasta implementar publicación real. Preview continúa sin crear solicitudes.
+## Arquitectura e inyección
 
-## Demo reproducible de persistencia
+`Compose → ViewModel → interfaces de repositorio → Room / adaptadores remotos`.
 
-1. Abrir la app y crear un formulario o editar uno existente.
-2. Cambiar el título y al menos un campo; esperar a que aparezca «Guardado en este dispositivo».
-3. Cerrar la app por completo y volver a abrirla.
-4. Comprobar que aparece el mismo título en la lista y que al abrirlo se conservan los campos y su orden.
+`AppContainer`, `BackendServices`, factories de ViewModels y WorkerFactory realizan inyección manual explícita. Los repositorios quedan ligados a una cuenta; al cambiar sesión se destruyen sus ViewModels y trabajos. Hilt automatizaría construcción, scopes y factories, pero no sustituye repositorios ni decide sincronización. La inyección manual es suficiente para este módulo; migrar a Hilt sería un PR separado, descrito en [la guía de arquitectura](docs/FIREBASE_BACKEND.md).
 
-La prueba instrumentada `FormDraftFlowTest` cubre creación y edición dentro de la app. `RoomFormRepositoryTest` cubre las emisiones del flujo tras insertar, editar y eliminar, y la reapertura de una base en disco. La demostración manual de cerrar y abrir en un dispositivo/emulador queda pendiente cuando haya uno disponible.
+## Documentación y entrega
 
-## Compromisos y estado
+- [Publicación, contratos web y despliegue](docs/PUBLIC_FORMS.md).
+- [Seguridad, cifrado y actualización](docs/SECURITY.md).
+- [Métricas, DebugView y Crashlytics](docs/ANALYTICS.md).
+- [Consultas de promedios y abandono al corte](docs/analytics/metrics.sql).
+- [Checklist de QA manual](docs/QA_CHECKLIST.md).
+- [Planificación, definición de terminado y feedback](docs/PHASE3_DELIVERY.md).
+- `.github/workflows/quality.yml`: compilación, unitarias, Lint, pruebas de reglas, navegador e instrumentadas por PR.
 
-| Compromiso | Estado | Evidencia / desviación |
-| --- | --- | --- |
-| Forms, edición, preview y borradores locales | Implementado en esta rama | Compose, ViewModels y Room; ver `docs/REVISION_ENTREGA_UI.md` y pruebas indicadas arriba |
-| Autenticación y publicación del formulario | Autenticación implementada; publicación pendiente | Auth/Firestore integrados de forma opcional; falta proyecto real para demo. Guardar no publica |
-| Respuestas desde formulario web | Pendiente: 9–13 de noviembre de 2026 | No hay formulario web ni captura remota de respuestas |
-| Demo manual de persistencia tras cierre completo | Pendiente de dispositivo/emulador | El entorno de desarrollo actual no ofrece una demo presencial registrada |
-
-Las fechas son compromisos de planificación para trabajo pendiente, no resultados completados.
-
-## Autoevaluación: feedback simulado de la fase de UI
-
-Esta autoevaluación usa los puntos verificables resumidos en `docs/REVISION_ENTREGA_UI.md`; el PDF original del plan no está en este repositorio. Es una revisión propia y **no corresponde al feedback de los auxiliares**.
-
-| Punto comprobable | Estado | Evidencia |
-| --- | --- | --- |
-| Compose y Material 3 | Implementado | Scaffold, componentes Material 3 y tema central |
-| Estado de carga, lista vacía, contenido y error | Implementado | `FormsUiState` y `FormsViewModelTest` |
-| Persistencia local reactiva | Implementado; demo manual pendiente | Room, `FormRepository`, prueba de Flow y prueba de reapertura en disco |
-| Validación centralizada para Preview | Implementado | Métodos del `EditFormViewModel` y prueba unitaria |
-| Comparación visual completa con Figma | Parcial | La revisión existente identifica diferencias que aún requieren revisión visual |
-| Acciones provisionales diferenciadas de las reales | Documentado | Esta tabla y la sección de funcionalidades |
-
-### Espacio para feedback de auxiliares
-
-Pendiente de incorporar después de recibirlo: observación, cambio acordado, responsable y fecha.
+El desarrollo se entrega por ramas y PRs revisados por otro integrante; no se integra directamente a main. Las pruebas automatizadas y los resultados de consola deben adjuntarse al PR correspondiente. La asistencia de IA apoyó implementación y pruebas; el equipo debe poder explicar los cambios.

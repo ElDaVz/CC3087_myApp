@@ -27,11 +27,12 @@
 
 ### Current local implementation
 
-- Firebase Auth and Firestore are optional integrations for owner-scoped form sync. Missing project configuration must leave guest editing usable and display an explicit unconfigured state. Room v4 adds owner and durable pending revisions through migration v3→v4. Local guest drafts require explicit import into an account; covers never sync.
-- The current app saves requests locally through `RequestRepository` / `RoomRequestRepository` in both build variants.
-- Room schema v3 adds an optional private cover path with non-destructive v2→v3 migration. Images live in app-private files, never database blobs. Continue must validate and wait for the latest Room save before navigation.
-- Room schema v2 adds `local_requests` with an explicit non-destructive migration from v1. Keep existing form data and exported schemas.
-- Room stores drafts only; publication is not implemented. Keep `Responder` disabled and submission disconnected from normal app navigation until publication exists. Exercise capture only through isolated test fixtures; debug examples must be labeled as demos. Editor preview remains validation-only and must never save submissions.
+- Firebase Auth and Firestore are optional integrations. Android controls encrypted Auth persistence through REST adapters. Missing project configuration keeps guest editing usable. Google Sign-In is not implemented.
+- Room schema v6 includes publication metadata, account-owned request snapshots and a deduplicated Analytics ledger. Keep all exported schemas and explicit migrations v1→v6. Room uses SQLCipher with a key protected by Android Keystore; plaintext databases are converted without destructive fallback.
+- Covers and derivatives stay in encrypted private files, never database blobs or cloud paths. Continue validates and waits for the latest Room save. Preview is validation-only and never submits.
+- Publication is explicit and online. Private draft edits never change the public copy until republishing. Published web forms accept at most ten questions across the existing nine types. Files, signatures, rating and remote images remain out of scope.
+- Public submissions are atomic: immutable response snapshot, two private validation groups and a non-sensitive receipt keyed by the stable attempt UUID. Never allow public response reads or mutations. Archive/delete removes public access while preserving existing responses.
+- Account requests use a separate owner-scoped Room projection and durable pending status revisions. Existing local requests remain in the guest partition; no automatic transfer. The mobile Responder entry remains disabled; answering uses the published web link.
 - Requests store immutable title/question/answer snapshots and survive source draft edits or deletion. Status is `PENDING`, `IN_PROGRESS`, or `COMPLETED`; local transitions allow reopening requests.
 - Use a stable submission ID for retry/process restoration, validate before insertion, and derive counts from stored requests. UI depends on repository interfaces, not Room DAOs.
 
@@ -45,7 +46,7 @@
   - `ARCHIVED`: owner may read and edit; no responses are accepted.
 
 ### Authentication
-- Email/password uses Firebase Authentication behind AuthRepository. Google Sign-In remains planned.
+- Email/password uses Firebase Authentication REST behind AuthRepository with a Keystore-encrypted session. Google Sign-In remains planned.
 - Guests may create local-only drafts. Authenticated users own and synchronize their forms. Clear session ViewModels on account changes; never reuse another account’s repository or sync job.
 - UI code accesses authentication through an `AuthRepository`; it must not call Firebase APIs directly.
 
@@ -69,8 +70,8 @@ forms/{formId}/responses/{responseId}
 ```
 
 - `fields` live in the form document for v1 so that the form editor can save and load one atomic document. Move them to a subcollection only if form size or collaboration requires it.
-- Remote response collection remains planned; local submission, list, detail and status UI are implemented independently of this cloud contract.
-- Files and digital signatures are stored in Firebase Storage; Firestore answers retain only their storage paths or references, never raw file bytes.
+- Remote responses are implemented with immutable snapshots, owner-only reads and status-only owner updates. `publishedForms` holds the public snapshot and non-sensitive receipts.
+- When implemented, files and digital signatures will use Firebase Storage; Firestore answers retain only their storage paths or references, never raw file bytes.
 
 ### Field contract
 
@@ -100,3 +101,8 @@ Supported field types and expected configuration:
 - Firestore security rules must allow owners to read and write only forms whose `ownerId` matches `request.auth.uid`.
 - Public requests may create responses only for published forms. They must not read drafts, edit forms, or read other responses.
 - Compose UI must depend on repository interfaces, not Firebase or Room implementations. The expected boundaries are `FormRepository` (observe, create, save, delete, publish forms) and `AuthRepository` (observe session, sign in, sign up, sign out).
+
+### Quality and observability
+- Never put names, titles, emails, phones, answers, credentials or free text in Analytics/Crashlytics. Metric parameters are random IDs, enums and numeric durations/counts only.
+- Creation ends at the first confirmed publication, never at a draft save. Public submission ends only after backend confirmation. Reuse attempt IDs across retries and deduplicate reports. Keep development separate from user studies.
+- CI must compile, run meaningful tests and Android Lint on every PR. Run instrumented and browser/emulator tests before claiming verification. Panel visibility, deployed URLs and human review require actual external evidence.
