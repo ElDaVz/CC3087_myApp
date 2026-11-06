@@ -78,7 +78,7 @@ test('ten answers validate all nine types within rule evaluation limits',async()
  const types=['SHORT_TEXT','PARAGRAPH','NUMBER','EMAIL','CHECKBOX','CHECKBOX_GROUP','DROPDOWN','MULTIPLE_CHOICE','DATE_TIME','SHORT_TEXT'];
  const p=await publish(types.map((type,i)=>({...field(`q${i}`,type),position:i})));
  const db=environment.unauthenticatedContext().firestore();
- const values=['text','paragraph','5','client@example.com',true,['a','b'],['a'],['a'],{date:Timestamp.fromDate(new Date('2099-01-01')),minute:null},'last'];
+ const values=['text','paragraph\nsecond line','5','client@example.com',true,['a','b'],['a'],['a'],{date:Timestamp.fromDate(new Date('2099-01-01')),minute:null},'last'];
  await assertSucceeds(response(db,p,values));
  for(const [index,bad] of [[0,''],[2,'11'],[2,'1.5'],[3,'invalid'],[4,false],[5,['unknown']],[6,['a','b']],[8,{date:null,minute:null}]]){
   const v=[...values];v[index]=bad;

@@ -14,6 +14,22 @@ import org.junit.Test
 import java.util.UUID
 
 class RestBackendIntegrationTest {
+    @Test fun missingOrDifferentProjectConfigDoesNotRestoreAnEncryptedSession() = runBlocking {
+        assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val cipher=DeviceCipher(context)
+        val auth=RestAuthRepository("demo-api-key",cipher,FirebaseHttp(true),true)
+        auth.state.first { it !is AuthState.Initializing };auth.signOut()
+        try {
+            auth.signUp("config-${UUID.randomUUID()}@example.com","password123")
+            val absent=RestAuthRepository(null,cipher,FirebaseHttp(true),true)
+            assertEquals(AuthState.Guest,absent.state.first { it !is AuthState.Initializing })
+            assertFalse(absent.configured)
+            val other=RestAuthRepository("different-project-key",cipher,FirebaseHttp(true),true)
+            assertEquals(AuthState.Guest,other.state.first { it !is AuthState.Initializing })
+            assertNotNull(cipher.read("auth-session"))
+        } finally { auth.signOut() }
+    }
     @Test fun encryptedRestSessionCanSignOutSignInAndRecoverOwnerForm() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
         val context = InstrumentationRegistry.getInstrumentation().targetContext

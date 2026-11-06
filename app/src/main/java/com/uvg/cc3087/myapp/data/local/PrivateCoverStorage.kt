@@ -6,7 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Canvas
 import android.graphics.Matrix
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import com.uvg.cc3087.myapp.data.repository.CoverStorage
 import kotlinx.coroutines.Dispatchers

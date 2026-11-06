@@ -19,11 +19,14 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
     private val mutex = Mutex()
     private var session: JSONObject? = null
     private var generation = 0L
+    private val projectBinding = apiKey?.let { key -> java.security.MessageDigest.getInstance("SHA-256")
+        .digest(key.toByteArray()).joinToString("") { "%02x".format(it) } }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val base get() = if (emulator) "http://10.0.2.2:9099/identitytoolkit.googleapis.com" else "https://identitytoolkit.googleapis.com"
     init { scope.launch {
         mutex.withLock {
-            session = try { cipher.read("auth-session")?.let { JSONObject(String(it)) } } catch (_: Exception) { null }
+            session = try { if (!configured) null else cipher.read("auth-session")?.let { JSONObject(String(it)) }
+                ?.takeIf { it.optString("projectBinding") == projectBinding } } catch (_: Exception) { null }
             mutableState.value = session?.let { AuthState.SignedIn(UserSession(it.getString("uid"), it.getString("email"))) } ?: AuthState.Guest
         }
     } }
@@ -42,6 +45,7 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
         }
     }
     private fun persist(value: JSONObject) {
+        value.put("projectBinding", projectBinding)
         cipher.write("auth-session", value.toString().toByteArray())
         session = value
         mutableState.value = AuthState.SignedIn(UserSession(value.getString("uid"), value.getString("email")))
