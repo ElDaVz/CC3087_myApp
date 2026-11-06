@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp.ui.viewmodel
 
+import com.uvg.cc3087.myapp.domain.telemetry.*
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -39,11 +40,15 @@ class EditFormViewModel(
     private val formRepository: FormRepository,
     private val now: () -> Long = System::currentTimeMillis,
     private val today: () -> LocalDate = LocalDate::now,
-    private val covers: CoverStorage? = null
+    private val covers: CoverStorage? = null,
+    private val analytics: ProductAnalytics = NoProductAnalytics
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(restoreState())
     val uiState: StateFlow<EditFormUiState> = mutableUiState.asStateFlow()
     private var createdAt = savedStateHandle.get<Long>(CREATED_AT_KEY) ?: 0L
+    private var creationAttempt = savedStateHandle.get<String>("creation_attempt")
+    private var creationStart = savedStateHandle.get<Long>("creation_start")
+    private var templateName = savedStateHandle.get<String>("creation_template")
     private var revision = 0L
     private val requests = Channel<DraftRequest>(Channel.UNLIMITED)
 
@@ -67,7 +72,21 @@ class EditFormViewModel(
         }
     }
 
+    fun beginCreationAttempt() {
+        val id = newId()
+        val attempt = UUID.randomUUID().toString()
+        savedStateHandle["pending_creation_id"] = id
+        savedStateHandle["pending_creation_attempt"] = attempt
+        savedStateHandle["pending_creation_start"] = now()
+        viewModelScope.launch { analytics.creationStarted(id, attempt) }
+    }
+
     fun startDraft(title: String, templateType: TemplateType?) {
+        if (!savedStateHandle.contains("pending_creation_id")) beginCreationAttempt()
+        val id = checkNotNull(savedStateHandle.remove<String>("pending_creation_id"))
+        creationAttempt = savedStateHandle.remove<String>("pending_creation_attempt")
+        creationStart = savedStateHandle.remove<Long>("pending_creation_start")
+        templateName = templateType?.name ?: "CUSTOM"
         // la ui pasa la selección y aquí obtenemos los datos para iniciar el editor
         val fields = templateType?.let(templateRepository::getInitialFields).orEmpty()
         // entrar desde una plantilla crea un borrador nuevo, aunque el título sea el mismo
@@ -75,7 +94,7 @@ class EditFormViewModel(
         updateState(EditFormUiState(
             title = title,
             fields = fields.map { it.copy(options = it.options.toList()) },
-            draftId = newId()
+            draftId = id
         ))
     }
 
@@ -237,13 +256,16 @@ class EditFormViewModel(
         rememberDraft(saving)
         mutableUiState.value = saving
         requests.trySend(DraftRequest.Save(
-            FormDraft(id, saving.title, saving.fields, createdAt, now(), saving.coverPath, saving.ownerId), revision
+            FormDraft(id, saving.title, saving.fields, createdAt, now(), saving.coverPath, saving.ownerId, creationAttempt, creationStart, templateName), revision
         ))
     }
 
     private fun rememberDraft(updated: EditFormUiState) {
         savedStateHandle[ID_KEY] = updated.draftId
         savedStateHandle[CREATED_AT_KEY] = createdAt
+        savedStateHandle["creation_attempt"] = creationAttempt
+        savedStateHandle["creation_start"] = creationStart
+        savedStateHandle["creation_template"] = templateName
         savedStateHandle[LOADING_KEY] = false
         savedStateHandle[TITLE_KEY] = updated.title
         savedStateHandle[COVER_KEY] = updated.coverPath
@@ -283,6 +305,9 @@ class EditFormViewModel(
                 )
             } else {
                 createdAt = draft.createdAt
+                creationAttempt = draft.creationAttemptId
+                creationStart = draft.creationStartedAt
+                templateName = draft.templateType
                 val loaded = EditFormUiState(
                     title = draft.title, fields = draft.fields, draftId = draft.id, coverPath = draft.coverPath, ownerId = draft.ownerId,
                     saveStatus = DraftSaveStatus.SAVED
@@ -350,8 +375,8 @@ class EditFormViewModel(
         private const val CREATED_AT_KEY = "editor_created_at"
         private const val LOADING_KEY = "editor_loading_draft"
 
-        fun factory(templateRepository: TemplateRepository, formRepository: FormRepository, covers: CoverStorage? = null): ViewModelProvider.Factory = viewModelFactory {
-            initializer { EditFormViewModel(templateRepository, createSavedStateHandle(), formRepository, covers = covers) }
+        fun factory(templateRepository: TemplateRepository, formRepository: FormRepository, covers: CoverStorage? = null, analytics: ProductAnalytics = NoProductAnalytics): ViewModelProvider.Factory = viewModelFactory {
+            initializer { EditFormViewModel(templateRepository, createSavedStateHandle(), formRepository, covers = covers, analytics = analytics) }
         }
     }
 }

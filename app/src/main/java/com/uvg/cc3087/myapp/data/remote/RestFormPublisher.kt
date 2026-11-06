@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp.data.remote
 
+import com.uvg.cc3087.myapp.domain.telemetry.firstPublished
 import androidx.room.withTransaction
 import com.uvg.cc3087.myapp.data.local.*
 import com.uvg.cc3087.myapp.data.model.FormDraft
@@ -15,7 +16,8 @@ fun contentFingerprint(form: FormDraft): String = MessageDigest.getInstance("SHA
 
 class RestFormPublisher(private val client: FirestoreRest, private val source: RemoteFormSource,
     private val database: FormLinkDatabase, private val currentOwner: () -> String?,
-    private val exclusive: suspend (suspend () -> FormPublication) -> FormPublication) : FormPublisher {
+    private val exclusive: suspend (suspend () -> FormPublication) -> FormPublication,
+    private val analytics: com.uvg.cc3087.myapp.domain.telemetry.ProductAnalytics = com.uvg.cc3087.myapp.domain.telemetry.NoProductAnalytics) : FormPublisher {
     private fun checkSession(owner: String) { check(currentOwner() == owner) { "Session changed" } }
     override suspend fun publication(owner: String, form: FormDraft): FormPublication? = database.cloud().publication(owner, form.id)?.let {
         FormPublication(it.url, it.status, it.version, it.firstPublishedAt, it.fingerprint == contentFingerprint(form))
@@ -40,6 +42,10 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
             val publicValues = linkedMapOf<String, Any?>("ownerId" to owner, "title" to form.title,
                 "fields" to fields, "active" to true, "version" to version, "fingerprint" to fingerprint,
                 "templateType" to (form.templateType ?: "LEGACY"))
+            if (oldPublic == null) {
+                publicValues["firstFieldCount"] = form.fields.size
+                publicValues["firstTemplateType"] = form.templateType ?: "LEGACY"
+            }
             val times = mutableListOf("publishedAt")
             if (oldPublic?.get("firstPublishedAt") == null) times += "firstPublishedAt"
             val privateValues = mutableMapOf<String, Any?>("status" to "PUBLISHED", "publishedVersion" to version,
@@ -58,6 +64,9 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
             (confirmed["publishedAt"] as Instant).toEpochMilli(), (confirmed["version"] as Number).toLong(),
             confirmed["fingerprint"] as String, (confirmed["firstPublishedAt"] as Instant).toEpochMilli())
         database.cloud().savePublication(row)
+        analytics.firstPublished(form, System.currentTimeMillis(),
+            (confirmed["firstFieldCount"] as? Number)?.toInt() ?: form.fields.size,
+            confirmed["firstTemplateType"] as? String ?: form.templateType ?: "LEGACY")
         FormPublication(row.url, row.status, row.version, row.firstPublishedAt, row.fingerprint == fingerprint)
     }
     suspend fun refresh(owner: String) {

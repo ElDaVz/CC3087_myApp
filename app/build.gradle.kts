@@ -4,9 +4,13 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.firebase.crashlytics) apply false
 }
 
-if (file("google-services.json").exists()) apply(plugin = "com.google.gms.google-services")
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
 
 room {
     schemaDirectory("$projectDir/schemas")
@@ -27,12 +31,14 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("boolean", "FIREBASE_EMULATORS", "false")
+        buildConfigField("boolean", "TELEMETRY_ENABLED", "true")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         debug {
+            buildConfigField("boolean", "TELEMETRY_ENABLED", providers.gradleProperty("telemetryEnabled").orElse("false").get())
             buildConfigField("boolean", "FIREBASE_EMULATORS", providers.gradleProperty("firebaseEmulators").orElse("false").get())
         }
         release {
@@ -88,4 +94,5 @@ dependencies {
     implementation(libs.sqlcipher)
     implementation(libs.androidx.exifinterface)
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
 }

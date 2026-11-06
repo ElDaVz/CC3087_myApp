@@ -92,7 +92,8 @@ internal fun FormLinkRoute(
     requestsAreDemo: Boolean = false,
     coverStorage: com.uvg.cc3087.myapp.data.repository.CoverStorage? = null,
     onAccountClick: (() -> Unit)? = null,
-    syncMessage: String? = null
+    syncMessage: String? = null,
+    analytics: com.uvg.cc3087.myapp.domain.telemetry.ProductAnalytics = com.uvg.cc3087.myapp.domain.telemetry.NoProductAnalytics
 ) {
     val resources = LocalResources.current
     // los viewmodels comparten el repositorio, no una copia de los formularios
@@ -105,7 +106,7 @@ internal fun FormLinkRoute(
     )
     val chooseTemplateUiState by chooseTemplateViewModel.uiState.collectAsStateWithLifecycle()
     val editFormViewModel: EditFormViewModel = viewModel(
-        factory = EditFormViewModel.factory(templateRepository, formRepository, coverStorage)
+        factory = EditFormViewModel.factory(templateRepository, formRepository, coverStorage, analytics)
     )
     val editFormUiState by editFormViewModel.uiState.collectAsStateWithLifecycle()
     val saveShareViewModel: SaveShareViewModel = viewModel(factory = SaveShareViewModel.factory(formRepository))
@@ -121,6 +122,7 @@ internal fun FormLinkRoute(
         chooseTemplateUiState = chooseTemplateUiState,
         editFormUiState = editFormUiState,
         onFilterSelected = formsViewModel::selectFilter,
+        onBeginCreation = editFormViewModel::beginCreationAttempt,
         onStartEditor = { template ->
             editFormViewModel.startDraft(
                 // el idioma se resuelve en la ui y los campos los decide el viewmodel
@@ -158,6 +160,7 @@ private fun FormLinkContent(
     editFormUiState: EditFormUiState,
     onFilterSelected: (FormFilter) -> Unit,
     onStartEditor: (FormTemplate?) -> Unit,
+    onBeginCreation: () -> Unit = {},
     onEditorAction: (EditFormAction) -> Unit,
     onValidateEditor: () -> FormValidationResult,
     onPreviewConfigurationErrors: () -> Map<String, Set<FieldError>>,
@@ -230,6 +233,7 @@ private fun FormLinkContent(
                 uiState = formsUiState,
                 onFilterSelected = onFilterSelected,
                 onNewFormClick = {
+                    onBeginCreation()
                     currentDestination = AppDestination.CHOOSE_TEMPLATE
                 },
                 onFormClick = { form ->
