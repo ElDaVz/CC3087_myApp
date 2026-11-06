@@ -53,9 +53,6 @@ android {
 
 dependencies {
     implementation(platform(libs.firebase.bom))
-    androidTestImplementation(platform(libs.firebase.bom))
-    androidTestImplementation(libs.firebase.auth)
-    androidTestImplementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.androidx.work.runtime)
     implementation(platform(libs.androidx.compose.bom))
