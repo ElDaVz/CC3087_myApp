@@ -34,7 +34,11 @@ class SecureStorageTest {
                 try { assertEquals("SECRET DOMAIN DATA", RoomFormStore(db).get(null, "f")!!.title) }
                 finally { db.close() }
                 assertFalse(String(context.getDatabasePath(name).readBytes(), Charsets.ISO_8859_1).contains("SECRET DOMAIN DATA"))
-                assertTrue(runCatching { android.database.sqlite.SQLiteDatabase.openDatabase(context.getDatabasePath(name).path, null, 0).use { plain -> plain.rawQuery("SELECT * FROM form_drafts", null).use { it.moveToFirst() } } }.isFailure)
+                // Android's default corruption handler deletes an unreadable database: probe a copy.
+                val probe = java.io.File(context.cacheDir, "$name.probe")
+                probe.writeBytes(context.getDatabasePath(name).readBytes())
+                try { assertTrue(runCatching { android.database.sqlite.SQLiteDatabase.openDatabase(probe.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY).use { plain -> plain.rawQuery("SELECT * FROM form_drafts", null).use { it.moveToFirst() } } }.isFailure) }
+                finally { probe.delete() }
             }
         } finally { context.deleteDatabase(name) }
     }

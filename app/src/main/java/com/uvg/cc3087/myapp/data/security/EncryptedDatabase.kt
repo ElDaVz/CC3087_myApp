@@ -20,7 +20,15 @@ object EncryptedDatabase {
             val target = File(file.path + ".encrypted")
             if (target.exists()) check(target.delete())
             val plain = SQLiteDatabase.openDatabase(file.path, "", null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.CREATE_IF_NECESSARY, null)
+            val expectedRows = linkedMapOf<String, Int>()
             try {
+                plain.rawQuery("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'", null).use { tables ->
+                    while (tables.moveToNext()) {
+                        val table = tables.getString(0)
+                        require(table.matches(Regex("[A-Za-z0-9_]+")))
+                        expectedRows[table] = plain.rawQuery("SELECT COUNT(*) FROM `$table`", null).use { it.moveToFirst(); it.getInt(0) }
+                    }
+                }
                 plain.rawQuery("PRAGMA wal_checkpoint(FULL)", null).use { it.moveToFirst() }
                 val version = plain.rawQuery("PRAGMA user_version", null).use { it.moveToFirst(); it.getInt(0) }
                 plain.execSQL("ATTACH DATABASE ? AS encrypted KEY ?", arrayOf(target.path, String(password)))
@@ -29,10 +37,24 @@ object EncryptedDatabase {
                 plain.execSQL("DETACH DATABASE encrypted")
             } finally { plain.close() }
             val encrypted = SQLiteDatabase.openDatabase(target.path, password, null, SQLiteDatabase.OPEN_READWRITE, null)
-            try { encrypted.rawQuery("PRAGMA integrity_check", null).use { check(it.moveToFirst() && it.getString(0) == "ok") } }
+            try {
+                encrypted.rawQuery("PRAGMA integrity_check", null).use { check(it.moveToFirst() && it.getString(0) == "ok") }
+                expectedRows.forEach { (table, count) ->
+                    encrypted.rawQuery("SELECT COUNT(*) FROM `$table`", null).use { check(it.moveToFirst() && it.getInt(0) == count) { "Encrypted export verification failed for $table" } }
+                }
+                encrypted.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+                encrypted.rawQuery("PRAGMA journal_mode=DELETE", null).use { it.moveToFirst() }
+            }
             finally { encrypted.close() }
             check(target.renameTo(file)) { "Cannot replace migrated database" }
             File(file.path + "-wal").delete(); File(file.path + "-shm").delete()
+        }
+        if (file.exists()) {
+            // A wrong/lost key must not invoke a default corruption handler that deletes data.
+            val probe = SQLiteDatabase.openDatabase(file.path, password, null, SQLiteDatabase.OPEN_READONLY,
+                net.zetetic.database.DatabaseErrorHandler { _, _ -> }, null)
+            try { probe.rawQuery("SELECT COUNT(*) FROM sqlite_master", null).use { check(it.moveToFirst()) } }
+            finally { probe.close() }
         }
         return SupportOpenHelperFactory(password)
     }
