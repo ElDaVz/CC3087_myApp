@@ -8,6 +8,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.isActive
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -42,6 +44,14 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
             restore = { SessionViewModelOwner(it.getByteArray("encrypted")?.let { bytes -> androidBundle(services.deviceCipher.decrypt(bytes)) }) })) { SessionViewModelOwner() }
         val forms = remember(uid) { services.repository(uid) }
         val lifecycleOwner = LocalLifecycleOwner.current
+        LaunchedEffect(uid, lifecycleOwner) {
+            if (uid != null) lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                    services.schedule(uid)
+                    kotlinx.coroutines.delay(15_000)
+                }
+            }
+        }
         DisposableEffect(owner) { onDispose { owner.clear() } }
         LaunchedEffect(uid) { uid?.let(services::schedule) }
         DisposableEffect(uid, lifecycleOwner) {
@@ -75,7 +85,7 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                 onSelect = accountModel::select, onImport = accountModel::importSelected,
                 onSignOut = accountModel::signOut, onSync = { uid?.let(services::schedule) })
             else FormLinkRoute(forms, templates,
-                if (uid == null) requests else EmptyAccountRequests,
+                if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests,
                 coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
         }
     }

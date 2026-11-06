@@ -7,7 +7,9 @@ data class SaveShareUiState(
     val isLoading: Boolean = false,
     val loadError: DraftLoadError? = null,
     // solo una publicación real podrá proporcionar este enlace
-    val publicLink: String? = null
+    val publicLink: String? = null,
+    val publication: com.uvg.cc3087.myapp.data.repository.FormPublication? = null,
+    val publishing: Boolean = false, val publishError: String? = null
 ) {
     val canShare: Boolean get() = !publicLink.isNullOrBlank()
 }
