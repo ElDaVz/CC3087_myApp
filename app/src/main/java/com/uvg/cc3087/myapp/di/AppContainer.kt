@@ -14,7 +14,7 @@ object AppContainer {
         // Remove the old Firebase Auth SDK store before enabling the encrypted REST session.
         java.io.File(appContext.applicationInfo.dataDir, "shared_prefs").listFiles()?.filter {
             it.name.startsWith("com.google.firebase.auth.")
-        }?.forEach { appContext.deleteSharedPreferences(it.name.removeSuffix(".xml")) }
+        }?.forEach { appContext.deleteSharedPreferences(it.name.removeSuffix(".bak").removeSuffix(".xml")) }
         FormLinkDatabase.open(appContext)
     }
     val coverStorage by lazy { com.uvg.cc3087.myapp.data.local.PrivateCoverStorage(appContext) }

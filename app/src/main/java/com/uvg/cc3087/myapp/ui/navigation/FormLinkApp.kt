@@ -64,14 +64,14 @@ private enum class AppDestination {
 @Composable
 fun FormLinkApp() {
     val context = LocalContext.current.applicationContext
-    remember(context) { AppContainer.initialize(context) }
+    val container = remember(context) { AppContainer.also { it.initialize(context) } }
     val resources = LocalResources.current
     val languageTags = resources.configuration.locales.toLanguageTags()
     LaunchedEffect(languageTags) {
-        AppContainer.updateTemplateFields(FormEditorSampleData.templateFields(resources))
+        container.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
     var initializationAttempt by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
-    val initialized = androidx.compose.runtime.remember(initializationAttempt) { runCatching { AppContainer.backend } }
+    val initialized = androidx.compose.runtime.remember(initializationAttempt) { runCatching { container.backend } }
     if (initialized.isFailure) {
         androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
@@ -80,8 +80,8 @@ fun FormLinkApp() {
         }
         return
     }
-    BackendRoot(initialized.getOrThrow(), AppContainer.templateRepository,
-        AppContainer.requestRepository, AppContainer.coverStorage)
+    BackendRoot(initialized.getOrThrow(), container.templateRepository,
+        container.requestRepository, container.coverStorage)
 }
 
 @Composable
