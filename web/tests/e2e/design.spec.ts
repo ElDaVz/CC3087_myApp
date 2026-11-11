@@ -121,3 +121,18 @@ for (const state of ['loading', 'error', 'success', 'info']) {
     await page.screenshot({path: `test-results/web-${state}.png`, fullPage: true});
   });
 }
+
+test('Cloudinary banner loads responsively and falls back when the image fails',async({page})=>{
+ const withCover=structuredClone(form);
+ withCover.cover={url:'https://res.cloudinary.com/uxrkjzti/image/upload/v123/fixture.jpg',publicId:'fixture',hash:'a'.repeat(64)};
+ await page.route(withCover.cover.url,route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200"><rect width="800" height="200" fill="#6650a4"/></svg>'}));
+ await fixture(page,withCover);
+ await expect(page.locator('.form-banner')).toHaveClass(/has-cover/);
+ await expect(page.getByRole('heading',{name:form.title})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.unroute(withCover.cover.url);
+ await page.route(withCover.cover.url,route=>route.abort());
+ await page.reload();
+ await expect(page.locator('.form-banner img')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Enviar solicitud'})).toBeVisible();
+});

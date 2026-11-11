@@ -116,3 +116,6 @@ h1:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.form-banner img { display: block; position: relative; width: 100%; height: 100%; object-fit: cover; }
+.form-banner.has-cover::before, .form-banner.has-cover::after { display: none; }

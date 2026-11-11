@@ -5,6 +5,14 @@ service cloud.firestore {
     function owns(data) { return signedIn() && data.ownerId == request.auth.uid; }
     function formPath(id) { return /databases/$(database)/documents/forms/$(id); }
     function publicPath(id) { return /databases/$(database)/documents/publishedForms/$(id); }
+    function validCover(c) {
+      return c == null || (c is map && c.keys().hasAll(['url','publicId','hash'])
+        && c.keys().hasOnly(['url','publicId','hash'])
+        && c.publicId is string && c.publicId.matches('[A-Za-z0-9_/-]{1,240}')
+        && c.hash is string && c.hash.matches('[a-f0-9]{64}')
+        && c.url is string && c.url.size() <= 1024
+        && c.url.matches('https://res[.]cloudinary[.]com/uxrkjzti/image/upload/(v[0-9]+/)?' + c.publicId + '[.](jpg|jpeg|png|webp)'));
+    }
     function validForm(id) {
       let d = request.resource.data;
       return d.keys().hasAll(['ownerId','title','status','fields','createdAt','updatedAt','publishedAt','version'])
@@ -29,19 +37,29 @@ service cloud.firestore {
         && f.required is bool && f.config is map && f.optionIds is list
         && f.type in ['SHORT_TEXT','PARAGRAPH','NUMBER','EMAIL','CHECKBOX','CHECKBOX_GROUP','DROPDOWN','MULTIPLE_CHOICE','DATE_TIME'];
     }
-    function fieldAt(p, i) { return i >= p.fields.size() || validField(p.fields[i]); }
     function validPublic(id) {
       let d = request.resource.data;
       let f = getAfter(formPath(id)).data;
+      let fields = d.fields;
+      let count = fields.size();
       return d.keys().hasAll(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt'])
-        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt','firstFieldCount','firstTemplateType'])
+        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt','firstFieldCount','firstTemplateType','cover'])
+        && validCover(d.get('cover', null))
         && owns(d) && f.ownerId == d.ownerId && d.active is bool && d.version is int && d.version > 0
         && d.fingerprint is string && d.templateType is string && d.publishedAt is timestamp && d.firstPublishedAt is timestamp
         && d.title is string && d.title.size() > 0 && d.title.size() <= 200 && d.fields is list
         && d.fields.size() > 0 && d.fields.size() <= 10
         && (!d.active || (f.status == 'PUBLISHED' && d.fields == f.fields && d.title == f.title && d.version == f.publishedVersion))
-        && fieldAt(d,0) && fieldAt(d,1) && fieldAt(d,2) && fieldAt(d,3) && fieldAt(d,4)
-        && fieldAt(d,5) && fieldAt(d,6) && fieldAt(d,7) && fieldAt(d,8) && fieldAt(d,9)
+        && validField(fields[0])
+        && (count <= 1 || validField(fields[1]))
+        && (count <= 2 || validField(fields[2]))
+        && (count <= 3 || validField(fields[3]))
+        && (count <= 4 || validField(fields[4]))
+        && (count <= 5 || validField(fields[5]))
+        && (count <= 6 || validField(fields[6]))
+        && (count <= 7 || validField(fields[7]))
+        && (count <= 8 || validField(fields[8]))
+        && (count <= 9 || validField(fields[9]))
         && (!exists(publicPath(id)) || (d.firstPublishedAt == resource.data.firstPublishedAt
           && (!resource.data.keys().hasAny(['firstFieldCount']) || d.firstFieldCount == resource.data.firstFieldCount)
           && (!resource.data.keys().hasAny(['firstTemplateType']) || d.firstTemplateType == resource.data.firstTemplateType)));
@@ -136,7 +154,7 @@ service cloud.firestore {
     match /publishedForms/{id} {
       allow get: if (resource != null && live(id,resource.data)) || (signedIn() && owns(get(formPath(id)).data));
       allow list: if owns(resource.data);
-      allow create, update: if owns(getAfter(formPath(id)).data) && validPublic(id);
+      allow create, update: if validPublic(id);
       allow delete: if false;
       match /receipts/{responseId} {
         // A receipt discloses only a random operation ID, version and confirmation time.
