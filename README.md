@@ -16,7 +16,7 @@ La implementación incluye autenticación por correo/contraseña, formularios pr
 
 ## Flujo principal
 
-1. Invitado o cuenta crea un formulario en blanco o desde plantilla. Las portadas son opcionales y permanecen en el dispositivo.
+1. Invitado o cuenta crea un formulario en blanco o desde plantilla. Las portadas son opcionales y se conservan cifradas en el dispositivo hasta publicar una copia con Cloudinary.
 2. Cada edición se guarda en Room. Preview valida sin guardar solicitudes.
 3. **Continuar** valida y espera el último guardado antes de abrir Guardar/Compartir.
 4. **Publicar** exige cuenta y conexión; confirma el backend antes de habilitar copiar/compartir el enlace HTTPS.
@@ -34,7 +34,7 @@ La primera web admite diez preguntas y los nueve tipos actuales del editor. No a
 - Solicitudes: **Firestore conserva el envío original**; Room mantiene su proyección por propietario. Android descarga al entrar/volver, reintentar y cada 15 segundos mientras está activo. Los cambios de estado se guardan localmente y se reintentan sin conexión. No se usa un listener push.
 - Sin conexión: editar y consultar lo ya descargado sigue disponible; la UI informa pendientes/errores. La web muestra error y conserva el intento en la pestaña; no anuncia un envío no confirmado ni guarda respuestas en almacenamiento persistente del navegador.
 - Invitados: borradores y solicitudes de fixtures locales separados de cuentas. Importar borradores a una cuenta es una selección explícita.
-- Portadas: archivos privados cifrados, nunca blobs de Room ni rutas transmitidas al backend.
+- Portadas: originales privados cifrados, nunca blobs de Room ni rutas transmitidas al backend. Al publicar se sube una copia optimizada a Cloudinary y se guarda su referencia pública; ver [configuración y límites](docs/CLOUDINARY_COVERS.md).
 
 ## Configuración
 
@@ -58,7 +58,7 @@ web/node_modules/.bin/playwright install --no-shell chromium
 npm run test:e2e --prefix web
 ```
 
-Debug desactiva telemetría por defecto. La demo real de Analytics/Crashlytics usa `-PtelemetryEnabled=true`, sin Firebase emulado. La variante con emuladores usa `demo-formlink` y no contacta servicios de producción.
+Debug desactiva telemetría por defecto. La demo real de Analytics/Crashlytics usa `-PtelemetryEnabled=true`, sin Firebase emulado. La variante con emuladores usa `demo-formlink` y no sube imágenes reales desde el flujo normal. La prueba externa de Cloudinary requiere activar explícitamente `realCloudinary=true`.
 
 ## Arquitectura e inyección
 
