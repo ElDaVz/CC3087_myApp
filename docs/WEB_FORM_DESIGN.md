@@ -12,9 +12,9 @@ La página se adapta a móvil, tablet y escritorio. Se puede recorrer con teclad
 
 La carga, los enlaces que ya no están disponibles, los errores de conexión y la confirmación también usan el mismo estilo. Durante el envío se bloquean temporalmente los campos para evitar que la respuesta visible cambie mientras se confirma. Si falla, vuelven a habilitarse con lo que la persona había escrito.
 
-## La portada del editor todavía no se publica
+## La portada del editor
 
-El banner actual es decorativo y no muestra una foto del administrador. Cloudinary queda para el siguiente paso: antes de integrar la subida compartiremos las instrucciones para crear la cuenta y configurar el servicio. La decisión acordada es subir la imagen al publicar el formulario, no al elegirla en el editor.
+El rediseño inicial usaba un banner decorativo. La integración posterior permite mostrar la portada publicada con Cloudinary y mantiene ese banner como respaldo. La imagen se sube al publicar el formulario, no al elegirla en el editor. Ver [configuración y comportamiento de portadas](CLOUDINARY_COVERS.md).
 
 En esta tarea no hay cambios de Room, reglas de Firestore ni sincronización Android. El dashboard de administración también queda pendiente.
 

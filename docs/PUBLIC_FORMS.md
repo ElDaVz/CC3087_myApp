@@ -4,7 +4,7 @@ El flujo es Continuar → guardado local confirmado → Guardar/Compartir → Pu
 
 `forms/{id}` sigue siendo privado. `publishedForms/{id}` contiene exclusivamente la copia publicada que consume `/f/{id}`. Cambiar el borrador no la modifica. Actualizar publicación conserva la URL y aumenta la versión; una repetición sin cambios es idempotente. Archivar bloquea lecturas públicas y respuestas. Borrar un formulario publicado deja un registro remoto archivado para conservar propiedad e historial de solicitudes.
 
-La primera versión admite 1–10 preguntas de los nueve tipos actuales, títulos y opciones de hasta 200 caracteres y texto de respuesta de hasta 10,000 caracteres. No publica portadas, archivos, firmas o rating. Las fechas se representan como medianoche UTC y minutos desde medianoche; la restricción de fechas pasadas se compara con el día UTC tanto en cliente como en reglas.
+La primera versión admite 1–10 preguntas de los nueve tipos actuales, títulos y opciones de hasta 200 caracteres y texto de respuesta de hasta 10,000 caracteres. Admite una portada opcional publicada mediante Cloudinary; no admite archivos, firmas o rating. Ver [configuración y comportamiento de portadas](CLOUDINARY_COVERS.md). Las fechas se representan como medianoche UTC y minutos desde medianoche; la restricción de fechas pasadas se compara con el día UTC tanto en cliente como en reglas.
 
 ## Respuestas
 
