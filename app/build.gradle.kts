@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -16,6 +18,12 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+val coverConfig = Properties().apply {
+    val config = rootProject.file("local.properties")
+    if (config.exists()) config.inputStream().use { load(it) }
+}
+fun coverSetting(name: String) = providers.gradleProperty(name).orElse(coverConfig.getProperty(name, "")).get()
+
 android {
     namespace = "com.uvg.cc3087.myapp"
     compileSdk {
@@ -25,6 +33,8 @@ android {
     }
 
     defaultConfig {
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${coverSetting("cloudinary.cloudName").replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${coverSetting("cloudinary.uploadPreset").replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         applicationId = "com.uvg.cc3087.myapp"
         minSdk = 26
         targetSdk = 36

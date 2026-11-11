@@ -19,6 +19,7 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
     override suspend fun get(owner: String?, id: String) = dao.getDraft(id)?.takeIf { it.form.ownerId == owner && !it.form.deleted }?.toDraft()
 
     override suspend fun save(owner: String?, draft: FormDraft) {
+        require(draft.coverAction in setOf("KEEP", "REPLACE", "REMOVE"))
         require(draft.id.isNotBlank() && draft.fields.map { it.id }.distinct().size == draft.fields.size)
         require(draft.ownerId == null || draft.ownerId == owner)
         val oldCover = database.withTransaction {

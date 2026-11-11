@@ -38,7 +38,8 @@ class BackendServices(private val context: Context, private val database: FormLi
     }
     val sync = remote?.let { FormSyncEngine(local, it) { auth.state.value.userId } }
     val publisher by lazy { client?.let { com.uvg.cc3087.myapp.data.remote.RestFormPublisher(it, checkNotNull(remote), database,
-        { auth.state.value.userId }, { block -> checkNotNull(sync).exclusive(block) }, analytics) } }
+        { auth.state.value.userId }, { block -> checkNotNull(sync).exclusive(block) }, analytics, covers,
+        if (BuildConfig.FIREBASE_EMULATORS) null else com.uvg.cc3087.myapp.data.remote.CloudinaryCoverUploader(BuildConfig.CLOUDINARY_CLOUD_NAME, BuildConfig.CLOUDINARY_UPLOAD_PRESET)) } }
     fun repository(owner: String?) = OfflineFirstFormRepository(local, auth, owner, publisher, ::schedule)
     fun requests(owner: String) = client?.let { CloudRequestRepository(database, it, owner, { auth.state.value.userId }, ::schedule) }
 
