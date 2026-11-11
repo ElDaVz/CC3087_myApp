@@ -1,4 +1,4 @@
-import {validate, type Answer, type Field, type PublishedForm, type Value} from './form';
+import {coverImageUrl, validate, type Answer, type Field, type PublishedForm, type Value} from './form';
 
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag);
@@ -179,9 +179,19 @@ function question(field: Field, index: number): {card: HTMLElement; reader: Read
 
 export function render(root: HTMLElement, form: PublishedForm, send: (answers: Answer[]) => Promise<void>) {
   const content = shell(root);
-  // Decorative until the separate Cloudinary publication integration is implemented.
+  // A missing or unavailable public image keeps the existing branded fallback.
   const banner = node('div', undefined, 'form-banner');
   banner.setAttribute('aria-hidden', 'true');
+  const coverUrl = coverImageUrl(form.cover);
+  if (coverUrl) {
+    const image = node('img');
+    image.alt = '';
+    image.referrerPolicy = 'no-referrer';
+    image.onload = () => banner.classList.add('has-cover');
+    image.onerror = () => { image.remove(); banner.classList.remove('has-cover'); };
+    image.src = coverUrl;
+    banner.append(image);
+  }
   const introduction = node('section', undefined, 'form-introduction');
   const count = `${form.fields.length} ${form.fields.length === 1 ? 'pregunta' : 'preguntas'}`;
   const eyebrow = node('div', undefined, 'form-eyebrow');

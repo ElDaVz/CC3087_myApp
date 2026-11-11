@@ -44,12 +44,12 @@ test('ownership transfer, publication and device paths are rejected', async () =
 });
 const config = {placeholder:'',allowMultipleAnswers:false,includeTime:false,disallowPastDates:false,allowDecimals:false,minimum:'1',maximum:'10',unit:'',options:[{id:'a',label:'A'},{id:'b',label:'B'}]};
 const field = (id='q', type='SHORT_TEXT') => ({id,type,label:'Pregunta',description:'',required:true,position:0,optionIds:['a','b'],config:{...config,allowMultipleAnswers:type==='CHECKBOX_GROUP'}});
-async function publish(fields=[field()]) {
+async function publish(fields=[field()],cover) {
  const db=environment.authenticatedContext('owner').firestore();
  await setDoc(doc(db,'forms/f'),{...draft('owner'),fields});
  const batch=writeBatch(db);
  batch.update(doc(db,'forms/f'),{status:'PUBLISHED',publishedAt:serverTimestamp(),publishedVersion:1});
- batch.set(doc(db,'publishedForms/f'),{ownerId:'owner',title:'Pedido real',fields,active:true,version:1,fingerprint:'test',templateType:'ORDER_FORM',publishedAt:serverTimestamp(),firstPublishedAt:serverTimestamp()});
+ batch.set(doc(db,'publishedForms/f'),{ownerId:'owner',title:'Pedido real',fields,active:true,version:1,fingerprint:'test',templateType:'ORDER_FORM',...(cover?{cover}:{}),publishedAt:serverTimestamp(),firstPublishedAt:serverTimestamp()});
  await assertSucceeds(batch.commit());
  return (await getDoc(doc(db,'publishedForms/f'))).data();
 }
@@ -109,4 +109,36 @@ test('ten bounded numeric fields and missing proof rejection',async()=>{
  const db=environment.unauthenticatedContext().firestore();
  await assertSucceeds(response(db,p,Array(10).fill('5')));
  await assertFails(setDoc(doc(db,'forms/f/responses/00000000-0000-4000-8000-000000000002'),{ownerId:'owner',formId:'f',attemptId:'00000000-0000-4000-8000-000000000002',title:p.title,fields:p.fields,version:1,submittedAt:serverTimestamp(),status:'PENDING',answers:p.fields.map(f=>({fieldId:f.id,value:'5'}))}));
+});
+
+test('cover metadata is optional, owner-only and restricted to the configured Cloudinary cloud',async()=>{
+ await publish();
+ const db=environment.authenticatedContext('owner').firestore();
+ const cover={url:'https://res.cloudinary.com/uxrkjzti/image/upload/v123/formlink/covers/fixture.jpg',publicId:'formlink/covers/fixture',hash:'a'.repeat(64)};
+ function change(value,context=db){
+  const batch=writeBatch(context);
+  batch.update(doc(context,'publishedForms/f'),{cover:value});
+  return batch.commit();
+ }
+ await assertSucceeds(change(cover));
+ const publicDb=environment.unauthenticatedContext().firestore();
+ assert.equal((await getDoc(doc(publicDb,'publishedForms/f'))).data().cover.url,cover.url);
+ for(const value of [
+  {...cover,url:cover.url.replace('https:','http:')},
+  {...cover,url:cover.url.replace('uxrkjzti','another')},
+  {...cover,url:cover.url.replace('res.cloudinary.com','evil.example')},
+  {...cover,hash:'text'}, {...cover,publicId:'another'}, {...cover,extra:'unwanted'},
+ ]) await assertFails(change(value));
+ await assertFails(change(null,publicDb));
+ await assertFails(change(null,environment.authenticatedContext('other').firestore()));
+ await assertSucceeds(response(publicDb,(await getDoc(doc(publicDb,'publishedForms/f'))).data(),['Respuesta con portada']));
+ await assertSucceeds(change(null));
+ assert.equal((await getDoc(doc(publicDb,'publishedForms/f'))).data().cover,null);
+});
+
+test('ten questions with a cover stay within rule evaluation limits',async()=>{
+ const cover={url:'https://res.cloudinary.com/uxrkjzti/image/upload/v123/fixture.jpg',publicId:'fixture',hash:'a'.repeat(64)};
+ await publish(Array.from({length:10},(_,i)=>({...field(`q${i}`,'NUMBER'),position:i})),cover);
+ const publicDb=environment.unauthenticatedContext().firestore();
+ await assertSucceeds(response(publicDb,(await getDoc(doc(publicDb,'publishedForms/f'))).data(),Array(10).fill('5')));
 });
