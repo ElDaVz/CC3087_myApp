@@ -110,6 +110,8 @@ class EditFormViewModel(
         savedStateHandle[LOADING_KEY] = true
         savedStateHandle.remove<String>(OWNER_KEY)
         savedStateHandle.remove<String>(COVER_KEY)
+        savedStateHandle.remove<String>(COVER_ACTION_KEY)
+        savedStateHandle.remove<String>(PUBLISHED_COVER_KEY)
         savedStateHandle.remove<String>(TITLE_KEY)
         savedStateHandle.remove<ArrayList<FormFieldDraft>>(FIELDS_V2_KEY)
         savedStateHandle.remove<ArrayList<String>>(FIELDS_KEY)
@@ -128,7 +130,7 @@ class EditFormViewModel(
             try {
                 val path = checkNotNull(covers).importImage(source)
                 if (token == coverRevision && mutableUiState.value.draftId == id) {
-                    updateState(mutableUiState.value.copy(coverPath = path, importingCover = false))
+                    updateState(mutableUiState.value.copy(coverPath = path, coverAction = "REPLACE", importingCover = false))
                 } else covers.delete(path)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
@@ -142,7 +144,7 @@ class EditFormViewModel(
         coverRevision++
         val state = mutableUiState.value
         if (!state.isLoading && state.loadError == null)
-            updateState(state.copy(coverPath = null, importingCover = false, coverError = false))
+            updateState(state.copy(coverPath = null, coverAction = "REMOVE", publishedCoverUrl = null, importingCover = false, coverError = false))
     }
 
     fun requestContinue(): FormValidationResult {
@@ -256,7 +258,7 @@ class EditFormViewModel(
         rememberDraft(saving)
         mutableUiState.value = saving
         requests.trySend(DraftRequest.Save(
-            FormDraft(id, saving.title, saving.fields, createdAt, now(), saving.coverPath, saving.ownerId, creationAttempt, creationStart, templateName), revision
+            FormDraft(id, saving.title, saving.fields, createdAt, now(), saving.coverPath, saving.ownerId, creationAttempt, creationStart, templateName, saving.coverAction), revision
         ))
     }
 
@@ -269,6 +271,8 @@ class EditFormViewModel(
         savedStateHandle[LOADING_KEY] = false
         savedStateHandle[TITLE_KEY] = updated.title
         savedStateHandle[COVER_KEY] = updated.coverPath
+        savedStateHandle[COVER_ACTION_KEY] = updated.coverAction
+        savedStateHandle[PUBLISHED_COVER_KEY] = updated.publishedCoverUrl
         savedStateHandle[OWNER_KEY] = updated.ownerId
         // el modelo ya es serializable y así no perdemos opciones ni ajustes al restaurar
         savedStateHandle[FIELDS_V2_KEY] = ArrayList(
@@ -308,8 +312,11 @@ class EditFormViewModel(
                 creationAttempt = draft.creationAttemptId
                 creationStart = draft.creationStartedAt
                 templateName = draft.templateType
+                val publishedCover = formRepository.publication(draft.id)?.coverUrl
+                if (revision != request.revision) return
                 val loaded = EditFormUiState(
                     title = draft.title, fields = draft.fields, draftId = draft.id, coverPath = draft.coverPath, ownerId = draft.ownerId,
+                    coverAction = draft.coverAction, publishedCoverUrl = publishedCover,
                     saveStatus = DraftSaveStatus.SAVED
                 )
                 rememberDraft(loaded)
@@ -343,7 +350,7 @@ class EditFormViewModel(
         if (savedStateHandle.contains(FIELDS_V2_KEY)) {
             val savedFields = savedStateHandle.get<ArrayList<*>>(FIELDS_V2_KEY).orEmpty()
             val fields = savedFields.filterIsInstance<FormFieldDraft>()
-            return EditFormUiState(title = title, fields = fields, draftId = id, coverPath = savedStateHandle[COVER_KEY], ownerId = savedStateHandle[OWNER_KEY])
+            return EditFormUiState(title = title, fields = fields, draftId = id, coverPath = savedStateHandle[COVER_KEY], coverAction = savedStateHandle[COVER_ACTION_KEY] ?: "KEEP", publishedCoverUrl = savedStateHandle[PUBLISHED_COVER_KEY], ownerId = savedStateHandle[OWNER_KEY])
         }
         // todavía aceptamos los borradores de cuatro valores de la versión anterior
         val values = savedStateHandle.get<ArrayList<String>>(FIELDS_KEY).orEmpty()
@@ -361,11 +368,13 @@ class EditFormViewModel(
                 required = required
             )
         }
-        return EditFormUiState(title = title, fields = fields, draftId = id, coverPath = savedStateHandle[COVER_KEY], ownerId = savedStateHandle[OWNER_KEY])
+        return EditFormUiState(title = title, fields = fields, draftId = id, coverPath = savedStateHandle[COVER_KEY], coverAction = savedStateHandle[COVER_ACTION_KEY] ?: "KEEP", publishedCoverUrl = savedStateHandle[PUBLISHED_COVER_KEY], ownerId = savedStateHandle[OWNER_KEY])
     }
 
     companion object {
         private const val OWNER_KEY = "editor_owner"
+        private const val COVER_ACTION_KEY = "editor_cover_action"
+        private const val PUBLISHED_COVER_KEY = "editor_published_cover"
         private const val COVER_KEY = "editor_cover"
         private const val TITLE_KEY = "editor_title"
         private const val FIELDS_KEY = "editor_fields"

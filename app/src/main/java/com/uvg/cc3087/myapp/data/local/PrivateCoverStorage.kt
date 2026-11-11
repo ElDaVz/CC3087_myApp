@@ -74,6 +74,22 @@ class PrivateCoverStorage(private val context: Context) : CoverStorage {
         }
     }
 
+    override suspend fun prepareUpload(path: String): com.uvg.cc3087.myapp.data.repository.PreparedCover = withContext(Dispatchers.IO) {
+        require(path.matches(Regex("covers/[a-fA-F0-9-]+[.]jpg")))
+        val encrypted = File(context.filesDir, path).readBytes()
+        require(encrypted.size <= 20 * 1024 * 1024)
+        val decoded = com.uvg.cc3087.myapp.data.security.DeviceCipher(context).decrypt(encrypted)
+        val bitmap = requireNotNull(BitmapFactory.decodeByteArray(decoded, 0, decoded.size))
+        val factor = minOf(1f, 1600f / max(bitmap.width, bitmap.height))
+        val scaled = Bitmap.createScaledBitmap(bitmap, max(1, (bitmap.width * factor).toInt()), max(1, (bitmap.height * factor).toInt()), true)
+        try {
+            val bytes = java.io.ByteArrayOutputStream().also { check(scaled.compress(Bitmap.CompressFormat.JPEG, 80, it)) }.toByteArray()
+            require(bytes.size <= 2 * 1024 * 1024) { "Cover exceeds 2 MiB" }
+            val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+            com.uvg.cc3087.myapp.data.repository.PreparedCover(bytes, hash)
+        } finally { setOf(bitmap, scaled).forEach { it.recycle() } }
+    }
+
     override suspend fun delete(path: String) = withContext(Dispatchers.IO) {
         require(path.startsWith("covers/") && !path.contains(".."))
         File(context.filesDir, path).delete()

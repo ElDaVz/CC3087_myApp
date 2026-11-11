@@ -21,7 +21,8 @@ data class FormDraftEntity(
     @ColumnInfo(defaultValue = "0") val revision: Long = 0,
     @ColumnInfo(defaultValue = "0") val syncedRevision: Long = 0,
     @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
-    val creationAttemptId: String? = null, val creationStartedAt: Long? = null, val templateType: String? = null
+    val creationAttemptId: String? = null, val creationStartedAt: Long? = null, val templateType: String? = null,
+    @ColumnInfo(defaultValue = "'KEEP'") val coverAction: String = "KEEP"
 )
 
 @Entity(

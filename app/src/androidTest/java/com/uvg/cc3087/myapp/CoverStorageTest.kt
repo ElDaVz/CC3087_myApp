@@ -50,6 +50,11 @@ class CoverStorageTest {
             val bytes = com.uvg.cc3087.myapp.data.security.DeviceCipher(context).decrypt(File(context.filesDir, path).readBytes())
             val normalized = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             assertEquals(40, normalized.width); assertEquals(80, normalized.height); normalized.recycle()
+            val prepared = storage.prepareUpload(path)
+            assertEquals(64, prepared.hash.length)
+            assertArrayEquals(prepared.bytes, storage.prepareUpload(path).bytes)
+            assertTrue(prepared.bytes.size <= 2 * 1024 * 1024)
+            assertTrue(runCatching { storage.prepareUpload("covers/../../private.jpg") }.isFailure)
             var database = Room.databaseBuilder(context, FormLinkDatabase::class.java, name).build()
             try { RoomFormRepository(database.drafts(), covers = storage).saveDraft(FormDraft("f", "Cover", emptyList(), 1, 1, path)) }
             finally { database.close() }

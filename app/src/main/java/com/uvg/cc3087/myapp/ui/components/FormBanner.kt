@@ -20,16 +20,20 @@ import com.uvg.cc3087.myapp.R
 import java.io.File
 
 @Composable
-fun FormBanner(title: String, coverPath: String?, modifier: Modifier = Modifier) {
+fun FormBanner(title: String, coverPath: String?, modifier: Modifier = Modifier, remoteUrl: String? = null) {
     Box(modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))
         .background(MaterialTheme.colorScheme.primaryContainer)) {
-        if (coverPath != null) {
-            PrivateCoverImage(coverPath + ".blur.jpg", null, Modifier.matchParentSize())
+        val remote = remoteUrl?.takeIf { com.uvg.cc3087.myapp.data.model.CoverAsset.allowedUrl(it) }
+        if (coverPath != null || remote != null) {
+            if (coverPath == null) AsyncImage(model = coil3.request.ImageRequest.Builder(LocalContext.current)
+                .data(remote).diskCachePolicy(coil3.request.CachePolicy.DISABLED).build(), contentDescription = null,
+                modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+            if (coverPath != null) PrivateCoverImage(coverPath + ".blur.jpg", null, Modifier.matchParentSize())
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .25f), Color.Black.copy(alpha = .7f)))))
         }
         Text(title.ifBlank { stringResource(R.string.untitled_form) },
             style = MaterialTheme.typography.headlineMedium,
-            color = if (coverPath == null) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
+            color = if (coverPath == null && remote == null) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
             modifier = Modifier.align(Alignment.BottomStart).padding(20.dp))
     }
 }

@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 @Entity(tableName = "form_publications")
 data class PublicationEntity(@PrimaryKey val formId: String, val ownerId: String, val status: String,
     val url: String, val publishedAt: Long, val version: Long, val fingerprint: String,
-    val firstPublishedAt: Long)
+    val firstPublishedAt: Long, val coverUrl: String? = null, val coverPublicId: String? = null, val coverHash: String? = null)
 
 @Entity(tableName = "remote_requests", primaryKeys = ["ownerId", "formId", "responseId"])
 data class RemoteRequestEntity(val ownerId: String, val formId: String, val responseId: String,
@@ -14,8 +14,14 @@ data class RemoteRequestEntity(val ownerId: String, val formId: String, val resp
     @ColumnInfo(defaultValue = "0") val statusRevision: Long = 0,
     @ColumnInfo(defaultValue = "0") val syncedStatusRevision: Long = 0)
 
+@Entity(tableName = "cover_uploads", primaryKeys = ["ownerId", "formId", "hash"])
+data class CoverUploadEntity(val ownerId: String, val formId: String, val hash: String, val url: String, val publicId: String)
+
 @Dao
 interface CloudDao {
+    @Query("SELECT * FROM cover_uploads WHERE ownerId = :owner AND formId = :form AND hash = :hash")
+    suspend fun uploadedCover(owner: String, form: String, hash: String): CoverUploadEntity?
+    @Upsert suspend fun saveCoverUpload(row: CoverUploadEntity)
     @Query("SELECT * FROM form_publications WHERE formId = :id AND ownerId = :owner")
     suspend fun publication(owner: String, id: String): PublicationEntity?
     @Query("SELECT * FROM form_publications WHERE ownerId = :owner")
