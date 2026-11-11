@@ -20,6 +20,8 @@ data class CoverAsset(val url: String, val publicId: String, val hash: String) {
             val asset = CoverAsset(map["url"] as String, map["publicId"] as String, map["hash"] as String)
             require(allowedUrl(asset.url) && asset.publicId.matches(Regex("[A-Za-z0-9_/-]{1,240}")) &&
                 asset.hash.matches(Regex("[a-f0-9]{64}")))
+            val path = URI(asset.url).path.removePrefix("/$CLOUD/image/upload/").replace(Regex("^v[0-9]+/"), "")
+            require(listOf("jpg", "jpeg", "png", "webp").any { path == "${asset.publicId}.$it" })
             return asset
         }
     }
