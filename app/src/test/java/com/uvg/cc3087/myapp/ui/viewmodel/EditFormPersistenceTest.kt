@@ -294,6 +294,24 @@ class EditFormPersistenceTest {
         assertTrue(repository.savedDrafts.isEmpty())
     }
 
+    @Test fun explicitCoverRemovalSurvivesProcessRestorationAndReopening() = runTest {
+        val repository = FakeFormRepository(listOf(storedDraft().copy(coverPath = "covers/old.jpg")))
+        val saved = SavedStateHandle()
+        val original = editor(repository, saved)
+        original.openDraft("stored")
+        advanceUntilIdle()
+        original.removeCover()
+        val restored = editor(repository, SavedStateHandle(saved.keys().associateWith { saved.get<Any?>(it) }))
+        advanceUntilIdle()
+        assertEquals("REMOVE", restored.uiState.value.coverAction)
+        assertNull(restored.uiState.value.coverPath)
+        assertEquals("REMOVE", repository.getDraft("stored")!!.coverAction)
+        val reopened = editor(repository)
+        reopened.openDraft("stored")
+        advanceUntilIdle()
+        assertEquals("REMOVE", reopened.uiState.value.coverAction)
+    }
+
     private fun editor(repository: FakeFormRepository, saved: SavedStateHandle = SavedStateHandle()) =
         EditFormViewModel(FakeTemplateRepository(), saved, repository, now = { time }).also {
             viewModels.put("editor-${viewModelNumber++}", it)

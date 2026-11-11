@@ -207,7 +207,7 @@ fun EditForm(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(enabled = !uiState.importingCover, onClick = {
                             picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }) { Text(stringResource(if (uiState.coverPath == null) R.string.cover_add else R.string.cover_change)) }
+                        }) { Text(stringResource(if (uiState.coverPath == null && (uiState.publishedCoverUrl == null || uiState.coverAction == "REMOVE")) R.string.cover_add else R.string.cover_change)) }
                         if (uiState.coverPath != null || (uiState.publishedCoverUrl != null && uiState.coverAction != "REMOVE")) OutlinedButton(onClick = onRemoveCover) {
                             Text(stringResource(R.string.cover_remove))
                         }
