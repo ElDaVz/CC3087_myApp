@@ -106,3 +106,9 @@ Supported field types and expected configuration:
 - Never put names, titles, emails, phones, answers, credentials or free text in Analytics/Crashlytics. Metric parameters are random IDs, enums and numeric durations/counts only.
 - Creation ends at the first confirmed publication, never at a draft save. Public submission ends only after backend confirmation. Reuse attempt IDs across retries and deduplicate reports. Keep development separate from user studies.
 - CI must compile, run meaningful tests and Android Lint on every PR. Run instrumented and browser/emulator tests before claiming verification. Panel visibility, deployed URLs and human review require actual external evidence.
+
+### Public web presentation
+- The client web form lives in `web/`. Keep presentation in `src/view.ts` and `src/style.css`; submission, retry identifiers and Analytics coordination remain in `src/main.ts` and the existing backend adapters.
+- Match the Android purple palette and reuse `web/public/formlink-logo.svg`, adapted from the Android launcher vectors. Keep the brand at the upper right and support narrow screens, large text and keyboard navigation.
+- The current web banner is decorative. Cloudinary uploads and publishing editor covers are a separate pending task; do not add credentials, uploads or pretend that local images are already public.
+- Browser-only design fixtures live in `web/tests/e2e/design.spec.ts`. Never expose fixture routes or answers in the production client. Use `npm test --prefix web`, `npm run build --prefix web` and the browser tests for web changes.
