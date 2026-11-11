@@ -3,7 +3,7 @@ package com.uvg.cc3087.myapp.data.local
 import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 
-internal fun FormDraft.toEntity() = FormDraftEntity(id, title, createdAt, updatedAt, coverPath, ownerId, creationAttemptId = creationAttemptId, creationStartedAt = creationStartedAt, templateType = templateType)
+internal fun FormDraft.toEntity() = FormDraftEntity(id, title, createdAt, updatedAt, coverPath, ownerId, creationAttemptId = creationAttemptId, creationStartedAt = creationStartedAt, templateType = templateType, coverAction = coverAction)
 
 internal fun FormDraft.toFieldEntities(): List<FormFieldEntity> = fields.mapIndexed { index, field ->
     FormFieldEntity(
@@ -20,6 +20,7 @@ internal fun FormDraftWithFields.toDraft() = FormDraft(
     id = form.id,
     title = form.title,
     coverPath = form.coverPath,
+    coverAction = form.coverAction,
     ownerId = form.ownerId,
     creationAttemptId = form.creationAttemptId, creationStartedAt = form.creationStartedAt, templateType = form.templateType,
     createdAt = form.createdAt,

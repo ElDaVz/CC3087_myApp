@@ -11,5 +11,6 @@ data class FormDraft(
     val ownerId: String? = null,
     val creationAttemptId: String? = null,
     val creationStartedAt: Long? = null,
-    val templateType: String? = null
+    val templateType: String? = null,
+    val coverAction: String = "KEEP"
 )

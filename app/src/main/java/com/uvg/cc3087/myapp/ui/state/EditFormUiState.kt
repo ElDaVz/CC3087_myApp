@@ -13,6 +13,8 @@ data class EditFormUiState(
     val loadError: DraftLoadError? = null,
     val ownerId: String? = null,
     val coverPath: String? = null,
+    val coverAction: String = "KEEP",
+    val publishedCoverUrl: String? = null,
     val importingCover: Boolean = false,
     val coverError: Boolean = false,
     val continueRequested: Boolean = false,
