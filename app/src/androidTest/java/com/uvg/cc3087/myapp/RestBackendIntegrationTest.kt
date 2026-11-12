@@ -14,6 +14,32 @@ import org.junit.Test
 import java.util.UUID
 
 class RestBackendIntegrationTest {
+    @Test fun passwordResetUsesEmulatorCodeWithoutStartingSession() = runBlocking {
+        assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val http = FirebaseHttp(true)
+        val auth = RestAuthRepository("demo-api-key", DeviceCipher(context), http, true)
+        auth.state.first { it !is AuthState.Initializing }; auth.signOut()
+        val email = "reset-${UUID.randomUUID()}@example.com"
+        try {
+            auth.signUp(email, "password123")
+            val uid = auth.state.value.userId
+            auth.signOut()
+            auth.sendPasswordReset("  $email  ")
+            assertEquals(AuthState.Guest, auth.state.value)
+            val codes = http.request("http://10.0.2.2:9099/emulator/v1/projects/demo-formlink/oobCodes").getJSONArray("oobCodes")
+            val code = (0 until codes.length()).map { codes.getJSONObject(it) }.single { it.getString("email") == email }
+            assertEquals("PASSWORD_RESET", code.getString("requestType"))
+            http.request("http://10.0.2.2:9099/identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=demo-api-key",
+                org.json.JSONObject().put("oobCode", code.getString("oobCode")).put("newPassword", "replacement123"))
+            assertTrue(runCatching { auth.signIn(email, "password123") }.isFailure)
+            auth.signIn(email, "replacement123")
+            assertEquals(uid, auth.state.value.userId)
+            auth.signOut()
+            auth.sendPasswordReset("unknown-${UUID.randomUUID()}@example.com")
+            assertEquals(AuthState.Guest, auth.state.value)
+        } finally { auth.signOut() }
+    }
     @Test fun missingOrDifferentProjectConfigDoesNotRestoreAnEncryptedSession() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
         val context=InstrumentationRegistry.getInstrumentation().targetContext

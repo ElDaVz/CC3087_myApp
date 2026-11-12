@@ -30,14 +30,30 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
             mutableState.value = session?.let { AuthState.SignedIn(UserSession(it.getString("uid"), it.getString("email"))) } ?: AuthState.Guest
         }
     } }
-    override suspend fun signIn(email: String, password: String) = authenticate("signInWithPassword", email, password)
-    override suspend fun signUp(email: String, password: String) = authenticate("signUp", email, password)
+    override suspend fun signIn(email: String, password: String) = authRequest { authenticate("signInWithPassword", email, password) }
+    override suspend fun signUp(email: String, password: String) = authRequest { authenticate("signUp", email, password) }
+    override suspend fun sendPasswordReset(email: String) = authRequest {
+        val key = checkNotNull(apiKey)
+        try {
+            http.request("$base/v1/accounts:sendOobCode?key=$key", JSONObject()
+                .put("requestType", "PASSWORD_RESET").put("email", email.trim()))
+        } catch (error: BackendHttpException) {
+            if (error.code != "EMAIL_NOT_FOUND") throw error
+        }
+        Unit // Recovery never changes or persists a session.
+    }
+    private suspend fun authRequest(block: suspend () -> Unit) {
+        try { block() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { throw AuthException(authFailure(error)) }
+    }
     private suspend fun authenticate(action: String, email: String, password: String) {
         val key = checkNotNull(apiKey) { "Firebase is not configured" }
         val stamp = generation
         val result = http.request("$base/v1/accounts:$action?key=$key", JSONObject()
             .put("email", email.trim()).put("password", password).put("returnSecureToken", true))
         mutex.withLock {
+            currentCoroutineContext().ensureActive()
             check(stamp == generation) { "Session changed" }
             persist(JSONObject().put("uid", result.getString("localId")).put("email", result.getString("email"))
                 .put("idToken", result.getString("idToken")).put("refreshToken", result.getString("refreshToken"))

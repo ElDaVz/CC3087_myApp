@@ -300,4 +300,21 @@
     <string name="archive_publication">Withdraw publication</string>
     <string name="publication_notice">Publishing requires an internet connection. Edits do not change the public form until you update its publication.</string>
     <string name="protected_data_error">Could not open protected data. No information has been deleted. If you restored this device, return to the original device to recover local drafts.</string>
+    <string name="auth_recovery">Reset password</string>
+    <string name="auth_confirm_password">Confirm password</string>
+    <string name="auth_forgot_password">Forgot your password?</string>
+    <string name="auth_check_email">Check your email</string>
+    <string name="auth_send_link">Send link</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
+    <string name="auth_required">This field is required.</string>
+    <string name="auth_email_format">Enter a valid email.</string>
+    <string name="auth_password_length">Use at least 6 characters.</string>
+    <string name="auth_password_mismatch">Passwords do not match.</string>
+    <string name="auth_invalid_credentials">Incorrect username or password</string>
+    <string name="auth_email_exists">This email is already registered. Sign in or reset your password.</string>
+    <string name="auth_disabled">This account is disabled. Contact support.</string>
+    <string name="auth_too_many_attempts">Too many attempts. Try again later.</string>
+    <string name="auth_network">Could not connect. Check your connection and try again.</string>
+    <string name="auth_unexpected">Something went wrong. Try again.</string>
 </resources>

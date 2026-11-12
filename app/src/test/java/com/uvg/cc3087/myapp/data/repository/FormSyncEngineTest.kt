@@ -34,6 +34,7 @@ class FormSyncEngineTest {
             override val state = kotlinx.coroutines.flow.MutableStateFlow<AuthState>(AuthState.SignedIn(UserSession("a", "a@example.com")))
             override suspend fun signIn(email: String, password: String) = Unit
             override suspend fun signUp(email: String, password: String) = Unit
+            override suspend fun sendPasswordReset(email: String) = Unit
             override suspend fun signOut() { state.value = AuthState.Guest }
         }
         val local = Local(emptyList())
