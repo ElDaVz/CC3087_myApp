@@ -18,6 +18,7 @@ class BackendRootTest {
         compose.onNodeWithText("Crear una cuenta nueva").performScrollTo().performClick()
         compose.onNodeWithText("Correo electrónico").performTextInput(email)
         compose.onNodeWithText("Contraseña").performTextInput("password123")
+        compose.onNodeWithText("Confirmar contraseña").performTextInput("password123")
         compose.onNode(hasText("Crear cuenta") and hasClickAction()).performScrollTo().performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Nuevo formulario").performClick()
@@ -29,6 +30,8 @@ class BackendRootTest {
         compose.onNodeWithText("Volver a mis formularios").performScrollTo().performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("Sincronizado con tu cuenta").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Cuenta").performClick()
+        compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
+        compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
         compose.onNodeWithText("Cerrar sesión").performScrollTo().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText(title).assertDoesNotExist()
@@ -38,6 +41,8 @@ class BackendRootTest {
         compose.onNode(hasText("Iniciar sesión") and hasClickAction()).performScrollTo().performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Cuenta").performClick()
+        compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
+        compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
         compose.onNodeWithText("Cerrar sesión").performScrollTo().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty() }
     }
@@ -60,6 +65,11 @@ class BackendRootTest {
         compose.onNodeWithText("Mis formularios").assertExists()
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").assertExists()
+        compose.onNodeWithText("Cerrar sesión").assertDoesNotExist()
+        compose.onNodeWithText("¿Olvidaste tu contraseña?").performScrollTo().performClick()
+        compose.onNodeWithText("Enviar enlace").assertExists()
+        compose.onNodeWithText("Contraseña").assertDoesNotExist()
+        compose.onNodeWithText("Volver").performClick()
         compose.onNodeWithText("Continuar como invitado").performScrollTo().performClick()
         compose.onNodeWithText("Mis formularios").assertExists()
     }

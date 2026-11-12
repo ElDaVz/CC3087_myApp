@@ -21,6 +21,7 @@ import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.repository.*
 import com.uvg.cc3087.myapp.di.BackendServices
 import com.uvg.cc3087.myapp.ui.screens.AccountScreen
+import com.uvg.cc3087.myapp.ui.screens.AuthScreen
 import com.uvg.cc3087.myapp.ui.viewmodel.*
 
 @Composable
@@ -78,10 +79,15 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                 phase == SyncPhase.SYNCED -> R.string.sync_complete
                 else -> R.string.sync_pending
             })
-            if (showAccount) AccountScreen((authState as? AuthState.SignedIn)?.session,
-                services.auth.configured, authUi, accountUi, guests, message,
-                authModel::email, authModel::password, authModel::toggleMode, authModel::submit,
-                onBack = { showAccount = false; authModel.clearCredentials() },
+            if (showAccount && uid == null) AuthScreen(authUi, services.auth.configured,
+                authModel::email, authModel::password, authModel::confirmation, authModel::mode, authModel::submit,
+                onBack = {
+                    if (authUi.mode != AuthMode.LOGIN) authModel.mode(AuthMode.LOGIN)
+                    else { showAccount = false; authModel.clearCredentials() }
+                })
+            else if (showAccount) AccountScreen((authState as AuthState.SignedIn).session,
+                accountUi, guests, message,
+                onBack = { showAccount = false },
                 onSelect = accountModel::select, onImport = accountModel::importSelected,
                 onSignOut = accountModel::signOut, onSync = { uid?.let(services::schedule) })
             else FormLinkRoute(forms, templates,
