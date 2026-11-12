@@ -12,6 +12,7 @@ interface RemoteFormSource {
 }
 interface LocalFormStore {
     fun observe(owner: String?): Flow<List<FormSummary>>
+    fun observePublishedCoverUrl(owner: String?, id: String): Flow<String?> = kotlinx.coroutines.flow.flowOf(null)
     fun pendingCount(owner: String): Flow<Int>
     suspend fun get(owner: String?, id: String): FormDraft?
     suspend fun save(owner: String?, draft: FormDraft)

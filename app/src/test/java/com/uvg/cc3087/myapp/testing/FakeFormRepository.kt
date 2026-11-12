@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.update
 
 class FakeFormRepository(initialDrafts: List<FormDraft> = emptyList()) : FormRepository {
     private val drafts = MutableStateFlow(initialDrafts.associateBy { it.id })
+    val publishedCovers = MutableStateFlow<Map<String, String?>>(emptyMap())
+    override fun observePublishedCoverUrl(id: String) = publishedCovers.map { it[id] }
     val savedDrafts = mutableListOf<FormDraft>()
     var saveFailure: Exception? = null
     var loadFailure: Exception? = null

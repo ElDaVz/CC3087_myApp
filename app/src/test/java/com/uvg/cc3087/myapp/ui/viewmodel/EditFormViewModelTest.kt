@@ -44,6 +44,60 @@ class EditFormViewModelTest {
         FormFieldDraft("last", FormFieldType.DATE, "Fecha")
     )
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test fun lateCoverMetadataPreservesEditsAndStopsWhenChangingDraft() {
+        val repository = FakeFormRepository(listOf(
+            com.uvg.cc3087.myapp.data.model.FormDraft("a", "First", fields, 1, 1),
+            com.uvg.cc3087.myapp.data.model.FormDraft("b", "Second", fields, 1, 1)
+        ))
+        val model = EditFormViewModel(templateRepository(), SavedStateHandle(), repository)
+            .also { viewModels.put("cover", it) }
+        val scheduler = mainDispatcherRule.dispatcher.scheduler
+        model.openDraft("a")
+        scheduler.advanceUntilIdle()
+        repository.saveDelayMillis = 1000
+        model.onAction(EditFormAction.ChangeTitle("Pending edit"))
+        scheduler.runCurrent()
+        val saves = repository.savedDrafts.size
+        repository.publishedCovers.value = mapOf("a" to "remote-a")
+        scheduler.runCurrent()
+        assertEquals("remote-a", model.uiState.value.publishedCoverUrl)
+        assertEquals("Pending edit", model.uiState.value.title)
+        assertEquals(com.uvg.cc3087.myapp.ui.state.DraftSaveStatus.SAVING, model.uiState.value.saveStatus)
+        assertEquals(saves, repository.savedDrafts.size)
+        scheduler.advanceUntilIdle()
+        assertEquals(saves + 1, repository.savedDrafts.size)
+        model.openDraft("b")
+        scheduler.advanceUntilIdle()
+        repository.publishedCovers.value = mapOf("a" to "late-a", "b" to "remote-b")
+        scheduler.runCurrent()
+        assertEquals("remote-b", model.uiState.value.publishedCoverUrl)
+        assertEquals("Second", model.uiState.value.title)
+        model.removeCover()
+        scheduler.advanceUntilIdle()
+        repository.publishedCovers.value = mapOf("b" to "new-b")
+        scheduler.runCurrent()
+        assertEquals("REMOVE", model.uiState.value.coverAction)
+        assertEquals(null, com.uvg.cc3087.myapp.ui.components.resolvePublishedCoverUrl(
+            model.uiState.value.coverAction, false, model.uiState.value.publishedCoverUrl))
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test fun restoredEditorResumesCoverObservation() {
+        val repository = FakeFormRepository()
+        val model = EditFormViewModel(templateRepository(), SavedStateHandle(mapOf(
+            "editor_draft_id" to "restored", "editor_title" to "Unsaved title",
+            "editor_cover_action" to "KEEP", "editor_fields_v2" to arrayListOf(fields.first())
+        )), repository).also { viewModels.put("restored-cover", it) }
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        val saves = repository.savedDrafts.size
+        repository.publishedCovers.value = mapOf("restored" to "new-cover")
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+        assertEquals("new-cover", model.uiState.value.publishedCoverUrl)
+        assertEquals("Unsaved title", model.uiState.value.title)
+        assertEquals(saves, repository.savedDrafts.size)
+    }
+
     @Test
     fun startingBlankDraftKeepsTheTitleAndNoFields() {
         val repository = templateRepository()

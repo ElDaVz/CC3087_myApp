@@ -9,6 +9,7 @@ interface FormRepository {
     fun observeForms(): Flow<List<FormSummary>>
     suspend fun getDraft(id: String): FormDraft?
     suspend fun saveDraft(draft: FormDraft)
+    fun observePublishedCoverUrl(id: String): Flow<String?> = kotlinx.coroutines.flow.flowOf(null)
     suspend fun publication(id: String): FormPublication? = null
     suspend fun publish(id: String): FormPublication = throw PublicationException(PublicationError.SETUP_REQUIRED)
     suspend fun archive(id: String) { throw PublicationException(PublicationError.UNAVAILABLE) }

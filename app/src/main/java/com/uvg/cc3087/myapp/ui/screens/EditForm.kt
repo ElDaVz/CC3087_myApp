@@ -134,6 +134,8 @@ fun EditForm(
         FormPreviewScreen(
             title = uiState.title,
             coverPath = uiState.coverPath,
+            publishedCoverUrl = uiState.publishedCoverUrl,
+            coverAction = uiState.coverAction,
             fields = uiState.fields,
             onClose = { showPreview = false },
             onSaveForm = onSaveForm,
@@ -208,7 +210,7 @@ fun EditForm(
         ) {
             item(key = "form-details") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FormBanner(uiState.title, uiState.coverPath, remoteUrl = uiState.publishedCoverUrl.takeUnless { uiState.coverAction == "REMOVE" })
+                    FormBanner(uiState.title, uiState.coverPath, remoteUrl = uiState.publishedCoverUrl, coverAction = uiState.coverAction)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(enabled = !uiState.importingCover && picker != null, onClick = {
                             if (picker != null) {

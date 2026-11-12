@@ -4,12 +4,45 @@ import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.local.*
 import com.uvg.cc3087.myapp.data.model.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import org.junit.Assert.*
 import org.junit.Test
 
 class RoomFormStoreTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    @Test fun latePublicationUpdatesSummariesAndCoverObserversWithinOwnerPartition() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+        try {
+            val local = RoomFormStore(db)
+            local.mergeRemote("a", listOf(FormDraft("restored", "Recovered", emptyList(), 1, 1, ownerId = "a")))
+            val summaries = kotlinx.coroutines.channels.Channel<List<FormSummary>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+            val urls = kotlinx.coroutines.channels.Channel<String?>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+            val cards = launch { local.observe("a").collect { summaries.send(it) } }
+            val cover = launch { local.observePublishedCoverUrl("a", "restored").collect { urls.send(it) } }
+            try {
+                withTimeout(5000) {
+                    assertNull(summaries.receive().single().publishedCoverUrl)
+                    assertNull(urls.receive())
+                    val remote = "https://res.cloudinary.com/uxrkjzti/image/upload/v1/cover.jpg"
+                    db.cloud().savePublication(PublicationEntity("restored", "a", "ARCHIVED", "link", 1, 1, "hash", 1, remote))
+                    var card = summaries.receive().single()
+                    while (card.publishedCoverUrl == null) card = summaries.receive().single()
+                    assertEquals(remote, card.publishedCoverUrl)
+                    assertEquals("", card.imageUrl)
+                    assertEquals(FormStatus.DRAFT, card.status)
+                    var url = urls.receive()
+                    while (url == null) url = urls.receive()
+                    assertEquals(remote, url)
+                    assertNull(local.observePublishedCoverUrl("b", "restored").first())
+                    assertNull(local.observePublishedCoverUrl(null, "restored").first())
+                    assertTrue(local.observe("b").first().isEmpty())
+                    local.save("a", checkNotNull(local.get("a", "restored")).copy(coverAction = "REMOVE"))
+                    assertEquals("REMOVE", local.observe("a").first().single().coverAction)
+                }
+            } finally { cards.cancelAndJoin(); cover.cancelAndJoin(); summaries.close(); urls.close() }
+        } finally { db.close() }
+    }
     @Test fun importingIsExplicitAndOwnerChecksProtectDirectIds() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
         try {

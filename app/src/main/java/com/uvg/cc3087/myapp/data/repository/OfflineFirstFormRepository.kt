@@ -2,6 +2,7 @@ package com.uvg.cc3087.myapp.data.repository
 
 import com.uvg.cc3087.myapp.data.model.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.flatMapLatest
 
 /** A repository instance is permanently bound to one session partition. */
 class OfflineFirstFormRepository(
@@ -14,6 +15,12 @@ class OfflineFirstFormRepository(
     private fun checkSession() {
         if (auth.state.value is AuthState.Initializing || auth.state.value.userId != owner)
             throw CancellationException("The session changed")
+    }
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    override fun observePublishedCoverUrl(id: String) = auth.state.flatMapLatest { session ->
+        if (session !is AuthState.Initializing && session.userId == owner)
+            local.observePublishedCoverUrl(owner, id)
+        else kotlinx.coroutines.flow.flowOf(null)
     }
     override fun observeForms() = local.observe(owner)
     override suspend fun getDraft(id: String): FormDraft? { checkSession(); return local.get(owner, id) }
