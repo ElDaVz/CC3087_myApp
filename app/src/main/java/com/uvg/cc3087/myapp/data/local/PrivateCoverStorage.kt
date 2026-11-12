@@ -14,6 +14,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 import kotlin.math.max
+import androidx.core.net.toUri
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 
 /** The database stores relative paths; the files stay in private, durable app storage. */
 class PrivateCoverStorage(private val context: Context) : CoverStorage {
@@ -22,7 +25,7 @@ class PrivateCoverStorage(private val context: Context) : CoverStorage {
         val cipher = com.uvg.cc3087.myapp.data.security.DeviceCipher(context)
         val target = File(dir, "${UUID.randomUUID()}.jpg")
         try {
-            val bytes = context.contentResolver.openInputStream(Uri.parse(source)).use { stream ->
+            val bytes = context.contentResolver.openInputStream(source.toUri()).use { stream ->
                 requireNotNull(stream) { "Image is unavailable" }
                 val output = java.io.ByteArrayOutputStream()
                 val buffer = ByteArray(8192)
@@ -56,14 +59,16 @@ class PrivateCoverStorage(private val context: Context) : CoverStorage {
                 }
             }
             val oriented = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
-            val normalized = Bitmap.createBitmap(oriented.width, oriented.height, Bitmap.Config.ARGB_8888)
+            val normalized = createBitmap(oriented.width, oriented.height)
             Canvas(normalized).apply { drawColor(Color.WHITE); drawBitmap(oriented, 0f, 0f, null) }
             target.writeBytes(cipher.encrypt(java.io.ByteArrayOutputStream().also { check(normalized.compress(Bitmap.CompressFormat.JPEG, 85, it)) }.toByteArray()))
-            val small = Bitmap.createScaledBitmap(normalized, 96,
-                max(1, 96 * normalized.height / normalized.width).coerceAtMost(192), true)
+            val small = normalized.scale(
+                96,
+                max(1, 96 * normalized.height / normalized.width).coerceAtMost(192)
+            )
             val blurred = blur(small)
             File(target.path + ".blur.jpg").writeBytes(cipher.encrypt(java.io.ByteArrayOutputStream().also {
-                check(blurred.compress(Bitmap.CompressFormat.JPEG, 85, it))
+                check(blurred.compress(Bitmap.CompressFormat.JPEG, 75, it))
             }.toByteArray()))
             setOf(decoded, oriented, normalized, small, blurred).forEach { it.recycle() }
             "covers/${target.name}"
@@ -81,7 +86,10 @@ class PrivateCoverStorage(private val context: Context) : CoverStorage {
         val decoded = com.uvg.cc3087.myapp.data.security.DeviceCipher(context).decrypt(encrypted)
         val bitmap = requireNotNull(BitmapFactory.decodeByteArray(decoded, 0, decoded.size))
         val factor = minOf(1f, 1600f / max(bitmap.width, bitmap.height))
-        val scaled = Bitmap.createScaledBitmap(bitmap, max(1, (bitmap.width * factor).toInt()), max(1, (bitmap.height * factor).toInt()), true)
+        val scaled = bitmap.scale(
+            max(1, (bitmap.width * factor).toInt()),
+            max(1, (bitmap.height * factor).toInt())
+        )
         try {
             val bytes = java.io.ByteArrayOutputStream().also { check(scaled.compress(Bitmap.CompressFormat.JPEG, 80, it)) }.toByteArray()
             require(bytes.size <= 2 * 1024 * 1024) { "Cover exceeds 2 MiB" }
@@ -93,7 +101,7 @@ class PrivateCoverStorage(private val context: Context) : CoverStorage {
     override suspend fun delete(path: String) = withContext(Dispatchers.IO) {
         require(path.startsWith("covers/") && !path.contains(".."))
         File(context.filesDir, path).delete()
-        File(context.filesDir, path + ".blur.jpg").delete()
+        File(context.filesDir, "$path.blur.jpg").delete()
         Unit
     }
 
