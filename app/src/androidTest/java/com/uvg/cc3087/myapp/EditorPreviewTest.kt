@@ -79,7 +79,9 @@ class EditorPreviewTest {
         }
         compose.onNodeWithContentDescription("Vista previa").performClick()
         compose.onNodeWithText("Escribe un nombre para cada opción").assertExists()
-        compose.onNodeWithText("Probar envío").performScrollTo().assertIsNotEnabled()
+        // El pie puede no estar compuesto todavía: desplazamos la LazyColumn para encontrarlo.
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Probar envío"))
+        compose.onNodeWithText("Probar envío").assertIsNotEnabled()
     }
 
     @Test fun previewSaveButtonUsesThePermissionFromItsStateHolder() {
