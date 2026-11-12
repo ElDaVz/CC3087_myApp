@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
+import com.uvg.cc3087.myapp.ui.resources.messageRes
 import com.uvg.cc3087.myapp.ui.components.DraftLoadStatus
 import com.uvg.cc3087.myapp.ui.components.SaveShareAsset
 import com.uvg.cc3087.myapp.ui.state.SaveShareUiState
@@ -114,11 +115,11 @@ fun SaveShareScreen(
                     if (onPublish != null) {
                         Button(onClick = onPublish, enabled = !uiState.publishing, modifier = Modifier.fillMaxWidth()) {
                             if (uiState.publishing) CircularProgressIndicator(Modifier.size(20.dp))
-                            else Text(if (uiState.publication?.status == "PUBLISHED") "Actualizar publicación" else "Publicar")
+                            else Text(stringResource(if (uiState.publication?.status == "PUBLISHED") R.string.update_publication else R.string.publish))
                         }
-                        Text("Publicar requiere conexión. Las ediciones no cambian el enlace público hasta actualizarlo.", style = MaterialTheme.typography.bodySmall)
-                        uiState.publishError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                        if (uiState.publication?.status == "PUBLISHED" && onArchive != null) TextButton(onClick = onArchive, enabled = !uiState.publishing) { Text("Retirar publicación") }
+                        Text(stringResource(R.string.publication_notice), style = MaterialTheme.typography.bodySmall)
+                        uiState.publishError?.let { Text(stringResource(it.messageRes), color = MaterialTheme.colorScheme.error) }
+                        if (uiState.publication?.status == "PUBLISHED" && onArchive != null) TextButton(onClick = onArchive, enabled = !uiState.publishing) { Text(stringResource(R.string.archive_publication)) }
                         Spacer(Modifier.height(16.dp))
                     }
                     ShareableLinkCard(uiState.publicLink, uiState.canShare, ::copyLink)

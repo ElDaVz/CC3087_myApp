@@ -2,6 +2,7 @@ package com.uvg.cc3087.myapp.data.remote
 
 import com.uvg.cc3087.myapp.data.model.CoverAsset
 import com.uvg.cc3087.myapp.data.repository.PreparedCover
+import com.uvg.cc3087.myapp.data.repository.PublicationError
 import com.uvg.cc3087.myapp.data.repository.PublicationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,7 +17,7 @@ fun interface CoverUploader { suspend fun upload(image: PreparedCover): CoverAss
 class CloudinaryCoverUploader(private val cloud: String, private val preset: String) : CoverUploader {
     override suspend fun upload(image: PreparedCover): CoverAsset = withContext(Dispatchers.IO) {
         if (cloud != CoverAsset.CLOUD || !preset.matches(Regex("[A-Za-z0-9_-]{1,100}")))
-            throw PublicationException("Configura Cloudinary para publicar una portada")
+            throw PublicationException(PublicationError.COVER_NOT_CONFIGURED)
         require(image.bytes.size <= 2 * 1024 * 1024)
         val boundary = "FormLink${UUID.randomUUID()}"
         val connection = URL("https://api.cloudinary.com/v1_1/$cloud/image/upload").openConnection() as HttpURLConnection
@@ -35,7 +36,7 @@ class CloudinaryCoverUploader(private val cloud: String, private val preset: Str
                 text("\r\n--$boundary--\r\n")
             }
             if (connection.responseCode !in 200..299)
-                throw PublicationException("Cloudinary no aceptó la portada. Revisa la conexión y el preset e intenta de nuevo.")
+                throw PublicationException(PublicationError.COVER_UPLOAD_FAILED)
             val bytes = connection.inputStream.use { it.readBytesLimited(64 * 1024) }
             val json = JSONObject(bytes.toString(Charsets.UTF_8))
             require(json.getString("resource_type") == "image")

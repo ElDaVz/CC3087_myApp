@@ -281,4 +281,23 @@
     <string name="sync_running">Sincronizando…</string>
     <string name="sync_pending">Guardado en este dispositivo; pendiente de sincronizar</string>
     <string name="sync_complete">Sincronizado con tu cuenta</string>
+    <string name="publication_sign_in_required">Inicia sesión para publicar</string>
+    <string name="publication_form_not_found">No se encontró el formulario</string>
+    <string name="publication_backend_not_configured">Firebase no está configurado</string>
+    <string name="publication_setup_required">Inicia sesión y configura Firebase para publicar</string>
+    <string name="publication_unavailable">La publicación no está disponible</string>
+    <string name="publication_invalid_form">Corrige los errores del formulario antes de publicar</string>
+    <string name="publication_too_many_fields">La web inicial admite hasta 10 preguntas</string>
+    <string name="publication_text_too_long">Los títulos y opciones admiten hasta 200 caracteres</string>
+    <string name="publication_cover_preparation_failed">No se pudo preparar la portada. Vuelve a seleccionarla y reintenta.</string>
+    <string name="publication_cover_not_configured">Configura Cloudinary para publicar una portada</string>
+    <string name="publication_cover_upload_failed">Cloudinary no aceptó la portada. Revisa la conexión y el preset e intenta de nuevo.</string>
+    <string name="publication_draft_changed">El formulario cambió; vuelve a abrir Publicar</string>
+    <string name="publication_publish_failed">No se pudo confirmar la publicación. Comprueba la conexión y reintenta.</string>
+    <string name="publication_archive_failed">No se pudo retirar la publicación. Reintenta con conexión.</string>
+    <string name="publish">Publicar</string>
+    <string name="update_publication">Actualizar publicación</string>
+    <string name="archive_publication">Retirar publicación</string>
+    <string name="publication_notice">Publicar requiere conexión. Las ediciones no cambian el enlace público hasta actualizarlo.</string>
+    <string name="protected_data_error">No se pudieron abrir los datos protegidos. No se ha borrado información. Si restauraste este dispositivo, vuelve al dispositivo original para recuperar los borradores locales.</string>
 </resources>

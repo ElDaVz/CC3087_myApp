@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -75,8 +76,8 @@ fun FormLinkApp() {
     if (initialized.isFailure) {
         androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
-            androidx.compose.material3.Text("No se pudieron abrir los datos protegidos. No se ha borrado información. Si restauraste este dispositivo, vuelve al dispositivo original para recuperar los borradores locales.")
-            androidx.compose.material3.Button(onClick = { initializationAttempt++ }) { androidx.compose.material3.Text("Reintentar") }
+            androidx.compose.material3.Text(stringResource(R.string.protected_data_error))
+            androidx.compose.material3.Button(onClick = { initializationAttempt++ }) { androidx.compose.material3.Text(stringResource(R.string.retry)) }
         }
         return
     }

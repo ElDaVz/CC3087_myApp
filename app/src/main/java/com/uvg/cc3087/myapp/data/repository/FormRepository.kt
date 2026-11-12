@@ -10,7 +10,7 @@ interface FormRepository {
     suspend fun getDraft(id: String): FormDraft?
     suspend fun saveDraft(draft: FormDraft)
     suspend fun publication(id: String): FormPublication? = null
-    suspend fun publish(id: String): FormPublication = throw PublicationException("Inicia sesión y configura Firebase para publicar")
-    suspend fun archive(id: String) { throw PublicationException("La publicación no está disponible") }
+    suspend fun publish(id: String): FormPublication = throw PublicationException(PublicationError.SETUP_REQUIRED)
+    suspend fun archive(id: String) { throw PublicationException(PublicationError.UNAVAILABLE) }
     suspend fun deleteDraft(id: String)
 }

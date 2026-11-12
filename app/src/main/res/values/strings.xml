@@ -281,4 +281,23 @@
     <string name="sync_running">Synchronizing…</string>
     <string name="sync_pending">Saved on this device; pending synchronization</string>
     <string name="sync_complete">Synchronized with your account</string>
+    <string name="publication_sign_in_required">Sign in to publish</string>
+    <string name="publication_form_not_found">The form could not be found</string>
+    <string name="publication_backend_not_configured">Firebase is not configured</string>
+    <string name="publication_setup_required">Sign in and configure Firebase to publish</string>
+    <string name="publication_unavailable">Publishing is not available</string>
+    <string name="publication_invalid_form">Correct the form errors before publishing</string>
+    <string name="publication_too_many_fields">The web form supports up to 10 questions</string>
+    <string name="publication_text_too_long">Titles and options support up to 200 characters</string>
+    <string name="publication_cover_preparation_failed">Could not prepare the cover. Select it again and retry.</string>
+    <string name="publication_cover_not_configured">Configure Cloudinary to publish a cover</string>
+    <string name="publication_cover_upload_failed">Cloudinary did not accept the cover. Check the connection and upload preset, then retry.</string>
+    <string name="publication_draft_changed">The form changed. Reopen Publish and retry.</string>
+    <string name="publication_publish_failed">Could not confirm publication. Check your connection and retry.</string>
+    <string name="publication_archive_failed">Could not withdraw publication. Connect to the internet and retry.</string>
+    <string name="publish">Publish</string>
+    <string name="update_publication">Update publication</string>
+    <string name="archive_publication">Withdraw publication</string>
+    <string name="publication_notice">Publishing requires an internet connection. Edits do not change the public form until you update its publication.</string>
+    <string name="protected_data_error">Could not open protected data. No information has been deleted. If you restored this device, return to the original device to recover local drafts.</string>
 </resources>
