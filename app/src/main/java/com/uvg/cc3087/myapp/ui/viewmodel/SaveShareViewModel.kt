@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.uvg.cc3087.myapp.data.repository.FormRepository
+import com.uvg.cc3087.myapp.data.repository.PublicationError
+import com.uvg.cc3087.myapp.data.repository.PublicationException
 import com.uvg.cc3087.myapp.ui.state.DraftLoadError
 import com.uvg.cc3087.myapp.ui.state.SaveShareUiState
 import kotlinx.coroutines.CancellationException
@@ -72,8 +74,8 @@ class SaveShareViewModel(
             catch (error: Exception) {
                 if (revision != operationRevision) return@launch
                 mutableUiState.value = mutableUiState.value.copy(publishing = false,
-                    publishError = (error as? com.uvg.cc3087.myapp.data.repository.PublicationException)?.message
-                        ?: "No se pudo confirmar la publicación. Comprueba la conexión y reintenta.")
+                    publishError = (error as? PublicationException)?.reason
+                        ?: PublicationError.PUBLISH_FAILED)
             }
         }
     }
@@ -85,7 +87,7 @@ class SaveShareViewModel(
         viewModelScope.launch {
             try { repository.archive(id); openDraft(id) }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { mutableUiState.value = mutableUiState.value.copy(publishing = false, publishError = "No se pudo retirar la publicación. Reintenta con conexión.") }
+            catch (_: Exception) { mutableUiState.value = mutableUiState.value.copy(publishing = false, publishError = PublicationError.ARCHIVE_FAILED) }
         }
     }
     fun retryLoading() {

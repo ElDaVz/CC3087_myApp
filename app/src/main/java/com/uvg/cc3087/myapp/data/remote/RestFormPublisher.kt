@@ -29,7 +29,7 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
     private suspend fun prepare(form: FormDraft): PreparedCover {
         try { return checkNotNull(covers).prepareUpload(checkNotNull(form.coverPath)) }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-        catch (_: Exception) { throw PublicationException("No se pudo preparar la portada. Vuelve a seleccionarla y reintenta.") }
+        catch (_: Exception) { throw PublicationException(PublicationError.COVER_PREPARATION_FAILED) }
     }
     override suspend fun publication(owner: String, form: FormDraft): FormPublication? {
         val row = database.cloud().publication(owner, form.id) ?: return null
@@ -46,10 +46,10 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
     override suspend fun publish(owner: String, form: FormDraft): FormPublication = exclusive {
         checkSession(owner)
         if (FormDraftValidator.validate(form.title, form.fields) != FormValidationResult.READY)
-            throw PublicationException("Corrige los errores del formulario antes de publicar")
-        if (form.fields.size > 10) throw PublicationException("La web inicial admite hasta 10 preguntas")
+            throw PublicationException(PublicationError.INVALID_FORM)
+        if (form.fields.size > 10) throw PublicationException(PublicationError.TOO_MANY_FIELDS)
         if (form.title.length > 200 || form.fields.any { it.title.length > 200 || it.options.any { option -> option.label.length > 200 } })
-            throw PublicationException("Los títulos y opciones admiten hasta 200 caracteres")
+            throw PublicationException(PublicationError.TEXT_TOO_LONG)
         source.put(owner, form)
         checkSession(owner)
         val privateDoc = checkNotNull(client.get(owner, "forms/${form.id}"))
@@ -65,7 +65,7 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
                 val cached = database.cloud().uploadedCover(owner, form.id, prepared.hash)
                 if (cached != null) CoverAsset.fromWire(mapOf("url" to cached.url, "publicId" to cached.publicId, "hash" to cached.hash))
                 else {
-                    val uploaded = (uploader ?: throw PublicationException("Configura Cloudinary para publicar una portada")).upload(prepared)
+                    val uploaded = (uploader ?: throw PublicationException(PublicationError.COVER_NOT_CONFIGURED)).upload(prepared)
                     checkSession(owner)
                     check(uploaded.hash == prepared.hash)
                     database.cloud().saveCoverUpload(CoverUploadEntity(owner, form.id, prepared.hash, uploaded.url, uploaded.publicId))
@@ -76,7 +76,8 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
         }
         checkSession(owner)
         val fingerprint = contentFingerprint(form, selected?.hash)
-        if (oldPublic?.get("fingerprint") != fingerprint || oldPublic["active"] != true) {
+        if (oldPublic?.get("fingerprint") !=
+            fingerprint || oldPublic["active"] != true) {
             val version = ((oldPublic?.get("version") as? Number)?.toLong() ?: 0L) + 1
             val fields = form.fields.mapIndexed { i, field -> FormFieldWire.encode(field, i) +
                 mapOf("optionIds" to field.options.map { it.id }) }
@@ -93,7 +94,8 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
                 "publishedFingerprint" to fingerprint)
             val privateTimes = mutableListOf("publishedAt", "updatedAt")
             if (remote["firstPublishedAt"] == null) privateTimes += "firstPublishedAt"
-            check(database.drafts().getDraft(form.id)?.toDraft() == form) { "El formulario cambió; vuelve a abrir Publicar" }
+            if (database.drafts().getDraft(form.id)?.toDraft() != form)
+                throw PublicationException(PublicationError.DRAFT_CHANGED)
             client.commit(owner, listOf(
                 client.update("forms/${form.id}", privateValues, privateTimes, JSONObject().put("updateTime", privateDoc.getString("updateTime"))),
                 client.update("publishedForms/${form.id}", publicValues, times,

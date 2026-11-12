@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.repository.PublicationError
+import com.uvg.cc3087.myapp.data.repository.PublicationException
 import com.uvg.cc3087.myapp.testing.FakeFormRepository
 import com.uvg.cc3087.myapp.testing.MainDispatcherRule
 import com.uvg.cc3087.myapp.ui.state.DraftLoadError
@@ -108,7 +110,26 @@ class SaveShareViewModelTest {
             override suspend fun publish(id: String): com.uvg.cc3087.myapp.data.repository.FormPublication = throw IOException("network")
         }
         val model = model(repository); model.openDraft(draft.id); runCurrent(); model.publish(); runCurrent()
-        assertNotNull(model.uiState.value.publishError); assertFalse(model.uiState.value.canShare); assertFalse(model.uiState.value.publishing)
+        assertEquals(PublicationError.PUBLISH_FAILED, model.uiState.value.publishError)
+        assertFalse(model.uiState.value.canShare); assertFalse(model.uiState.value.publishing)
+    }
+    @Test fun publicationFailureKeepsItsReasonForTheUiToTranslate() = runTest {
+        val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
+            override suspend fun publish(id: String): com.uvg.cc3087.myapp.data.repository.FormPublication =
+                throw PublicationException(PublicationError.COVER_UPLOAD_FAILED)
+        }
+        val model = model(repository)
+        model.openDraft(draft.id); runCurrent(); model.publish(); runCurrent()
+        assertEquals(PublicationError.COVER_UPLOAD_FAILED, model.uiState.value.publishError)
+    }
+    @Test fun archiveFailureReturnsATranslatableReason() = runTest {
+        val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
+            override suspend fun archive(id: String) { throw IOException("network") }
+        }
+        val model = model(repository)
+        model.openDraft(draft.id); runCurrent(); model.archive(); runCurrent()
+        assertEquals(PublicationError.ARCHIVE_FAILED, model.uiState.value.publishError)
+        assertFalse(model.uiState.value.publishing)
     }
     @Test fun aLatePublicationDoesNotAttachItsLinkToAnotherDraft() = runTest {
         val pending = kotlinx.coroutines.CompletableDeferred<com.uvg.cc3087.myapp.data.repository.FormPublication>()

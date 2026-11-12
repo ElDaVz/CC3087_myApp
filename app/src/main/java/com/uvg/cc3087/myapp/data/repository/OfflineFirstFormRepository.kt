@@ -29,9 +29,9 @@ class OfflineFirstFormRepository(
     }
     override suspend fun publish(id: String): FormPublication {
         checkSession()
-        val user = owner ?: throw PublicationException("Inicia sesión para publicar")
-        val form = getDraft(id) ?: throw PublicationException("No se encontró el formulario")
-        return (publisher ?: throw PublicationException("Firebase no está configurado")).publish(user, form)
+        val user = owner ?: throw PublicationException(PublicationError.SIGN_IN_REQUIRED)
+        val form = getDraft(id) ?: throw PublicationException(PublicationError.FORM_NOT_FOUND)
+        return (publisher ?: throw PublicationException(PublicationError.BACKEND_NOT_CONFIGURED)).publish(user, form)
     }
     override suspend fun archive(id: String) {
         checkSession()

@@ -46,7 +46,7 @@ class CloudinaryPublicationTest {
         val withCover = base.copy(coverPath = "covers/fixture.jpg", coverAction = "REPLACE")
         val uploader = CoverUploader {
             uploadCount++
-            if (failUpload) throw PublicationException("Prueba de red")
+            if (failUpload) throw PublicationException(com.uvg.cc3087.myapp.data.repository.PublicationError.COVER_UPLOAD_FAILED)
             if (changeDuringUpload) { changeDuringUpload = false; local.save(owner, withCover.copy(title = "Edición posterior")) }
             image
         }
