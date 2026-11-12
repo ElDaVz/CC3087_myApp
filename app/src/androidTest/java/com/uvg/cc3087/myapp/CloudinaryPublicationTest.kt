@@ -23,7 +23,8 @@ class CloudinaryPublicationTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val auth = RestAuthRepository("demo-api-key", DeviceCipher(context), FirebaseHttp(true), true)
         auth.state.first { it !is AuthState.Initializing }; auth.signOut()
-        auth.signUp("cover-${UUID.randomUUID()}@example.com", "password123")
+        val authEmail = "cover-${UUID.randomUUID()}@example.com"
+        auth.signUp(authEmail, "password123")
         val owner = auth.state.value.userId!!
         var currentOwner: String? = owner
         val client = FirestoreRest("demo-formlink", auth, FirebaseHttp(true), true)
@@ -62,6 +63,20 @@ class CloudinaryPublicationTest {
             val second = publisher.publish(owner, withCover)
             assertEquals(1, uploadCount)
             assertEquals(image.url, second.coverUrl)
+            // Sign in on an installation with no local originals or publication cache.
+            auth.signOut()
+            auth.signIn(authEmail, "password123")
+            val recoveredDb = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+            try {
+                val recovered = RoomFormStore(recoveredDb)
+                recovered.mergeRemote(owner, source.fetch(owner))
+                assertNull(recovered.get(owner, id)!!.coverPath)
+                assertNull(recovered.observe(owner).first().single { it.id == id }.publishedCoverUrl)
+                RestFormPublisher(client, source, recoveredDb, { currentOwner }, { it() }).refresh(owner)
+                assertEquals(image.url, recovered.observe(owner).first().single { it.id == id }.publishedCoverUrl)
+                assertEquals(image.url, recovered.observePublishedCoverUrl(owner, id).first())
+                assertEquals(1, uploadCount)
+            } finally { recoveredDb.close() }
             assertEquals(second.version, publisher.publish(owner, withCover).version)
             assertTrue(publisher.publication(owner, withCover)!!.matchesDraft)
             assertFalse(publisher.publication(owner, withCover.copy(coverAction = "REMOVE"))!!.matchesDraft)

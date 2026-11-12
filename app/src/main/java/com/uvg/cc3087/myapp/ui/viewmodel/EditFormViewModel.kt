@@ -52,6 +52,8 @@ class EditFormViewModel(
     private var revision = 0L
     private val requests = Channel<DraftRequest>(Channel.UNLIMITED)
 
+    private var coverObservation: kotlinx.coroutines.Job? = null
+
     init {
         viewModelScope.launch {
             // las lecturas esperan los guardados anteriores para no reabrir una versión vieja
@@ -69,6 +71,7 @@ class EditFormViewModel(
             // recuperamos también las ediciones que android conservó antes de terminar una escritura
             if (!savedStateHandle.contains(CREATED_AT_KEY)) createdAt = now()
             updateState(mutableUiState.value.copy(draftId = pendingId ?: newId()))
+            observeCover(checkNotNull(mutableUiState.value.draftId))
         }
     }
 
@@ -82,6 +85,7 @@ class EditFormViewModel(
     }
 
     fun startDraft(title: String, templateType: TemplateType?) {
+        coverObservation?.cancel()
         if (!savedStateHandle.contains("pending_creation_id")) beginCreationAttempt()
         val id = checkNotNull(savedStateHandle.remove<String>("pending_creation_id"))
         creationAttempt = savedStateHandle.remove<String>("pending_creation_attempt")
@@ -104,6 +108,7 @@ class EditFormViewModel(
         if (current.draftId == id &&
             (current.saveStatus == DraftSaveStatus.SAVING || current.saveStatus == DraftSaveStatus.ERROR)
         ) return
+        coverObservation?.cancel()
         revision++
         mutableUiState.value = EditFormUiState(draftId = id, isLoading = true)
         savedStateHandle[ID_KEY] = id
@@ -312,15 +317,15 @@ class EditFormViewModel(
                 creationAttempt = draft.creationAttemptId
                 creationStart = draft.creationStartedAt
                 templateName = draft.templateType
-                val publishedCover = formRepository.publication(draft.id)?.coverUrl
                 if (revision != request.revision) return
                 val loaded = EditFormUiState(
                     title = draft.title, fields = draft.fields, draftId = draft.id, coverPath = draft.coverPath, ownerId = draft.ownerId,
-                    coverAction = draft.coverAction, publishedCoverUrl = publishedCover,
+                    coverAction = draft.coverAction,
                     saveStatus = DraftSaveStatus.SAVED
                 )
                 rememberDraft(loaded)
                 mutableUiState.value = loaded
+                observeCover(draft.id)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -329,6 +334,20 @@ class EditFormViewModel(
                 mutableUiState.value = mutableUiState.value.copy(
                     isLoading = false, loadError = DraftLoadError.FAILED
                 )
+            }
+        }
+    }
+
+    private fun observeCover(id: String) {
+        coverObservation?.cancel()
+        coverObservation = viewModelScope.launch {
+            formRepository.observePublishedCoverUrl(id).collect { url ->
+                val current = mutableUiState.value
+                if (current.draftId == id) {
+                    // Publication metadata changes presentation only, never the pending draft revision.
+                    mutableUiState.value = current.copy(publishedCoverUrl = url)
+                    savedStateHandle[PUBLISHED_COVER_KEY] = url
+                }
             }
         }
     }

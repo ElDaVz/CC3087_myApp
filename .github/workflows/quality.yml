@@ -92,9 +92,14 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          # Build platform matches compileSdk; the Android 17 image matches the local AVD.
+          api-level: '36.1'
+          system-image-api-level: '37.0'
           arch: x86_64
-          target: google_apis
+          target: google_apis_playstore_ps16k
+          profile: pixel_9
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -no-audio -no-boot-anim
           disable-animations: true
           script: backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore "./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process"
       - uses: actions/upload-artifact@v4

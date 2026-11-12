@@ -44,7 +44,9 @@ fun FormPreviewScreen(
     coverPath: String? = null,
     onSubmitLocal: ((Map<String, FormAnswer>, Locale) -> Unit)? = null,
     submitting: Boolean = false,
-    submitFailed: Boolean = false
+    submitFailed: Boolean = false,
+    publishedCoverUrl: String? = null,
+    coverAction: String = "KEEP"
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val cipher = androidx.compose.runtime.remember(context) { com.uvg.cc3087.myapp.data.security.DeviceCipher(context) }
@@ -99,7 +101,7 @@ fun FormPreviewScreen(
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    com.uvg.cc3087.myapp.ui.components.FormBanner(title, coverPath)
+                    com.uvg.cc3087.myapp.ui.components.FormBanner(title, coverPath, remoteUrl = publishedCoverUrl, coverAction = coverAction)
                     Text(stringResource(if (onSubmitLocal == null) R.string.preview_notice else R.string.request_local_notice))
                     Text(stringResource(R.string.required_legend), style = MaterialTheme.typography.bodySmall)
                     if (!configurationValid) {

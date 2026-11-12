@@ -13,5 +13,7 @@ data class FormSummary(
     val responseCount: Int,
     val updatedDate: String,
     val status: FormStatus,
-    val imageUrl: String
+    val imageUrl: String,
+    val publishedCoverUrl: String? = null,
+    val coverAction: String = "KEEP"
 )

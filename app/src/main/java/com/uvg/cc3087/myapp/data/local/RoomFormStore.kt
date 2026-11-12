@@ -11,10 +11,14 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
     override fun observe(owner: String?) = combine(dao.observeOwned(owner), database.requests().observeCounts(),
         database.cloud().observeRequests(owner.orEmpty()), database.cloud().observePublications(owner.orEmpty())) { rows, counts, remoteRequests, publications ->
         val byId = if (owner == null) counts.associate { it.formId to it.count } else remoteRequests.groupingBy { it.formId }.eachCount()
+        val publishedById = publications.associateBy { it.formId }
         val active = publications.filter { it.status == "PUBLISHED" }.map { it.formId }.toSet()
         rows.map { it.toDraft().toSummary().copy(responseCount = byId[it.form.id] ?: 0,
+            publishedCoverUrl = publishedById[it.form.id]?.coverUrl,
             status = if (it.form.id in active) com.uvg.cc3087.myapp.data.model.FormStatus.ACTIVE else com.uvg.cc3087.myapp.data.model.FormStatus.DRAFT) }
     }
+    override fun observePublishedCoverUrl(owner: String?, id: String) =
+        if (owner == null) kotlinx.coroutines.flow.flowOf(null) else database.cloud().observePublishedCoverUrl(owner, id)
     override fun pendingCount(owner: String) = dao.observePendingCount(owner)
     override suspend fun get(owner: String?, id: String) = dao.getDraft(id)?.takeIf { it.form.ownerId == owner && !it.form.deleted }?.toDraft()
 

@@ -15,5 +15,6 @@ internal fun FormDraft.toSummary() = FormSummary(
     updatedDate = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
         .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(updatedAt)),
     status = FormStatus.DRAFT,
-    imageUrl = coverPath.orEmpty()
+    imageUrl = coverPath.orEmpty(),
+    coverAction = coverAction
 )

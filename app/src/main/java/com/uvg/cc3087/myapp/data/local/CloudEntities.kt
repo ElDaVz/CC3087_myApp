@@ -26,6 +26,10 @@ interface CloudDao {
     suspend fun publication(owner: String, id: String): PublicationEntity?
     @Query("SELECT * FROM form_publications WHERE ownerId = :owner")
     fun observePublications(owner: String): Flow<List<PublicationEntity>>
+    @Query("""SELECT p.coverUrl FROM form_publications p INNER JOIN form_drafts d
+        ON d.id = p.formId AND d.ownerId = p.ownerId
+        WHERE p.ownerId = :owner AND p.formId = :id AND d.deleted = 0""")
+    fun observePublishedCoverUrl(owner: String, id: String): Flow<String?>
     @Upsert suspend fun savePublication(row: PublicationEntity)
     @Query("SELECT * FROM remote_requests WHERE ownerId = :owner ORDER BY submittedAt DESC")
     fun observeRequests(owner: String): Flow<List<RemoteRequestEntity>>

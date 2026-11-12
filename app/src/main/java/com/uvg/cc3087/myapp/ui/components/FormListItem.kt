@@ -28,15 +28,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.model.FormStatus
@@ -71,22 +68,17 @@ fun FormListItem(
         ) {
             val placeholderColor = MaterialTheme.colorScheme.surfaceVariant
 
-            // coil carga la miniatura y deja un color suave mientras espera
-            if (form.imageUrl.startsWith("covers/")) PrivateCoverImage(form.imageUrl,
-                stringResource(R.string.thumbnail_for_form, displayTitle), Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)))
-            else AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(if (form.imageUrl.startsWith("covers/")) java.io.File(LocalContext.current.filesDir, form.imageUrl) else form.imageUrl)
-                    .crossfade(true)
-                    .build(),
+            // Visual samples retain their illustrative URLs; persisted drafts use private paths.
+            if (form.imageUrl.isNotBlank() && !form.imageUrl.startsWith("covers/") && form.coverAction == "KEEP") AsyncImage(
+                model = form.imageUrl,
                 contentDescription = stringResource(R.string.thumbnail_for_form, displayTitle),
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                placeholder = ColorPainter(placeholderColor),
-                error = ColorPainter(placeholderColor),
-                fallback = ColorPainter(placeholderColor),
-                contentScale = ContentScale.Crop
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)),
+                placeholder = ColorPainter(placeholderColor), error = ColorPainter(placeholderColor),
+                fallback = ColorPainter(placeholderColor), contentScale = ContentScale.Crop
+            ) else FormCoverImage(
+                path = form.imageUrl.takeIf { it.isNotBlank() }, remoteUrl = form.publishedCoverUrl,
+                coverAction = form.coverAction, description = stringResource(R.string.thumbnail_for_form, displayTitle),
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp))
             )
 
             Spacer(modifier = Modifier.width(12.dp))

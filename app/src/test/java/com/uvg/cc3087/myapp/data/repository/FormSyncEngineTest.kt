@@ -14,6 +14,8 @@ import org.junit.Test
 class FormSyncEngineTest {
     private val form = FormDraft("f", "Pedido", emptyList(), 1, 1, ownerId = "a")
     private class Local(var queue: List<PendingForm>) : LocalFormStore {
+        val cover = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+        override fun observePublishedCoverUrl(owner: String?, id: String) = cover
         var merged = false
         var acknowledged = false
         override fun observe(owner: String?) = flowOf(emptyList<FormSummary>())
@@ -26,6 +28,33 @@ class FormSyncEngineTest {
         override suspend fun acknowledge(owner: String, pending: PendingForm) { acknowledged = true; queue = queue.filterNot { it.revision == pending.revision } }
         override suspend fun mergeRemote(owner: String, forms: List<FormDraft>) { merged = true }
     }
+    @Test fun coverObservationStopsOnSessionChange() = runTest {
+        val auth = object : AuthRepository {
+            override val configured = true
+            override val state = kotlinx.coroutines.flow.MutableStateFlow<AuthState>(AuthState.SignedIn(UserSession("a", "a@example.com")))
+            override suspend fun signIn(email: String, password: String) = Unit
+            override suspend fun signUp(email: String, password: String) = Unit
+            override suspend fun signOut() { state.value = AuthState.Guest }
+        }
+        val local = Local(emptyList())
+        val repository = OfflineFirstFormRepository(local, auth, "a") {}
+        val seen = mutableListOf<String?>()
+        val job = backgroundScope.launch { repository.observePublishedCoverUrl("f").collect { seen += it } }
+        runCurrent()
+        local.cover.value = "cover-a"
+        runCurrent()
+        assertEquals("cover-a", seen.last())
+        assertEquals(1, local.cover.subscriptionCount.value)
+        auth.state.value = AuthState.SignedIn(UserSession("b", "b@example.com"))
+        runCurrent()
+        assertNull(seen.last())
+        assertEquals(0, local.cover.subscriptionCount.value)
+        local.cover.value = "late-cover-a"
+        runCurrent()
+        assertNull(seen.last())
+        job.cancel()
+    }
+
     @Test fun cancellingAWorkerLeavesPendingDataAndClearsTheBusyIndicator() = runTest {
         val local = Local(listOf(PendingForm(form, 1, false)))
         val gate = CompletableDeferred<Unit>()
