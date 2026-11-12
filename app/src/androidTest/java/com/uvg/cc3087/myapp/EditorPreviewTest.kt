@@ -177,14 +177,18 @@ class EditorPreviewTest {
 @Composable
 internal fun SpanishTestTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
-    val originalConfiguration = androidx.compose.ui.platform.LocalConfiguration.current
+    val originalConfiguration = LocalConfiguration.current
     val configuration = remember(originalConfiguration) {
         Configuration(originalConfiguration).apply { setLocale(Locale.forLanguageTag("es")) }
     }
+    val localizedContext = remember(context, configuration) {
+        context.createConfigurationContext(configuration)
+    }
     val resources = remember(context, configuration) {
-        context.createConfigurationContext(configuration).resources
+        localizedContext.resources
     }
     CompositionLocalProvider(
+        LocalContext provides localizedContext,
         LocalResources provides resources,
         LocalConfiguration provides configuration
     ) {
