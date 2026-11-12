@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp.ui.screens
 
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -85,9 +86,13 @@ fun EditForm(
     onConsumeContinue: () -> Unit = {},
     syncMessage: String? = null
 ) {
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        uri?.let { onImportCover(it.toString()) }
-    }
+    val registryOwner = LocalActivityResultRegistryOwner.current
+    val picker = if (registryOwner != null) {
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            uri?.let { onImportCover(it.toString()) }
+        }
+    } else null
+
     LaunchedEffect(uiState.readyToContinue) {
         if (uiState.readyToContinue) {
             onConsumeContinue()
@@ -205,8 +210,10 @@ fun EditForm(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     FormBanner(uiState.title, uiState.coverPath, remoteUrl = uiState.publishedCoverUrl.takeUnless { uiState.coverAction == "REMOVE" })
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(enabled = !uiState.importingCover, onClick = {
-                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        OutlinedButton(enabled = !uiState.importingCover && picker != null, onClick = {
+                            if (picker != null) {
+                                picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }
                         }) { Text(stringResource(if (uiState.coverPath == null && (uiState.publishedCoverUrl == null || uiState.coverAction == "REMOVE")) R.string.cover_add else R.string.cover_change)) }
                         if (uiState.coverPath != null || (uiState.publishedCoverUrl != null && uiState.coverAction != "REMOVE")) OutlinedButton(onClick = onRemoveCover) {
                             Text(stringResource(R.string.cover_remove))
