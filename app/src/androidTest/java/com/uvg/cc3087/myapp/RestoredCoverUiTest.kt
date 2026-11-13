@@ -4,7 +4,8 @@ import android.graphics.Bitmap
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
@@ -29,7 +30,7 @@ import org.junit.Rule
 import org.junit.Test
 
 class RestoredCoverUiTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @Test fun cardResolvesCovers() = verifySurface(0)
     @Test fun editorResolvesCovers() = verifySurface(1)
     @Test fun previewResolvesCovers() = verifySurface(2)
@@ -93,7 +94,9 @@ class RestoredCoverUiTest {
             if (surface == 1) {
                 compose.onNodeWithContentDescription(context.getString(R.string.preview)).performClick()
                 compose.waitUntil(5000) { hasColor(false) }
-                androidx.test.espresso.Espresso.pressBack()
+                // Verify the preview BackHandler through its Activity, independent of OS focus.
+                compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                compose.onNodeWithContentDescription(context.getString(R.string.preview)).assertExists()
             }
             change(path)
             compose.waitUntil(5000) { hasColor(true) }
