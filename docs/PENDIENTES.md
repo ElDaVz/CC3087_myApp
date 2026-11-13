@@ -94,6 +94,7 @@ Ideas adicionales por evaluar dentro de futuras entregas: título/descripción d
 
 - [ ] Recuperar las portadas publicadas al iniciar sesión sin archivos locales, con actualización reactiva en tarjetas, editor y Preview. Implementación en `fix/restore-cloudinary-covers`; consultar la verificación y evidencia pendiente al final de este documento.
 - [x] Completar la pantalla de login con la identidad visual de FormLink, registro, recuperación por correo, validaciones y estados de carga y error. Ver la verificación de autenticación al final. Los ajustes visuales adicionales se siguen en los grupos 2 y 3.
+- [x] Corregir la selección incremental de Firebase real/emulado para evitar conexiones de login al puerto local 9099 después de ejecutar pruebas. Ver la verificación de entorno al final.
 - [ ] Evaluar una URL más amigable que `formlink-9f735.web.app`: comparar un sitio Hosting con otro identificador y un dominio propio, incluyendo costos y cómo conservar los enlaces existentes. Coordinar con el grupo 9.
 
 ## Verificación del dashboard de respuestas (2026-11-12)
@@ -172,3 +173,21 @@ Comandos reproducibles:
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.uvg.cc3087.myapp.AuthScreenTest,com.uvg.cc3087.myapp.BackendRootTest
 backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore './gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true -Pandroid.testInstrumentationRunnerArguments.class=com.uvg.cc3087.myapp.RestBackendIntegrationTest,com.uvg.cc3087.myapp.BackendRootTest'
 ```
+
+## Verificación de selección de entorno Firebase (2026-11-12)
+
+Arreglo en `fix/firebase-environment-selection`, basado en `feature/responses-dashboard`: ese trabajo todavía no estaba en `main` y se conserva para mantener el dashboard y Room v8 en la instalación existente.
+
+Diagnóstico: el login fallaba con `ConnectException` hacia `10.0.2.2:9099`, aunque el `BuildConfig` generado indicaba `FIREBASE_EMULATORS=false`. El bytecode Kotlin de `BackendServices` conservaba valores `true` incrustados desde una compilación anterior para pruebas. No se inspeccionaron ni registraron credenciales. La comprobación identifica artefactos incrementales inconsistentes; no atribuye el fallo a un componente concreto del compilador.
+
+La bandera ahora se inicializa mediante `Boolean.parseBoolean`, evitando que sea una constante de compilación. Por defecto se usa Firebase real; únicamente debug con `-PfirebaseEmulators=true` habilita los servicios locales. Valores distintos de `true` y `false` se rechazan al configurar el proyecto. No se cambian los endpoints, TLS, validaciones ni el almacenamiento de la app.
+
+Comprobaciones realizadas:
+
+- Reconstrucción inicial: `./gradlew clean assembleDebug compileDebugKotlin testDebugUnitTest --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process`. Correcta: 161 pruebas unitarias, cero fallos y cero omitidas. `clean` elimina artefactos de compilación, no datos del dispositivo.
+- Ciclo real → emulado → real: tras la reconstrucción inicial se ejecutaron `assembleDebug assembleDebugAndroidTest -PfirebaseEmulators=true` y después `assembleDebug compileDebugKotlin` sin la propiedad, sin `clean` entre pasos. Ambas compilaciones pasaron. `javap` comprueba inicialización de la bandera con `true` y después `false`; los cinco accesos de `BackendServices` usan `getstatic BuildConfig.FIREBASE_EMULATORS`, y el bytecode de esa clase permanece idéntico entre modos.
+- Android 17 (API 37), Firebase Auth/Firestore locales: las tres pruebas de `RestBackendIntegrationTest` pasaron sin omisiones. Incluyen registro/login, renovación, aislamiento por proyecto y recuperación con código del emulador; no se envían correos reales. Cada prueba usa un directorio propio para la sesión cifrada y lo elimina al terminar, sin sustituir la sesión instalada.
+- Las pruebas se lanzaron con `adb shell am instrument`, después de instalar ambos APK mediante `adb install -r`, para conservar la instalación. Las huellas de los 16 archivos de datos ajenos a diagnósticos permanecieron idénticas antes y después de las pruebas; solamente rotaron archivos de Crashlytics.
+- Se instaló finalmente el APK debug con Firebase real mediante `adb install -r`, se detuvo el proceso y se abrió `MainActivity`: arranque en frío correcto. La huella SHA-256 del APK instalado coincide con la del artefacto comprobado. Se conservan Room v8, borradores, imágenes y sesión; no hubo desinstalación ni limpieza de almacenamiento.
+
+Pendiente de evidencia: login con la cuenta real del usuario y resultado de GitHub Actions. No se han dado por verificados mediante las pruebas locales. Los comandos `connectedDebugAndroidTest` anteriores se reservan para dispositivos de prueba; esta ejecución utilizó instalación con reemplazo e instrumentación directa para conservar los datos existentes.
