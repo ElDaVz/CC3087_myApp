@@ -53,6 +53,8 @@ npm run build --prefix web
 
 Configurar las opciones públicas de Firebase siguiendo `web/.env.example` y la guía de publicación; en Hosting se puede resolver la configuración del proyecto. El cliente sirve `/f/{id}` y requiere un formulario publicado. Las variables `VITE_*` son visibles para el navegador y no deben contener secretos.
 
+Para desarrollo aislado, seguir la [guía de Firebase local](docs/FIREBASE_BACKEND.md#desarrollo-aislado-con-firebase-emulator-suite): usa `demo-formlink`, un AVD dedicado y la configuración Run **FormLink Firebase local**, sin `google-services.json` real y sin telemetría. Las dependencias actuales de pruebas Firebase requieren Node >=24.12.
+
 ## Cómo usar la app
 
 1. **Mis formularios** es la entrada. Crear un formulario nuevo o elegir una plantilla; editar título, preguntas y portada. Los cambios se guardan automáticamente.
