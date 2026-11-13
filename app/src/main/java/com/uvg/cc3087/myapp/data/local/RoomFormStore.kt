@@ -59,6 +59,7 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
         for (id in ids) {
             val row = dao.getDraft(id) ?: error("Guest draft disappeared")
             check(row.form.ownerId == null && !row.form.deleted) { "Only guest drafts may be imported" }
+            check(database.guestImports().get(id)?.ownerId.let { it == null || it == owner }) { "Draft reserved for another account" }
             dao.saveDraft(row.form.copy(ownerId = owner, revision = row.form.revision + 1, syncedRevision = 0), row.fields)
         }
     }
