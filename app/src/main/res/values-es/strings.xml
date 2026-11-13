@@ -339,4 +339,11 @@
     <string name="dashboard_unknown_status">Sin estado</string>
     <string name="dashboard_read_error">No se pudo guardar la lectura.</string>
     <string name="dashboard_retry_read">Reintentar marcar como revisada</string>
+    <string name="delete_form_named">Eliminar formulario %1$s</string>
+    <string name="delete_form_title">¿Eliminar formulario?</string>
+    <string name="delete_form_confirm">Eliminar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete_form_policy">“%1$s” se quitará de tus formularios. Se conservarán las solicitudes recibidas y su historial de lectura. El enlace público dejará de aceptar respuestas al sincronizar la eliminación; puede seguir activo sin conexión. Se borrarán las portadas privadas sin referencias. Las imágenes ya publicadas se conservarán. Esta acción no se puede deshacer.</string>
+    <string name="delete_form_error">No se pudo guardar la eliminación. Intenta de nuevo.</string>
+    <string name="form_deleted">Formulario eliminado de la lista. El acceso público se cerrará al completar la sincronización.</string>
 </resources>

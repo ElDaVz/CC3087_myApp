@@ -75,7 +75,13 @@ class RestoredCoverUiTest {
                 }
             }
             fun hasColor(red: Boolean): Boolean {
-                val pixels = compose.onRoot().captureToImage().toPixelMap()
+                // Inspect the thumbnail itself: other card actions may legitimately be red.
+                val description = context.getString(R.string.thumbnail_for_form, "Cover test")
+                if (surface == 0 && compose.onAllNodesWithContentDescription(description,
+                        useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) return false
+                val target = if (surface == 0) compose.onNodeWithContentDescription(description,
+                    useUnmergedTree = true) else compose.onRoot()
+                val pixels = target.captureToImage().toPixelMap()
                 var count = 0
                 for (y in 0 until pixels.height step 4) for (x in 0 until pixels.width step 4) {
                     val c = pixels[x, y]

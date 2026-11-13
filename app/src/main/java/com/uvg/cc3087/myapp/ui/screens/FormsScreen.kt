@@ -1,6 +1,8 @@
 package com.uvg.cc3087.myapp.ui.screens
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +23,9 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
@@ -72,7 +77,11 @@ fun Forms(
     onResponsesClick: () -> Unit = {},
     onAccountClick: (() -> Unit)? = null,
     syncMessage: String? = null,
-    hasUnreadResponses: Boolean = false
+    hasUnreadResponses: Boolean = false,
+    onDeleteFormClick: (FormSummary) -> Unit = {},
+    onConfirmDeletion: () -> Unit = {},
+    onDismissDeletion: () -> Unit = {},
+    onConsumeDeletionCompleted: () -> Unit = {}
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -84,6 +93,33 @@ fun Forms(
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(resources.getString(messageResId, *formatArgs))
         }
+    }
+
+    LaunchedEffect(uiState.deletion.completed) {
+        if (uiState.deletion.completed) {
+            snackbarHostState.showSnackbar(resources.getString(R.string.form_deleted))
+            onConsumeDeletionCompleted()
+        }
+    }
+    uiState.deletion.target?.let { form ->
+        AlertDialog(
+            onDismissRequest = onDismissDeletion,
+            title = { Text(stringResource(R.string.delete_form_title)) },
+            text = { Column(modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.delete_form_policy,
+                    form.title.ifBlank { stringResource(R.string.untitled_form) }))
+                if (uiState.deletion.failed) Text(stringResource(R.string.delete_form_error),
+                    color = MaterialTheme.colorScheme.error)
+                if (uiState.deletion.inProgress) CircularProgressIndicator()
+            } },
+            confirmButton = { TextButton(onClick = onConfirmDeletion, enabled = !uiState.deletion.inProgress) {
+                Text(stringResource(R.string.delete_form_confirm))
+            } },
+            dismissButton = { TextButton(onClick = onDismissDeletion, enabled = !uiState.deletion.inProgress) {
+                Text(stringResource(R.string.cancel))
+            } }
+        )
     }
 
     Scaffold(
@@ -167,7 +203,9 @@ fun Forms(
                     onClick = { onFormClick(form) },
                     onShareClick = { onShareFormClick(form) },
                     onEditClick = { onFormClick(form) },
-                    shareEnabled = form.id != unsavedDraftId
+                    shareEnabled = form.id != unsavedDraftId,
+                    onDeleteClick = { onDeleteFormClick(form) },
+                    deleteEnabled = form.id != unsavedDraftId && !uiState.deletion.inProgress
                 )
             }
         }

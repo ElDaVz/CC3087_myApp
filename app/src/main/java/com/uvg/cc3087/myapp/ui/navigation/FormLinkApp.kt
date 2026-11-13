@@ -170,6 +170,10 @@ internal fun FormLinkRoute(
         onRetrySave = editFormViewModel::retrySave,
         onRetryEditorLoad = editFormViewModel::retryLoad,
         onRetryFormsLoad = formsViewModel::retryLoading,
+        onDeleteForm = formsViewModel::requestDeletion,
+        onConfirmDeletion = formsViewModel::confirmDeletion,
+        onDismissDeletion = formsViewModel::dismissDeletion,
+        onConsumeDeletionCompleted = formsViewModel::consumeDeletionCompleted,
         onPublish = saveShareViewModel::publish, onArchive = saveShareViewModel::archive,
         saveShareUiState = saveShareUiState,
         onOpenSaveShare = saveShareViewModel::openDraft,
@@ -201,6 +205,10 @@ private fun FormLinkContent(
     onRetrySave: () -> Unit = {},
     onRetryEditorLoad: () -> Unit = {},
     onRetryFormsLoad: () -> Unit = {},
+    onDeleteForm: (com.uvg.cc3087.myapp.data.model.FormSummary) -> Unit = {},
+    onConfirmDeletion: () -> Unit = {},
+    onDismissDeletion: () -> Unit = {},
+    onConsumeDeletionCompleted: () -> Unit = {},
     saveShareUiState: SaveShareUiState = SaveShareUiState(),
     onOpenSaveShare: (String) -> Unit = {},
     onRetrySaveShareLoad: () -> Unit = {},
@@ -289,6 +297,10 @@ private fun FormLinkContent(
                     currentDestination = AppDestination.EDIT_FORM
                 },
                 onRetryLoad = onRetryFormsLoad,
+                onDeleteFormClick = onDeleteForm,
+                onConfirmDeletion = onConfirmDeletion,
+                onDismissDeletion = onDismissDeletion,
+                onConsumeDeletionCompleted = onConsumeDeletionCompleted,
                 unsavedDraftId = editFormUiState.takeIf { it.saveStatus != DraftSaveStatus.SAVED }?.draftId,
                 onShareFormClick = { form ->
                     onOpenSaveShare(form.id)

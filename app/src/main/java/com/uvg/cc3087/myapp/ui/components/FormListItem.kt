@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +50,9 @@ fun FormListItem(
     onClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    shareEnabled: Boolean = true
+    shareEnabled: Boolean = true,
+    onDeleteClick: () -> Unit = {},
+    deleteEnabled: Boolean = true
 ) {
     val displayTitle = form.title.ifBlank { stringResource(R.string.untitled_form) }
     val responseText = pluralStringResource(
@@ -100,6 +104,11 @@ fun FormListItem(
 
                 StatusLabel(status = form.status)
             }
+            IconButton(onClick = onDeleteClick, enabled = deleteEnabled) {
+                Icon(Icons.Outlined.Delete,
+                    contentDescription = stringResource(R.string.delete_form_named, displayTitle),
+                    tint = MaterialTheme.colorScheme.error)
+            }
         }
 
         HorizontalDivider()
@@ -123,7 +132,7 @@ fun FormListItem(
             )
             FormActionButton(
                 label = stringResource(R.string.request_respond),
-                // Room only stores drafts. Enable responses when publication exists.
+                // Answering uses the published web link.
                 onClick = {},
                 icon = Icons.Outlined.Visibility,
                 enabled = false

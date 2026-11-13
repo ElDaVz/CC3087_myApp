@@ -221,6 +221,72 @@ class FormsViewModelTest {
         assertEquals(FormsLoadStatus.ERROR, errorModel.uiState.value.status)
     }
 
+    @Test fun deletionRequiresConfirmationAndCanBeCancelled() = runTest {
+        val repository = FakeFormRepository(forms)
+        val model = FormsViewModel(repository, SavedStateHandle())
+        observe(model)
+        model.requestDeletion(forms[0])
+        runCurrent()
+        assertEquals(forms[0], model.uiState.value.deletion.target)
+        assertEquals(forms, repository.forms.value)
+        model.dismissDeletion()
+        model.confirmDeletion()
+        runCurrent()
+        assertEquals(forms, repository.forms.value)
+        assertEquals(null, model.uiState.value.deletion.target)
+    }
+
+    @Test fun confirmedDeletionUpdatesTheFilteredListAndCannotRunTwice() = runTest {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val backing = FakeFormRepository(forms)
+        var calls = 0
+        val repository = object : FormRepository by backing {
+            override suspend fun deleteDraft(id: String) {
+                calls++
+                gate.await()
+                backing.deleteDraft(id)
+            }
+        }
+        val model = FormsViewModel(repository, SavedStateHandle())
+        observe(model)
+        model.selectFilter(FormFilter.DRAFT)
+        model.requestDeletion(forms[1])
+        model.confirmDeletion()
+        model.confirmDeletion()
+        model.dismissDeletion()
+        runCurrent()
+        assertEquals(1, calls)
+        assertTrue(model.uiState.value.deletion.inProgress)
+        gate.complete(Unit)
+        runCurrent()
+        assertEquals(FormsLoadStatus.EMPTY, model.uiState.value.status)
+        assertEquals(listOf(forms[0], forms[2]), backing.forms.value)
+        assertTrue(model.uiState.value.deletion.completed)
+    }
+
+    @Test fun failedDeletionKeepsTheFormAndSupportsRetry() = runTest {
+        val backing = FakeFormRepository(forms)
+        var fail = true
+        val repository = object : FormRepository by backing {
+            override suspend fun deleteDraft(id: String) {
+                if (fail) throw IOException("write failed")
+                backing.deleteDraft(id)
+            }
+        }
+        val model = FormsViewModel(repository, SavedStateHandle())
+        observe(model)
+        model.requestDeletion(forms[0])
+        model.confirmDeletion()
+        runCurrent()
+        assertTrue(model.uiState.value.deletion.failed)
+        assertEquals(forms, backing.forms.value)
+        fail = false
+        model.confirmDeletion()
+        runCurrent()
+        assertTrue(model.uiState.value.deletion.completed)
+        assertEquals(forms.drop(1), model.uiState.value.forms)
+    }
+
     private fun TestScope.observe(viewModel: FormsViewModel) {
         // statein comienza a observar el repositorio cuando tiene una suscripción
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -235,7 +301,7 @@ class FormsViewModelTest {
         override fun observeForms(): Flow<List<FormSummary>> = forms
         override suspend fun getDraft(id: String): FormDraft? = null
         override suspend fun saveDraft(draft: FormDraft) = Unit
-        override suspend fun deleteDraft(id: String) = Unit
+        override suspend fun deleteDraft(id: String) { forms.value = forms.value.filterNot { it.id == id } }
     }
 
     private fun form(id: String, status: FormStatus) = FormSummary(
