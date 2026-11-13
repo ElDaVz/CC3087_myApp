@@ -2,6 +2,24 @@
 
 Entregas propuestas de alcance moderado, ordenadas para poder completarlas por grupo. Cada grupo tendrá una rama propia y commits por tarea pequeña; los grupos dependientes se iniciarán desde `main` cuando su base esté integrada. Este checklist define trabajo futuro: no implica que las funciones estén implementadas o verificadas.
 
+## Prioridad de ejecución acordada
+
+Las prioridades del usuario son dashboard, Google, botones de Mis formularios y cuenta con sincronización/importación, sin orden entre ellas. Se propone esta secuencia por dependencias, manteniendo entregas pequeñas:
+
+| Orden | Entrega | Motivo y límite |
+|---|---|---|
+| 1 | Dashboard y respuestas nuevas (grupo 7) | Hace útiles las respuestas recibidas y define el destino de estadísticas. |
+| 2 | Importación automática con imágenes (grupo 1) | Resuelve el paso de invitado a cuenta antes de añadir otra forma de acceso. |
+| 3 | Cuenta y sincronización (grupo 2) | Presenta importación, progreso y reintentos en una cuenta clara y utilizable. |
+| 4 | Acceso con Google (grupo 10) | Reutiliza el contrato de incorporación y separación de cuentas anterior. |
+| 5 | Búsqueda, orden y fijados (grupo 5) | Da funcionalidad a búsqueda y más opciones de Mis formularios. |
+| 6 | Accesos de configuración (primera tarea del grupo 8) | Conecta perfil y estadísticas ya existentes; exportación tendrá su propia entrega. |
+| 7 | Eliminar desde más opciones (grupo 6) | Completa los botones tras definir conservación de datos y confirmación. |
+
+Después: identidad visual (grupo 3), regreso tras publicación (grupo 4), preferencias/exportación restantes (grupo 8) e identidad empresarial/Open Graph (grupo 9). El banner empresarial sigue siendo una propuesta opcional.
+
+Antes de nuevas funciones, resolver la incidencia de CI de navegación: el log aportado muestra `RootViewWithoutFocusException` en `Espresso.pressBack()` en `RequestNavigationTest.selectedRequestSurvivesSavedStateRestoration` y `RestoredCoverUiTest.editorResolvesCovers`. Investigar y verificar en una rama de fix independiente; no dar GitHub Actions por corregido hasta tener evidencia de una nueva ejecución.
+
 ## 1. Incorporación automática de borradores e imágenes
 
 - [ ] Al crear una cuenta desde una sesión invitada, incorporar automáticamente sus borradores a la cuenta y sustituir la selección manual como paso obligatorio. Definir el comportamiento del primer inicio de sesión en una cuenta existente, manteniendo separadas las cuentas previamente autenticadas.
@@ -13,6 +31,7 @@ Cambio de contrato: hoy los borradores de invitado no se transfieren automática
 ## 2. Perfil y navegación de regreso
 
 - [ ] Rediseñar el perfil tomando como referencia la imagen compartida: cabecera de identidad y opciones agrupadas en tarjetas o filas con iconos y jerarquía clara, usando morado, logo y tipografía de FormLink. Conservar sincronización y cierre de sesión; adaptar la importación al grupo 1. La referencia orienta la composición, sin añadir funciones inexistentes por copiar sus filas.
+- [ ] Mostrar el estado real de sincronización de la cuenta (pendiente, en curso, completado o fallo), con reintento y resultado de la incorporación automática de borradores e imágenes del grupo 1. Verificar reinicio, desconexión y cambio de cuenta sin mezclar datos.
 - [ ] Sustituir el texto «Volver» por una flecha con descripción accesible y área pulsable suficiente en perfil y autenticación; revisar la coherencia de los controles de regreso en el recorrido del editor y publicación.
 
 Cierre del grupo: comprobar claro/oscuro, texto grande, teclado, navegación atrás y separación entre perfil y autenticación.
@@ -63,11 +82,16 @@ Dependencias: grupos 2 y 7 para los destinos de perfil y estadísticas; grupo 5 
 
 Ideas adicionales por evaluar dentro de futuras entregas: título/descripción de enlace personalizables y vista previa antes de publicar. Mantener este grupo limitado a identidad y enlaces; exportación y estadísticas pertenecen a sus grupos propios.
 
+## 10. Acceso con Google
+
+- [ ] Añadir acceso con Google a través de `AuthRepository` y la integración Android apropiada; mantener el acceso por correo y como invitado. Configurar los clientes y las firmas necesarias sin guardar secretos en el repositorio.
+- [ ] Reutilizar la incorporación de borradores e imágenes del grupo 1 al entrar desde invitado, conservando sesión cifrada, cierre de sesión y aislamiento entre propietarios. Definir el comportamiento si el correo ya pertenece a una cuenta para evitar cuentas duplicadas.
+- [ ] Manejar cancelación, desconexión, proveedor no disponible y solicitudes duplicadas. Verificar en un entorno configurado el acceso y cambio de cuenta; los dobles de prueba no verifican por sí solos el acceso real con Google.
+
 ## Otros pendientes y seguimiento existente
 
 - [ ] Recuperar las portadas publicadas al iniciar sesión sin archivos locales, con actualización reactiva en tarjetas, editor y Preview. Implementación en `fix/restore-cloudinary-covers`; consultar la verificación y evidencia pendiente al final de este documento.
 - [x] Completar la pantalla de login con la identidad visual de FormLink, registro, recuperación por correo, validaciones y estados de carga y error. Ver la verificación de autenticación al final. Los ajustes visuales adicionales se siguen en los grupos 2 y 3.
-- [ ] Implementar login con Google mediante Firebase a través de `AuthRepository`, conservando la sesión cifrada y la separación entre cuentas.
 - [ ] Evaluar una URL más amigable que `formlink-9f735.web.app`: comparar un sitio Hosting con otro identificador y un dominio propio, incluyendo costos y cómo conservar los enlaces existentes. Coordinar con el grupo 9.
 
 ## Verificación de recuperación de portadas (2026-11-12)
