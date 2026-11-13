@@ -12,6 +12,10 @@ import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.ui.state.FormFilter
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
+import com.uvg.cc3087.myapp.data.model.FormSummary
+import com.uvg.cc3087.myapp.ui.state.FormDeletionState
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,13 +30,15 @@ import kotlinx.coroutines.flow.update
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FormsViewModel(
-    repository: FormRepository,
+    private val repository: FormRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val savedFilter = savedStateHandle.getStateFlow(
         SELECTED_FILTER_KEY,
         FormFilter.ALL.name
     )
+
+    private val deletion = MutableStateFlow(FormDeletionState())
 
     private val reloadRequests = MutableStateFlow(0)
     private val sourceState = reloadRequests.flatMapLatest {
@@ -45,8 +51,9 @@ class FormsViewModel(
     // si cambia la lista o el filtro, calculamos un solo estado para la pantalla
     val uiState: StateFlow<FormsUiState> = combine(
         sourceState,
-        savedFilter
-    ) { source, filterName ->
+        savedFilter,
+        deletion
+    ) { source, filterName, deletionState ->
         val forms = source.forms
         val selectedFilter = restoreFilter(filterName)
         val visibleForms = when (selectedFilter) {
@@ -61,12 +68,41 @@ class FormsViewModel(
             FormsLoadStatus.EMPTY, FormsLoadStatus.CONTENT ->
                 if (visibleForms.isEmpty()) FormsLoadStatus.EMPTY else FormsLoadStatus.CONTENT
         }
-        source.copy(forms = visibleForms, selectedFilter = selectedFilter, status = status)
+        source.copy(forms = visibleForms, selectedFilter = selectedFilter, status = status, deletion = deletionState)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value))
     )
+
+    fun requestDeletion(form: FormSummary) {
+        if (!deletion.value.inProgress) deletion.value = FormDeletionState(target = form)
+    }
+
+    fun dismissDeletion() {
+        if (!deletion.value.inProgress) deletion.value = FormDeletionState()
+    }
+
+    fun consumeDeletionCompleted() {
+        deletion.update { it.copy(completed = false) }
+    }
+
+    fun confirmDeletion() {
+        val target = deletion.value.target ?: return
+        if (deletion.value.inProgress) return
+        deletion.value = FormDeletionState(target = target, inProgress = true)
+        viewModelScope.launch {
+            try {
+                repository.deleteDraft(target.id)
+                deletion.value = FormDeletionState(completed = true)
+            } catch (cancelled: CancellationException) {
+                deletion.value = FormDeletionState(target = target)
+                throw cancelled
+            } catch (_: Exception) {
+                deletion.value = FormDeletionState(target = target, failed = true)
+            }
+        }
+    }
 
     fun retryLoading() {
         reloadRequests.update { it + 1 }

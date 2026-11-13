@@ -42,6 +42,22 @@ class FormDraftFlowTest {
     // cerramos la base después de que la actividad de prueba haya liberado sus viewmodels
     @get:Rule val rules = RuleChain.outerRule(databaseRule).around(compose)
 
+    @Test fun deletionCanBeCancelledAndConfirmedFromTheList() {
+        runBlocking { repository.saveDraft(FormDraft("stored", "Pedido guardado", emptyList(), 1, 1)) }
+        launchApp(repository)
+        compose.onNodeWithContentDescription("Eliminar formulario Pedido guardado").performClick()
+        compose.onNodeWithText("¿Eliminar formulario?").assertExists()
+        compose.onNodeWithText("Cancelar").performClick()
+        compose.onNodeWithText("Pedido guardado").assertExists()
+        runBlocking { assertEquals(1, repository.observeForms().first().size) }
+        compose.onNodeWithContentDescription("Eliminar formulario Pedido guardado").performClick()
+        compose.onNodeWithText("Eliminar", useUnmergedTree = true).performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("Pedido guardado").fetchSemanticsNodes().isEmpty()
+        }
+        runBlocking { assertEquals(0, repository.observeForms().first().size) }
+    }
+
     @Test fun continueValidatesThenOpensTheSavedFormWithoutPreview() {
         launchApp(repository)
         compose.onNodeWithText("Nuevo formulario").performClick()

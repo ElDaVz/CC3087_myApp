@@ -339,4 +339,11 @@
     <string name="dashboard_unknown_status">Without status</string>
     <string name="dashboard_read_error">Could not save reading status.</string>
     <string name="dashboard_retry_read">Retry marking as read</string>
+    <string name="delete_form_named">Delete form %1$s</string>
+    <string name="delete_form_title">Delete form?</string>
+    <string name="delete_form_confirm">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete_form_policy">“%1$s” will be removed from your forms. Existing requests and their reading history will be kept. The public link will stop accepting responses once deletion syncs; it may stay active while offline. Unreferenced private cover files will be removed. Previously published images will be kept. This action cannot be undone.</string>
+    <string name="delete_form_error">Could not save the deletion. Please try again.</string>
+    <string name="form_deleted">Form removed. Public access will close when synchronization completes.</string>
 </resources>
