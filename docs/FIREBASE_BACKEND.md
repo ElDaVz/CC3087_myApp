@@ -60,18 +60,18 @@ En Device Manager, crear un Pixel 9 API 37 con el nombre exacto `FormLink_Local_
 En otra terminal, con los servicios iniciados:
 
 ```bash
-ANDROID_SERIAL=emulator-5580 bash scripts/run-firebase-local.sh
+bash scripts/run-firebase-local.sh
 ```
 
-El script verifica el nombre del AVD, los puertos locales y la ausencia del JSON real antes de instalar. Ejecuta `./gradlew installDebug -PfirebaseEmulators=true -PtelemetryEnabled=false`, limita la instalación mediante `ANDROID_SERIAL`, detiene el proceso previo y vuelve a abrir la app. No desinstala ni borra datos. Para ejecutar el comando Gradle manualmente, exportar primero `ANDROID_SERIAL=emulator-5580` y reiniciar el proceso de la app después de cambiar de entorno.
+El script descubre el serial actual del AVD por su nombre, aunque Android Studio le asigne otro puerto. Verifica el nombre del AVD, los puertos locales y la ausencia del JSON real antes de instalar. Ejecuta `./gradlew installDebug -PfirebaseEmulators=true -PtelemetryEnabled=false`, limita la instalación mediante `ANDROID_SERIAL`, detiene el proceso previo y vuelve a abrir la app. No desinstala ni borra datos. Para ejecutar el comando Gradle manualmente, exportar primero `ANDROID_SERIAL=emulator-5580` y reiniciar el proceso de la app después de cambiar de entorno.
 
 La telemetría está desactivada y el modo emulado no construye el uploader de Cloudinary. Usar únicamente cuentas y formularios ficticios; no habilitar `realCloudinary=true`. Las cuentas de emulador son distintas de las reales. Al detener los servicios, su estado es efímero salvo que se configure una exportación local explícita; Room conserva sus datos del AVD.
 
 ### Android Studio: conservar las opciones al usar Run
 
-Abrir esta copia de trabajo como proyecto independiente. Elegir **FormLink Firebase local** en el selector de configuraciones y pulsar Run. La configuración compartida `.run/FormLink Firebase local.run.xml` es de tipo Shell Script y ejecuta el launcher con `ANDROID_SERIAL=emulator-5580`. El plugin Shell Script está incluido en Android Studio de esta máquina; debe estar habilitado. El script fija las dos propiedades en cada ejecución, evitando depender de argumentos temporales de la terminal o del daemon de Gradle. Los servicios y el AVD deben estar iniciados antes de Run.
+Abrir esta copia de trabajo como proyecto independiente. Elegir **FormLink Firebase local** en el selector de configuraciones y pulsar Run. La configuración compartida `.run/FormLink Firebase local.run.xml` es de tipo Shell Script y ejecuta el launcher, que encuentra el AVD dedicado por su nombre. El plugin Shell Script está incluido en Android Studio de esta máquina; debe estar habilitado. El script fija las dos propiedades en cada ejecución, evitando depender de argumentos temporales de la terminal o del daemon de Gradle. Los servicios y el AVD deben estar iniciados antes de Run.
 
-Esta configuración utiliza el serial explícito; cambiar solamente el selector de dispositivos del IDE no cambia el destino del script. El launcher rechazará cualquier AVD con otro nombre. No usar la configuración Android `app` para este flujo: omitir `-PfirebaseEmulators=true` selecciona el modo real por defecto; sin el JSON real solo se dispone del modo invitado. No cambiar el valor global del proyecto para ocultar esa diferencia.
+Esta configuración utiliza exclusivamente el AVD llamado `FormLink_Local_API_37`, independientemente del puerto asignado por Android Studio. El selector de dispositivos del IDE no cambia ese destino; para fijar un serial manualmente se puede definir `ANDROID_SERIAL`, y el launcher seguirá rechazando cualquier AVD con otro nombre. No usar la configuración Android `app` para este flujo: omitir `-PfirebaseEmulators=true` selecciona el modo real por defecto; sin el JSON real solo se dispone del modo invitado. No cambiar el valor global del proyecto para ocultar esa diferencia.
 
 ### Comprobaciones reproducibles
 

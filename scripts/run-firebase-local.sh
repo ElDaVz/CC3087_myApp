@@ -15,7 +15,20 @@ fi
 sdk_dir="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
 adb="$sdk_dir/platform-tools/adb"
 [[ -x "$adb" ]] || { echo "Set ANDROID_HOME to your Android SDK." >&2; exit 1; }
-export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5580}"
+if [[ -z "${ANDROID_SERIAL:-}" ]]; then
+    matches=()
+    while read -r candidate state rest; do
+        [[ "$candidate" == emulator-* && "$state" == device ]] || continue
+        name="$("$adb" -s "$candidate" emu avd name 2>/dev/null | head -n 1 | tr -d '\r')"
+        [[ "$name" == FormLink_Local_API_37 ]] && matches+=("$candidate")
+    done < <("$adb" devices)
+    if (( ${#matches[@]} != 1 )); then
+        echo "Start exactly one FormLink_Local_API_37 AVD, or set ANDROID_SERIAL explicitly." >&2
+        exit 1
+    fi
+    ANDROID_SERIAL="${matches[0]}"
+fi
+export ANDROID_SERIAL
 avd_name="$("$adb" -s "$ANDROID_SERIAL" emu avd name | head -n 1 | tr -d '\r')"
 if [[ "$avd_name" != FormLink_Local_API_37 ]]; then
     echo "Refusing to install: select the dedicated FormLink_Local_API_37 AVD." >&2
