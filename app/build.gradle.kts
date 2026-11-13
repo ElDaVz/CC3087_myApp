@@ -40,7 +40,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("boolean", "FIREBASE_EMULATORS", "false")
+        // Runtime initialization prevents Kotlin from inlining a stale environment across builds.
+        buildConfigField("boolean", "FIREBASE_EMULATORS", "java.lang.Boolean.parseBoolean(\"false\")")
         buildConfigField("boolean", "TELEMETRY_ENABLED", "true")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -49,7 +50,8 @@ android {
     buildTypes {
         debug {
             buildConfigField("boolean", "TELEMETRY_ENABLED", providers.gradleProperty("telemetryEnabled").orElse("false").get())
-            buildConfigField("boolean", "FIREBASE_EMULATORS", providers.gradleProperty("firebaseEmulators").orElse("false").get())
+            val firebaseEmulators = providers.gradleProperty("firebaseEmulators").orElse("false").get().toBooleanStrict()
+            buildConfigField("boolean", "FIREBASE_EMULATORS", "java.lang.Boolean.parseBoolean(\"$firebaseEmulators\")")
         }
         release {
             optimization {
