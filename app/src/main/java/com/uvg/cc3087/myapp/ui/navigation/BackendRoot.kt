@@ -23,6 +23,7 @@ import com.uvg.cc3087.myapp.di.BackendServices
 import com.uvg.cc3087.myapp.ui.screens.AccountScreen
 import com.uvg.cc3087.myapp.ui.screens.AuthScreen
 import com.uvg.cc3087.myapp.ui.viewmodel.*
+import com.uvg.cc3087.myapp.ui.components.GuestImportNotice
 
 @Composable
 internal fun BackendRoot(services: BackendServices, templates: TemplateRepository,
@@ -66,9 +67,9 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
             }
         }
         CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-            val accountModel: AccountViewModel = viewModel(factory = AccountViewModel.factory(services.auth, services.local, forms, services::cancel))
+            val accountModel: AccountViewModel = viewModel(factory = AccountViewModel.factory(services.auth, services.local, forms, services.guestImports, services::cancel))
             val accountUi by accountModel.uiState.collectAsStateWithLifecycle()
-            val guests by accountModel.guests.collectAsStateWithLifecycle()
+            val importState by accountModel.importState.collectAsStateWithLifecycle()
             val pending = accountModel.pending?.collectAsStateWithLifecycle()?.value ?: 0
             val sync = services.sync?.state?.collectAsStateWithLifecycle()?.value
             val phase = sync?.takeIf { it.owner == uid }?.phase
@@ -86,13 +87,14 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                     else { showAccount = false; authModel.clearCredentials() }
                 })
             else if (showAccount) AccountScreen((authState as AuthState.SignedIn).session,
-                accountUi, guests, message,
+                accountUi, importState, message,
                 onBack = { showAccount = false },
-                onSelect = accountModel::select, onImport = accountModel::importSelected,
+                onRetryImport = accountModel::retryImport,
                 onSignOut = accountModel::signOut, onSync = { uid?.let(services::schedule) })
             else {
                 val responseRepository = remember(uid) { if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests }
                 FormLinkRoute(forms, templates, responseRepository,
+                    guestImportNotice = { GuestImportNotice(importState, accountModel::retryImport) },
                     analytics = services.analytics, coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
             }
         }
