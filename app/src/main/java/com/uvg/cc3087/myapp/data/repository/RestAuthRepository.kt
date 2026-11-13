@@ -12,7 +12,8 @@ import org.json.JSONObject
 /** Firebase Authentication via HTTPS; no SDK plaintext session store is created. */
 class RestAuthRepository(private val apiKey: String?, private val cipher: DeviceCipher,
     private val http: FirebaseHttp, private val emulator: Boolean = false,
-    private val now: () -> Long = System::currentTimeMillis) : AuthRepository {
+    private val now: () -> Long = System::currentTimeMillis,
+    private val guestImports: GuestImportStore? = null) : AuthRepository {
     override val configured get() = apiKey != null
     private val mutableState = MutableStateFlow<AuthState>(AuthState.Initializing)
     override val state = mutableState.asStateFlow()
@@ -49,12 +50,18 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
     }
     private suspend fun authenticate(action: String, email: String, password: String) {
         val key = checkNotNull(apiKey) { "Firebase is not configured" }
-        val stamp = generation
+        state.first { it !is AuthState.Initializing }
+        val (stamp, guests) = mutex.withLock {
+            generation to if (mutableState.value == AuthState.Guest) guestImports?.snapshotGuestIds().orEmpty() else emptySet()
+        }
         val result = http.request("$base/v1/accounts:$action?key=$key", JSONObject()
             .put("email", email.trim()).put("password", password).put("returnSecureToken", true))
         mutex.withLock {
             currentCoroutineContext().ensureActive()
             check(stamp == generation) { "Session changed" }
+            // Reserve only after Firebase confirms the account. Transfer starts after session persistence.
+            guestImports?.prepare(result.getString("localId"), guests)
+            currentCoroutineContext().ensureActive()
             persist(JSONObject().put("uid", result.getString("localId")).put("email", result.getString("email"))
                 .put("idToken", result.getString("idToken")).put("refreshToken", result.getString("refreshToken"))
                 .put("expiresAt", now() + result.getString("expiresIn").toLong() * 1000))
