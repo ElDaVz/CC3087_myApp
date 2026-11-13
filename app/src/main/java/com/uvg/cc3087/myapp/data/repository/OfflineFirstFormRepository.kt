@@ -22,7 +22,12 @@ class OfflineFirstFormRepository(
             local.observePublishedCoverUrl(owner, id)
         else kotlinx.coroutines.flow.flowOf(null)
     }
-    override fun observeForms() = local.observe(owner)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    override fun observeForms() = auth.state.flatMapLatest { session ->
+        if (session !is AuthState.Initializing && session.userId == owner)
+            local.observe(owner)
+        else kotlinx.coroutines.flow.flowOf(emptyList())
+    }
     override suspend fun getDraft(id: String): FormDraft? { checkSession(); return local.get(owner, id) }
     override suspend fun saveDraft(draft: FormDraft) {
         checkSession()
