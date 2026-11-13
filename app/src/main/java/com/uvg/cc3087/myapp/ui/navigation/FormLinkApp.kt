@@ -52,12 +52,23 @@ import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.SaveShareViewModel
 import java.util.Locale
+import com.uvg.cc3087.myapp.ui.viewmodel.ResponseDashboardViewModel
+import com.uvg.cc3087.myapp.ui.viewmodel.ResponseDashboardUiState
+import com.uvg.cc3087.myapp.ui.screens.ResponseDashboardScreen
+import com.uvg.cc3087.myapp.ui.screens.RequestListScreen
+import com.uvg.cc3087.myapp.ui.components.ResponseFilters
+import com.uvg.cc3087.myapp.ui.state.RequestListUiState
+import com.uvg.cc3087.myapp.ui.state.RequestListLoadStatus
+import com.uvg.cc3087.myapp.data.model.RequestStatus
+import com.uvg.cc3087.myapp.domain.requests.ResponsePeriod
+import androidx.lifecycle.repeatOnLifecycle
 
 private enum class AppDestination {
     FORMS,
     CHOOSE_TEMPLATE,
     EDIT_FORM,
     SAVE_SHARE,
+    DASHBOARD,
     REQUESTS,
     REQUEST_DETAIL
 }
@@ -114,7 +125,22 @@ internal fun FormLinkRoute(
     val saveShareUiState by saveShareViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    val dashboardModel: ResponseDashboardViewModel = viewModel(factory = ResponseDashboardViewModel.factory(requestRepository))
+    val dashboardState by dashboardModel.uiState.collectAsStateWithLifecycle()
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    LaunchedEffect(dashboardModel, lifecycle) {
+        lifecycle.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            while (true) {
+                dashboardModel.checkCalendar()
+                kotlinx.coroutines.delay(30_000)
+            }
+        }
+    }
     FormLinkContent(
+        dashboardState = dashboardState,
+        onDashboardForm = dashboardModel::selectForm,
+        onDashboardPeriod = dashboardModel::selectPeriod,
+        onDashboardRefresh = dashboardModel::refresh,
         requestRepository = requestRepository,
         onAccountClick = onAccountClick,
         syncMessage = syncMessage,
@@ -183,7 +209,11 @@ private fun FormLinkContent(
     requestRepository: RequestRepository = UnavailableRequestRepository,
     requestsAreDemo: Boolean = false,
     onAccountClick: (() -> Unit)? = null,
-    syncMessage: String? = null
+    syncMessage: String? = null,
+    dashboardState: ResponseDashboardUiState = ResponseDashboardUiState(),
+    onDashboardForm: (String?) -> Unit = {},
+    onDashboardPeriod: (ResponsePeriod) -> Unit = {},
+    onDashboardRefresh: () -> Unit = {}
 ) {
     // cada pantalla recibe su estado y la navegación sigue aquí
     var currentDestination by rememberSaveable {
@@ -198,7 +228,21 @@ private fun FormLinkContent(
     var selectedRequestFormId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedResponseId by rememberSaveable { mutableStateOf<String?>(null) }
     val requestListState = rememberLazyListState()
-    val showRequests = { currentDestination = AppDestination.REQUESTS }
+    val dashboardListState = rememberLazyListState()
+    var inboxStatus by rememberSaveable { mutableStateOf("ALL") }
+    var detailReturnDestination by rememberSaveable { mutableStateOf(AppDestination.DASHBOARD) }
+    val showDashboard = { currentDestination = AppDestination.DASHBOARD }
+    val openResponse: (com.uvg.cc3087.myapp.data.model.RequestSummary) -> Unit = { request ->
+        detailReturnDestination = currentDestination
+        selectedRequestFormId = request.formId
+        selectedResponseId = request.responseId
+        currentDestination = AppDestination.REQUEST_DETAIL
+    }
+    val openInbox: (String) -> Unit = { status ->
+        inboxStatus = status
+        requestListState.requestScrollToItem(0)
+        currentDestination = AppDestination.REQUESTS
+    }
 
     val showForms = {
         currentDestination = AppDestination.FORMS
@@ -220,8 +264,9 @@ private fun FormLinkContent(
             AppDestination.EDIT_FORM -> leaveEditor()
             AppDestination.SAVE_SHARE -> { currentDestination = saveShareReturnDestination }
             AppDestination.FORMS -> Unit
-            AppDestination.REQUESTS -> showForms()
-            AppDestination.REQUEST_DETAIL -> showRequests()
+            AppDestination.DASHBOARD -> showForms()
+            AppDestination.REQUESTS -> showDashboard()
+            AppDestination.REQUEST_DETAIL -> { currentDestination = detailReturnDestination }
         }
     }
 
@@ -230,7 +275,8 @@ private fun FormLinkContent(
             Forms(
                 onAccountClick = onAccountClick,
                 syncMessage = syncMessage,
-                onResponsesClick = showRequests,
+                onResponsesClick = showDashboard,
+                hasUnreadResponses = dashboardState.dashboard.hasUnread,
                 uiState = formsUiState,
                 onFilterSelected = onFilterSelected,
                 onNewFormClick = {
@@ -254,7 +300,8 @@ private fun FormLinkContent(
 
         AppDestination.CHOOSE_TEMPLATE -> {
             ChooseTemplate(
-                onResponsesClick = showRequests,
+                onResponsesClick = showDashboard,
+                hasUnreadResponses = dashboardState.dashboard.hasUnread,
                 uiState = chooseTemplateUiState,
                 onBackClick = showForms,
                 onBlankFormClick = { showEditor(null) },
@@ -301,18 +348,36 @@ private fun FormLinkContent(
             )
         }
 
-        AppDestination.REQUESTS -> {
-            RequestListRoute(
-                repository = requestRepository,
-                onOpenRequest = { request ->
-                    selectedRequestFormId = request.formId
-                    selectedResponseId = request.responseId
-                    currentDestination = AppDestination.REQUEST_DETAIL
+        AppDestination.DASHBOARD -> MyappTheme(dynamicColor = false) {
+            ResponseDashboardScreen(dashboardState, dashboardListState,
+                onForm = onDashboardForm, onPeriod = onDashboardPeriod,
+                onInbox = { openInbox(it?.name ?: "ALL") }, onUnknown = { openInbox("UNKNOWN") },
+                onOpen = openResponse, onBack = showForms, onRefresh = onDashboardRefresh,
+                syncMessage = syncMessage, isDemo = requestsAreDemo)
+        }
+
+        AppDestination.REQUESTS -> MyappTheme(dynamicColor = false) {
+            val data = dashboardState.dashboard
+            val rows = data.requests.filter { request -> when (inboxStatus) {
+                "ALL" -> true
+                "UNKNOWN" -> request.requestStatus == null
+                else -> request.requestStatus?.name == inboxStatus
+            } }
+            val status = if (dashboardState.hasData) {
+                if (rows.isEmpty()) RequestListLoadStatus.EMPTY else RequestListLoadStatus.CONTENT
+            } else dashboardState.status
+            RequestListScreen(RequestListUiState(status, rows), openResponse, showDashboard, onDashboardRefresh,
+                requestListState, requestsAreDemo, hasUnreadResponses = data.hasUnread,
+                filters = {
+                    ResponseFilters(dashboardState.filter, data.forms,
+                        { onDashboardForm(it); requestListState.requestScrollToItem(0) },
+                        { onDashboardPeriod(it); requestListState.requestScrollToItem(0) })
+                    syncMessage?.let { androidx.compose.material3.Text(it) }
+                    if (dashboardState.hasData && dashboardState.status != RequestListLoadStatus.CONTENT)
+                        com.uvg.cc3087.myapp.ui.components.ResponseLoadMessage(dashboardState.status, onDashboardRefresh)
                 },
-                onBack = showForms,
-                listState = requestListState,
-                isDemo = requestsAreDemo
-            )
+                statusFilter = inboxStatus, onStatusFilter = { inboxStatus = it; requestListState.requestScrollToItem(0) },
+                hasUnknownStatus = data.unknownStatusCount > 0, onForms = showForms)
         }
 
         AppDestination.REQUEST_DETAIL -> {
@@ -320,7 +385,7 @@ private fun FormLinkContent(
                 formId = selectedRequestFormId.orEmpty(),
                 responseId = selectedResponseId.orEmpty(),
                 repository = requestRepository,
-                onBack = showRequests,
+                onBack = { currentDestination = detailReturnDestination },
                 isDemo = requestsAreDemo
             )
         }

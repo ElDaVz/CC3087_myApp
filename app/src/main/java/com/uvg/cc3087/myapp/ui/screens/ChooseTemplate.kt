@@ -30,7 +30,8 @@ fun ChooseTemplate(
     onBackClick: () -> Unit = {},
     onBlankFormClick: () -> Unit = {},
     onTemplateClick: (FormTemplate) -> Unit = {},
-    onResponsesClick: () -> Unit = {}
+    onResponsesClick: () -> Unit = {},
+    hasUnreadResponses: Boolean = false
 ) {
 
     Scaffold(
@@ -69,30 +70,7 @@ fun ChooseTemplate(
         },
 
         bottomBar = {
-
-            NavigationBar {
-
-                NavigationBarItem(
-                    selected = true,
-                    onClick = onBackClick,
-                    icon = { Icon(Icons.Outlined.AccountBox, null) },
-                    label = { Text(stringResource(R.string.forms)) }
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onResponsesClick,
-                    icon = { Icon(Icons.AutoMirrored.Outlined.List, null) },
-                    label = { Text(stringResource(R.string.responses)) }
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    icon = { Icon(Icons.Outlined.Settings, null) },
-                    label = { Text(stringResource(R.string.settings)) }
-                )
-            }
+            FormsBottomBar({}, onResponsesClick, onFormsClick = onBackClick, hasUnreadResponses = hasUnreadResponses)
         }
 
     ) { padding ->

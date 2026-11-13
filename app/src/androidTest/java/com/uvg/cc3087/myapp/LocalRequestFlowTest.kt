@@ -66,6 +66,7 @@ class LocalRequestFlowTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Ver solicitud guardada").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Ver solicitud guardada").performClick()
         compose.onNodeWithText("Respuestas").performClick()
+        compose.onNodeWithTag("metric-total").performScrollTo().performClick()
         compose.onNodeWithTag("request-local/fixture-response").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Completada").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Completada").performClick()

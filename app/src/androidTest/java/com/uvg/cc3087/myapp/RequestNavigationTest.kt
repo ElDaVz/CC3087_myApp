@@ -24,6 +24,7 @@ class RequestNavigationTest {
     @Test fun responsesOpensTheSelectedDetailAndBothBackActionsReturnToTheList() {
         launchApp(TestRequests(listOf(request("a"), request("b"))))
         compose.onNodeWithText("Respuestas").performClick()
+        compose.onNodeWithTag("metric-total").performScrollTo().performClick()
         compose.onNodeWithText("Solicitudes recibidas").assertExists()
         compose.onNodeWithTag("request-a/shared").performClick()
         compose.onNodeWithText("Respuesta de a").assertExists()
@@ -41,6 +42,7 @@ class RequestNavigationTest {
         val restoration = StateRestorationTester(compose)
         launchApp(TestRequests(listOf(request("a"), request("b"))), restoration)
         compose.onNodeWithText("Respuestas").performClick()
+        compose.onNodeWithTag("metric-total").performScrollTo().performClick()
         compose.onNodeWithTag("request-b/shared").performClick()
         restoration.emulateSavedInstanceStateRestore()
         compose.onNodeWithText("Detalle de solicitud").assertExists()
@@ -52,6 +54,7 @@ class RequestNavigationTest {
     @Test fun backFromDetailPreservesListScrollPosition() {
         launchApp(TestRequests((1..30).map { request("form-$it") }))
         compose.onNodeWithText("Respuestas").performClick()
+        compose.onNodeWithTag("metric-total").performScrollTo().performClick()
         compose.onNodeWithTag("request-list").performScrollToNode(hasTestTag("request-form-25/shared"))
         compose.onNodeWithTag("request-form-25/shared").performClick()
         compose.onNodeWithText("Respuesta de form-25").assertExists()
@@ -85,7 +88,7 @@ class RequestNavigationTest {
     }
 
     private fun request(form: String) = RequestDetail(
-        form, "shared", "Formulario $form", Instant.parse("2026-10-29T16:30:00Z"),
+        form, "shared", "Formulario $form", Instant.now(),
         listOf(RequestDetailAnswer("answer", "Respuesta", RequestAnswerValue.Text("Respuesta de $form")))
     )
 

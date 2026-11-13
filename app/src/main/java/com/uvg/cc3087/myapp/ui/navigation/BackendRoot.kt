@@ -90,9 +90,11 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                 onBack = { showAccount = false },
                 onSelect = accountModel::select, onImport = accountModel::importSelected,
                 onSignOut = accountModel::signOut, onSync = { uid?.let(services::schedule) })
-            else FormLinkRoute(forms, templates,
-                if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests,
-                analytics = services.analytics, coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
+            else {
+                val responseRepository = remember(uid) { if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests }
+                FormLinkRoute(forms, templates, responseRepository,
+                    analytics = services.analytics, coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
+            }
         }
     }
 }

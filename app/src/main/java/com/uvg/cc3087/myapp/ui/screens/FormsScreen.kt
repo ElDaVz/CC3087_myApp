@@ -40,6 +40,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -68,7 +71,8 @@ fun Forms(
     unsavedDraftId: String? = null,
     onResponsesClick: () -> Unit = {},
     onAccountClick: (() -> Unit)? = null,
-    syncMessage: String? = null
+    syncMessage: String? = null,
+    hasUnreadResponses: Boolean = false
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -111,7 +115,7 @@ fun Forms(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            FormsBottomBar(onMessage = ::showMessage, onResponsesClick = onResponsesClick)
+            FormsBottomBar(onMessage = ::showMessage, onResponsesClick = onResponsesClick, hasUnreadResponses = hasUnreadResponses)
         }
     ) { innerPadding ->
         LazyColumn(
@@ -230,8 +234,10 @@ internal fun FormsBottomBar(
     onMessage: (Int) -> Unit,
     onResponsesClick: () -> Unit,
     onFormsClick: () -> Unit = { onMessage(R.string.forms_selected) },
-    responsesSelected: Boolean = false
+    responsesSelected: Boolean = false,
+    hasUnreadResponses: Boolean = false
 ) {
+    val unreadDescription = stringResource(R.string.dashboard_new_responses)
     NavigationBar {
         NavigationBarItem(
             selected = !responsesSelected,
@@ -248,10 +254,15 @@ internal fun FormsBottomBar(
             selected = responsesSelected,
             onClick = onResponsesClick,
             icon = {
-                Icon(
-                    imageVector = Icons.Outlined.ChatBubbleOutline,
-                    contentDescription = null
-                )
+                androidx.compose.material3.BadgedBox(badge = {
+                    if (hasUnreadResponses) androidx.compose.material3.Badge(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFB3261E),
+                        modifier = Modifier.testTag("responses-unread-badge").semantics {
+                            contentDescription = unreadDescription
+                        })
+                }) {
+                    Icon(imageVector = Icons.Outlined.ChatBubbleOutline, contentDescription = null)
+                }
             },
             label = { Text(text = stringResource(R.string.responses)) }
         )
