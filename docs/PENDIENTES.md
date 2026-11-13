@@ -8,7 +8,7 @@ Las prioridades del usuario son dashboard, Google, botones de Mis formularios y 
 
 | Orden | Entrega | Motivo y límite |
 |---|---|---|
-| 1 | Dashboard y respuestas nuevas (grupo 7) | Hace útiles las respuestas recibidas y define el destino de estadísticas. |
+| 1 | Dashboard y respuestas nuevas (grupo 7) | Implementado en `feature/responses-dashboard`; verificación al final. |
 | 2 | Importación automática con imágenes (grupo 1) | Resuelve el paso de invitado a cuenta antes de añadir otra forma de acceso. |
 | 3 | Cuenta y sincronización (grupo 2) | Presenta importación, progreso y reintentos en una cuenta clara y utilizable. |
 | 4 | Acceso con Google (grupo 10) | Reutiliza el contrato de incorporación y separación de cuentas anterior. |
@@ -18,7 +18,7 @@ Las prioridades del usuario son dashboard, Google, botones de Mis formularios y 
 
 Después: identidad visual (grupo 3), regreso tras publicación (grupo 4), preferencias/exportación restantes (grupo 8) e identidad empresarial/Open Graph (grupo 9). El banner empresarial sigue siendo una propuesta opcional.
 
-Antes de nuevas funciones, resolver la incidencia de CI de navegación: el log aportado muestra `RootViewWithoutFocusException` en `Espresso.pressBack()` en `RequestNavigationTest.selectedRequestSurvivesSavedStateRestoration` y `RestoredCoverUiTest.editorResolvesCovers`. Investigar y verificar en una rama de fix independiente; no dar GitHub Actions por corregido hasta tener evidencia de una nueva ejecución.
+Seguimiento de CI de navegación: el log aportado muestra `RootViewWithoutFocusException` en `Espresso.pressBack()` en `RequestNavigationTest.selectedRequestSurvivesSavedStateRestoration` y `RestoredCoverUiTest.editorResolvesCovers`. La corrección se realizó en `fix/navigation-tests-window-focus` y está en la base de esta entrega. No dar GitHub Actions por corregido hasta tener evidencia de una nueva ejecución.
 
 ## 1. Incorporación automática de borradores e imágenes
 
@@ -62,9 +62,11 @@ Dependencia: grupo 5 para integrar el menú. La eliminación definitiva requiere
 
 ## 7. Dashboard y respuestas nuevas
 
-- [ ] Crear el dashboard Android con Material 3: total de solicitudes, distribución por estado y evolución temporal, con acceso al detalle y cambio de estado. Calcular los indicadores desde respuestas almacenadas mediante repositorios y ViewModels.
-- [ ] Mostrar un pequeño punto rojo en el acceso al dashboard cuando lleguen respuestas nuevas. Acompañarlo de una descripción accesible para no depender solo del color.
-- [ ] Definir cuándo una respuesta se considera revisada y cuándo desaparece el indicador. Conservar el estado por cuenta y formulario entre reinicios, sin mezclar propietarios ni marcar novedades solo por resincronizar datos existentes.
+- [x] Crear el dashboard Android con Material 3: total de solicitudes, distribución por estado y evolución temporal, con acceso al detalle y cambio de estado. Los indicadores se calculan desde los resúmenes almacenados mediante repositorios y ViewModels.
+- [x] Mostrar un pequeño punto rojo accesible en el acceso Respuestas cuando hay solicitudes sin revisar. Las filas también muestran «Sin revisar» y el indicador considera toda la partición activa, aunque el dashboard esté filtrado.
+- [x] Marcar una respuesta revisada al cargar y mostrar correctamente su detalle. Conservar la lectura local por cuenta/formulario/respuesta tras reiniciar o cerrar sesión; no mezclar propietarios ni restablecer lecturas al sincronizar o cambiar estados.
+
+Decisiones implementadas: Respuestas abre resumen y acceso a bandeja completa; selector de formulario y períodos 7 días, 30 días (predeterminado) y Todo; gráfica diaria o mensual y cinco respuestas recientes. Todas las respuestas existentes empiezan sin revisar. El estado de lectura es local a este dispositivo y no se sincroniza entre dispositivos. Room pasa a v8 mediante migración no destructiva v7→v8. Se mantiene el ciclo de descarga existente, sin push.
 
 ## 8. Configuración y exportación
 
@@ -93,6 +95,32 @@ Ideas adicionales por evaluar dentro de futuras entregas: título/descripción d
 - [ ] Recuperar las portadas publicadas al iniciar sesión sin archivos locales, con actualización reactiva en tarjetas, editor y Preview. Implementación en `fix/restore-cloudinary-covers`; consultar la verificación y evidencia pendiente al final de este documento.
 - [x] Completar la pantalla de login con la identidad visual de FormLink, registro, recuperación por correo, validaciones y estados de carga y error. Ver la verificación de autenticación al final. Los ajustes visuales adicionales se siguen en los grupos 2 y 3.
 - [ ] Evaluar una URL más amigable que `formlink-9f735.web.app`: comparar un sitio Hosting con otro identificador y un dominio propio, incluyendo costos y cómo conservar los enlaces existentes. Coordinar con el grupo 9.
+
+## Verificación del dashboard de respuestas (2026-11-12)
+
+Implementado en `feature/responses-dashboard`, desde `main` que ya contiene la corrección anterior de navegación. La pestaña Respuestas abre indicadores, gráfica y cinco solicitudes recientes; tarjetas y botón de bandeja comparten los filtros de formulario y período. Volver desde detalle restaura su origen, filtros y desplazamiento. Las métricas se derivan de solicitudes almacenadas, deduplicadas por formulario/respuesta, sin leer sus respuestas ni consultar Analytics. Se conservan los snapshots de formularios eliminados.
+
+La lectura se guarda en Room v8, en una tabla local separada de las solicitudes, con claves de partición invitado/cuenta y formulario/respuesta. Abrir correctamente el detalle marca lectura de forma idempotente y ofrece reintento si falla la escritura. El indicador global no depende de los filtros, y las descargas o cambios de estado no restablecen lecturas. No hay cambios de reglas remotas ni de publicación, push o sincronización de lecturas entre dispositivos. El README se reorganizó con funcionamiento, stack, preparación, uso, dashboard, arquitectura y límites actuales; la importación automática y Google siguen pendientes.
+
+Comprobaciones realizadas:
+
+- Compilación Kotlin y 161 pruebas unitarias correctas, sin omisiones. Cubren deduplicación, estados, filtros combinados, períodos de días naturales, zona horaria y cambio de horario, meses vacíos, fechas/estados ausentes, cambio de día, restauración de filtros, cancelación de sesión, reintento de lectura y resultados tardíos de otra selección.
+- Android Lint correcto. El primer intento combinado perdió el daemon de Gradle; se completó al ejecutar con un solo worker. No se cambió la configuración global para resolverlo.
+- Tanda final de 20 pruebas instrumentadas en Pixel_9 Android 17/API 37 con Firebase Auth/Firestore locales (`demo-formlink`): cero fallos, errores u omisiones. Incluye `ResponseDashboardTest` (4), `RequestNavigationTest` (5), `LocalRequestFlowTest` (2), `PublishedRequestFlowTest` (1), `RequestReadRepositoryTest` (2), `RoomMigrationTest` (1), `BackendRootTest` (3) y `LocaleResourcesTest` (2).
+- Se comprueban migraciones desde v2/v3/v6/v7 a v8 sin pérdida de datos, lectura persistente tras reapertura, aislamiento invitado/cuentas/formularios, snapshot remoto resincronizado que conserva la lectura, cambio y reapertura de estado, navegación, filtros, restauración de estado y punto rojo independiente del período.
+- Revisión visual local sobre capturas sintéticas: [claro](evidence/dashboard-light.png), [oscuro](evidence/dashboard-dark.png) y [texto al 150 %](evidence/dashboard-large-text.png). Se verificaron contraste, ajuste de textos y acceso mediante desplazamiento a la bandeja. La gráfica abre en su extremo más reciente. No equivale a revisión humana ni a una prueba de lector de pantalla.
+- `git diff --check` y comprobación de credenciales/cleartext del repositorio correctos.
+
+Incidencias resueltas durante la verificación: la primera prueba de captura buscaba un botón aún no compuesto; se corrigió el desplazamiento de la lista. Una ejecución ampliada detectó recomposición en un hilo de trabajo del arnés de cuenta y contaminación de sesión tras fallar. Se añadió `StandardTestDispatcher` al contexto de ese test y limpieza de la sesión emulada antes/después de cada caso; pasaron las tres pruebas de cuenta y posteriormente la tanda conjunta de veinte. No se alteró el dispatcher de sincronización de producción. La API de pruebas permite configurar el [contexto de ejecución de Compose](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/junit4/package-summary).
+
+Pendiente de evidencia externa: ejecución de GitHub Actions de esta rama, revisión humana y prueba con lector de pantalla; no se han desplegado servicios ni enviado correos reales. La web no cambia y sus pruebas no se repiten en esta entrega. Las lecturas son locales a cada dispositivo y las novedades solo aparecen después de descargar las respuestas.
+
+Comandos reproducibles:
+
+```sh
+./gradlew compileDebugKotlin testDebugUnitTest lintDebug --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process
+backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore './gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true -Pandroid.testInstrumentationRunnerArguments.class=com.uvg.cc3087.myapp.ResponseDashboardTest,com.uvg.cc3087.myapp.RequestNavigationTest,com.uvg.cc3087.myapp.LocalRequestFlowTest,com.uvg.cc3087.myapp.PublishedRequestFlowTest,com.uvg.cc3087.myapp.RequestReadRepositoryTest,com.uvg.cc3087.myapp.RoomMigrationTest,com.uvg.cc3087.myapp.BackendRootTest,com.uvg.cc3087.myapp.LocaleResourcesTest --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process'
+```
 
 ## Verificación de recuperación de portadas (2026-11-12)
 
