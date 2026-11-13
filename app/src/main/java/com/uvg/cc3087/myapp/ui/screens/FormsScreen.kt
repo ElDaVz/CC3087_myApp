@@ -72,7 +72,8 @@ fun Forms(
     onResponsesClick: () -> Unit = {},
     onAccountClick: (() -> Unit)? = null,
     syncMessage: String? = null,
-    hasUnreadResponses: Boolean = false
+    hasUnreadResponses: Boolean = false,
+    guestImportNotice: @Composable () -> Unit = {}
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -128,6 +129,7 @@ fun Forms(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item(key = "guest-import") { guestImportNotice() }
             item(key = "forms-controls") {
                 FormsControls(
                     selectedFilter = uiState.selectedFilter,
