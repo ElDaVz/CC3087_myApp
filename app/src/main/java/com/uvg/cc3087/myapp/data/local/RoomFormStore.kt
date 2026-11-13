@@ -41,9 +41,11 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
             val old = dao.getDraft(id) ?: return@withTransaction null
             check(old.form.ownerId == owner) { "Form is outside this session" }
             if (old.form.deleted) return@withTransaction old.form.coverPath
-            if (owner == null) dao.deleteDraft(id)
-            else dao.saveDraft(old.form.copy(deleted = true,
-                revision = old.form.revision + 1), emptyList())
+            // Retain a tombstone even for guests. Removing the row would let a late
+            // editor save recreate this ID or assign it to a different account.
+            val revision = old.form.revision + 1
+            dao.saveDraft(old.form.copy(deleted = true, revision = revision,
+                syncedRevision = if (owner == null) revision else old.form.syncedRevision), emptyList())
             old.form.coverPath
         }
         cover?.let { cleanup(it) }
@@ -72,15 +74,16 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
                 require(remote.ownerId == owner)
                 val existing = dao.getDraft(remote.id)
                 check(existing == null || existing.form.ownerId == owner) { "Remote form ID belongs to another partition" }
-                if (existing != null && existing.form.revision != existing.form.syncedRevision) continue
+                if (existing != null && (existing.form.deleted || existing.form.revision != existing.form.syncedRevision)) continue
                 // Cover files are device-local and never overwritten by a remote download.
                 val copy = remote.copy(coverPath = existing?.form?.coverPath)
                 dao.saveDraft(copy.toEntity().copy(revision = existing?.form?.revision ?: 0,
                     syncedRevision = existing?.form?.syncedRevision ?: 0), copy.toFieldEntities())
             }
             val remoteIds = forms.map { it.id }.toSet()
-            for ((id, row) in local) if (id !in remoteIds && row.form.revision == row.form.syncedRevision) {
-                dao.deleteDraft(id)
+            for ((id, row) in local) if (id !in remoteIds && !row.form.deleted && row.form.revision == row.form.syncedRevision) {
+                // A remote removal also reserves the ID against stale local editors.
+                dao.saveDraft(row.form.copy(deleted = true), emptyList())
                 row.form.coverPath?.let { paths += it }
             }
             paths

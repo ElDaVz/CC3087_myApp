@@ -15,10 +15,11 @@ class FormSyncEngineTest {
     private val form = FormDraft("f", "Pedido", emptyList(), 1, 1, ownerId = "a")
     private class Local(var queue: List<PendingForm>) : LocalFormStore {
         val cover = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+        val forms = kotlinx.coroutines.flow.MutableStateFlow<List<FormSummary>>(emptyList())
         override fun observePublishedCoverUrl(owner: String?, id: String) = cover
         var merged = false
         var acknowledged = false
-        override fun observe(owner: String?) = flowOf(emptyList<FormSummary>())
+        override fun observe(owner: String?) = forms
         override fun pendingCount(owner: String) = flowOf(queue.size)
         override suspend fun get(owner: String?, id: String): FormDraft? = null
         override suspend fun save(owner: String?, draft: FormDraft) = Unit
@@ -27,6 +28,60 @@ class FormSyncEngineTest {
         override suspend fun pending(owner: String) = queue.toList()
         override suspend fun acknowledge(owner: String, pending: PendingForm) { acknowledged = true; queue = queue.filterNot { it.revision == pending.revision } }
         override suspend fun mergeRemote(owner: String, forms: List<FormDraft>) { merged = true }
+    }
+
+    @Test fun formsObservationClearsOldAccountDataAndStopsCollectingAfterSignOut() = runTest {
+        val auth = object : AuthRepository {
+            override val configured = true
+            override val state = kotlinx.coroutines.flow.MutableStateFlow<AuthState>(AuthState.SignedIn(UserSession("a", "a@example.com")))
+            override suspend fun signIn(email: String, password: String) = Unit
+            override suspend fun signUp(email: String, password: String) = Unit
+            override suspend fun sendPasswordReset(email: String) = Unit
+            override suspend fun signOut() { state.value = AuthState.Guest }
+        }
+        val local = Local(emptyList())
+        local.forms.value = listOf(form.toSummary())
+        val repository = OfflineFirstFormRepository(local, auth, "a") {}
+        val seen = mutableListOf<List<FormSummary>>()
+        val job = backgroundScope.launch { repository.observeForms().collect { seen += it } }
+        runCurrent()
+        assertEquals(listOf("f"), seen.last().map { it.id })
+        local.forms.value = emptyList() // Confirmed local deletion.
+        runCurrent()
+        assertTrue(seen.last().isEmpty())
+        auth.signOut()
+        runCurrent()
+        assertEquals(0, local.forms.subscriptionCount.value)
+        auth.state.value = AuthState.SignedIn(UserSession("b", "b@example.com"))
+        runCurrent()
+        local.forms.value = listOf(form.toSummary()) // A late old-account emission.
+        runCurrent()
+        assertTrue(seen.last().isEmpty())
+        assertEquals(0, local.forms.subscriptionCount.value)
+        job.cancel()
+    }
+
+    @Test fun switchingAccountsDuringRemoteDeletionKeepsTheDeletionPendingForItsOwner() = runTest {
+        val local = Local(listOf(PendingForm(form, 2, true)))
+        var activeOwner = "a"
+        var deleted = false
+        val remote = object : RemoteFormSource {
+            override suspend fun fetch(owner: String) = emptyList<FormDraft>()
+            override suspend fun put(owner: String, form: FormDraft) = error("A deletion must never upload a draft")
+            override suspend fun delete(owner: String, id: String) {
+                assertEquals("a", owner)
+                assertEquals("f", id)
+                deleted = true
+                activeOwner = "b"
+            }
+        }
+        val engine = FormSyncEngine(local, remote) { activeOwner }
+        assertEquals(SyncResult.SESSION_CHANGED, engine.sync("a"))
+        assertTrue(deleted)
+        assertTrue(local.queue.single().deleted)
+        assertFalse(local.acknowledged)
+        assertFalse(local.merged)
+        assertEquals(SyncResult.SESSION_CHANGED, engine.sync("a"))
     }
     @Test fun coverObservationStopsOnSessionChange() = runTest {
         val auth = object : AuthRepository {

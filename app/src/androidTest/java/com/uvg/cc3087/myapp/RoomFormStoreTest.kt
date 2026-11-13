@@ -11,6 +11,85 @@ import org.junit.Test
 
 class RoomFormStoreTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test fun confirmedDeletionSurvivesAccountSwitchAndRejectsRestoredEditorSaves() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+        try {
+            val local = RoomFormStore(db)
+            val auth = object : com.uvg.cc3087.myapp.data.repository.AuthRepository {
+                override val configured = true
+                override val state = MutableStateFlow<AuthState>(AuthState.SignedIn(UserSession("a", "a@example.com")))
+                override suspend fun signIn(email: String, password: String) = Unit
+                override suspend fun signUp(email: String, password: String) = Unit
+                override suspend fun sendPasswordReset(email: String) = Unit
+                override suspend fun signOut() { state.value = AuthState.Guest }
+            }
+            fun repository(owner: String?) = com.uvg.cc3087.myapp.data.repository.OfflineFirstFormRepository(local, auth, owner) {}
+            // A newly created editor can still hold ownerId=null before reloading Room.
+            val editorSnapshot = FormDraft("deleted", "Old account form", emptyList(), 1, 1)
+            val accountA = repository("a")
+            accountA.saveDraft(editorSnapshot)
+            val unrelated = editorSnapshot.copy(id = "keep", title = "Keep this form")
+            accountA.saveDraft(unrelated)
+            local.acknowledge("a", local.pending("a").first { it.draft.id == "keep" })
+            accountA.deleteDraft(editorSnapshot.id)
+            local.acknowledge("a", local.pending("a").single())
+            // Previously the acknowledgement removed the only record of the deletion.
+            assertTrue(runCatching { accountA.saveDraft(editorSnapshot) }.isFailure)
+            auth.signOut()
+            assertTrue(repository(null).observeForms().first().isEmpty())
+            auth.state.value = AuthState.SignedIn(UserSession("b", "b@example.com"))
+            val accountB = repository("b")
+            assertTrue(accountB.observeForms().first().isEmpty())
+            assertTrue(runCatching { accountA.saveDraft(editorSnapshot) }.isFailure)
+            assertTrue(runCatching { accountB.saveDraft(editorSnapshot) }.isFailure)
+            accountB.saveDraft(editorSnapshot.copy(id = "new-b", title = "New account form"))
+            assertEquals(listOf("new-b"), accountB.observeForms().first().map { it.id })
+            auth.signOut()
+            auth.state.value = AuthState.SignedIn(UserSession("a", "a@example.com"))
+            assertEquals(listOf("keep"), repository("a").observeForms().first().map { it.id })
+            assertTrue(local.pending("a").isEmpty())
+        } finally { db.close() }
+    }
+
+    @Test fun deletedGuestCannotBeRestoredOrImportedIntoAnotherAccount() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+        try {
+            val local = RoomFormStore(db)
+            val snapshot = FormDraft("guest", "Guest form", emptyList(), 1, 1)
+            local.save(null, snapshot)
+            local.delete(null, snapshot.id)
+            assertTrue(runCatching { local.save(null, snapshot) }.isFailure)
+            assertTrue(runCatching { local.save("b", snapshot) }.isFailure)
+            assertTrue(runCatching { local.importGuests("b", setOf(snapshot.id)) }.isFailure)
+            assertNull(local.get(null, snapshot.id))
+            assertTrue(local.observe(null).first().isEmpty())
+            assertTrue(local.observe("b").first().isEmpty())
+        } finally { db.close() }
+    }
+
+    @Test fun staleDownloadsCannotReviveAcknowledgedDeletionsOrDiscardTheirMarkers() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+        try {
+            val local = RoomFormStore(db)
+            val form = FormDraft("f", "Deleted form", emptyList(), 1, 1, ownerId = "a")
+            local.save("a", form)
+            local.delete("a", form.id)
+            local.acknowledge("a", local.pending("a").single())
+            local.mergeRemote("a", listOf(form))
+            assertNull(local.get("a", form.id))
+            local.mergeRemote("a", emptyList())
+            assertTrue(runCatching { local.save("a", form) }.isFailure)
+            assertTrue(local.pending("a").isEmpty())
+            // Downloaded removals must protect against a restored editor as well.
+            val remote = form.copy(id = "removed-remotely")
+            local.mergeRemote("a", listOf(remote))
+            local.mergeRemote("a", emptyList())
+            assertTrue(runCatching { local.save("a", remote) }.isFailure)
+            assertTrue(local.observe("a").first().isEmpty())
+        } finally { db.close() }
+    }
+
     @Test fun deletionCascadesFieldsAndUnreferencedCoversButPreservesRequestsAndHistory() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
         val removed = mutableListOf<String>()
@@ -40,7 +119,8 @@ class RoomFormStoreTest {
             local.delete(null, "guest")
             assertEquals(listOf("covers/shared.jpg"), removed)
             local.acknowledge("a", pending)
-            assertNull(db.drafts().getDraft("f"))
+            assertTrue(db.drafts().getDraft("f")!!.form.deleted)
+            assertTrue(local.pending("a").isEmpty())
             assertEquals("Snapshot", db.cloud().detail("a", "f", "r")!!.formTitle)
             assertEquals(listOf(read), db.requestReads().get("account:a"))
             assertNotNull(db.cloud().uploadedCover("a", "f", "hash"))
@@ -135,7 +215,7 @@ class RoomFormStoreTest {
             assertTrue(deletion.deleted)
             local.acknowledge("a", deletion)
             assertTrue(local.pending("a").isEmpty())
-            assertNull(db.drafts().getDraft("f"))
+            assertTrue(db.drafts().getDraft("f")!!.form.deleted)
         } finally { db.close() }
     }
 }

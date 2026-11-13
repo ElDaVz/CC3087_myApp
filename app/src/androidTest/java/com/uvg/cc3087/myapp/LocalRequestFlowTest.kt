@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.room.Room
+import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.local.FormLinkDatabase
 import com.uvg.cc3087.myapp.data.model.*
@@ -41,9 +42,16 @@ class LocalRequestFlowTest {
         compose.onNodeWithText("Guardar solicitud en este dispositivo").assertDoesNotExist()
         compose.onNodeWithText("Editar").performClick()
         compose.onNodeWithContentDescription("Vista previa").performClick()
-        compose.onNode(hasSetTextAction()).performTextInput("Solo una prueba")
-        compose.onNodeWithText("Probar envío").performScrollTo().performClick()
-        compose.onNodeWithText("Respuesta de prueba completada. No se envió ningún dato.").assertExists()
+        compose.onNodeWithTag("answer-name").performTextInput("Solo una prueba")
+        // Finish the IME interaction before scrolling and tapping a moving footer.
+        closeSoftKeyboard()
+        compose.onNodeWithTag("answer-name").assertTextContains("Solo una prueba")
+        compose.onNodeWithText("Probar envío").performScrollTo().assertIsDisplayed().performClick()
+        val confirmation = "Respuesta de prueba completada. No se envió ningún dato."
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText(confirmation).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText(confirmation).performScrollTo().assertIsDisplayed()
         runBlocking { assertEquals(0, requests.getRequests().size) }
     }
 

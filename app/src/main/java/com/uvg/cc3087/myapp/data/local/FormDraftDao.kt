@@ -35,7 +35,8 @@ abstract class FormDraftDao {
     @Query("UPDATE form_drafts SET syncedRevision = :revision WHERE id = :id AND ownerId = :owner AND revision = :revision")
     abstract suspend fun acknowledge(owner: String, id: String, revision: Long): Int
 
-    @Query("DELETE FROM form_drafts WHERE id = :id AND ownerId = :owner AND revision = :revision AND deleted = 1")
+    // Keep the identity reserved: a restored editor must never recreate a deleted form.
+    @Query("UPDATE form_drafts SET syncedRevision = :revision WHERE id = :id AND ownerId = :owner AND revision = :revision AND deleted = 1")
     abstract suspend fun acknowledgeDeletion(owner: String, id: String, revision: Long): Int
 
     @Upsert
