@@ -42,6 +42,7 @@ android {
         versionName = "1.0"
         // Runtime initialization prevents Kotlin from inlining a stale environment across builds.
         buildConfigField("boolean", "FIREBASE_EMULATORS", "java.lang.Boolean.parseBoolean(\"false\")")
+        buildConfigField("boolean", "CLOUDINARY_UPLOADS_ENABLED", "java.lang.Boolean.parseBoolean(\"true\")")
         buildConfigField("boolean", "TELEMETRY_ENABLED", "true")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -52,6 +53,11 @@ android {
             buildConfigField("boolean", "TELEMETRY_ENABLED", providers.gradleProperty("telemetryEnabled").orElse("false").get())
             val firebaseEmulators = providers.gradleProperty("firebaseEmulators").orElse("false").get().toBooleanStrict()
             buildConfigField("boolean", "FIREBASE_EMULATORS", "java.lang.Boolean.parseBoolean(\"$firebaseEmulators\")")
+            // Real Cloudinary uploads require a separate opt-in when Firebase is local.
+            val cloudinaryWithEmulators = coverSetting("cloudinary.allowUploadsWithEmulators")
+                .ifBlank { "false" }.toBooleanStrict()
+            val cloudinaryUploads = !firebaseEmulators || cloudinaryWithEmulators
+            buildConfigField("boolean", "CLOUDINARY_UPLOADS_ENABLED", "java.lang.Boolean.parseBoolean(\"$cloudinaryUploads\")")
         }
         release {
             optimization {
