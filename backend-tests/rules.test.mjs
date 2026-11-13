@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { before, after, beforeEach, test } from 'node:test';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, setDoc, getDoc, getDocs, collection, query, where, deleteDoc, Timestamp, writeBatch, serverTimestamp, updateDoc, collectionGroup } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocFromServer, getDocs, collection, query, where, deleteDoc, Timestamp, writeBatch, serverTimestamp, updateDoc, collectionGroup } from 'firebase/firestore';
 
 let environment;
 before(async () => {
-  environment = await initializeTestEnvironment({ projectId: 'demo-formlink',
+  // Rule fixtures are cleared between tests; keep them out of the app's demo data.
+  environment = await initializeTestEnvironment({ projectId: 'demo-formlink-rules',
     firestore: { host: '127.0.0.1', port: 8080, rules: await readFile('../firestore.rules', 'utf8') } });
 });
 beforeEach(async () => { await environment.clearFirestore(); });
@@ -14,14 +15,36 @@ after(async () => { await environment.cleanup(); });
 const draft = ownerId => ({ ownerId, title: 'Pedido real', status: 'DRAFT', fields: [],
   createdAt: Timestamp.now(), updatedAt: Timestamp.now(), publishedAt: null, version: 1 });
 
-test('an owner creates, reads, lists and deletes their forms', async () => {
+test('an owner creates, reads, lists and tombstones their forms without physically deleting them', async () => {
   const db = environment.authenticatedContext('owner').firestore();
   const ref = doc(db, 'forms', 'f');
   await assertSucceeds(setDoc(ref, draft('owner')));
   await assertSucceeds(getDoc(ref));
   await assertSucceeds(getDocs(query(collection(db, 'forms'), where('ownerId', '==', 'owner'))));
-  await assertSucceeds(deleteDoc(ref));
-  await assertSucceeds(deleteDoc(ref));
+  await assertFails(deleteDoc(ref));
+  await assertSucceeds(updateDoc(ref, { deleted: true, status: 'ARCHIVED', updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(ref, { deleted: true, status: 'ARCHIVED', updatedAt: serverTimestamp() }));
+  await assertFails(deleteDoc(ref));
+});
+
+test('an unpublished draft deleted on device A cannot be recreated by a pending edit on device B', async () => {
+  const deviceA = environment.authenticatedContext('owner', { device: 'a' }).firestore();
+  const deviceB = environment.authenticatedContext('owner', { device: 'b' }).firestore();
+  const refA = doc(deviceA, 'forms', 'unpublished');
+  const refB = doc(deviceB, 'forms', 'unpublished');
+  await setDoc(refA, draft('owner'));
+  const pendingEdit = { ...(await getDocFromServer(refB)).data(), title: 'Old edit from device B', version: 2 };
+  await assertSucceeds(updateDoc(refA, { deleted: true, status: 'ARCHIVED', updatedAt: serverTimestamp() }));
+  await assertFails(setDoc(refB, pendingEdit));
+  await assertFails(updateDoc(refB, { title: pendingEdit.title }));
+  await assertFails(updateDoc(refB, { deleted: false, status: 'DRAFT' }));
+  await assertFails(deleteDoc(refB));
+  const removed = (await getDocFromServer(refA)).data();
+  assert.equal(removed.deleted, true);
+  assert.equal(removed.status, 'ARCHIVED');
+  assert.equal(removed.title, 'Pedido real');
+  assert.equal((await getDocFromServer(doc(deviceA, 'publishedForms', 'unpublished'))).exists(), false);
+  await assertSucceeds(setDoc(doc(deviceB, 'forms', 'new-id'), draft('owner')));
 });
 test('unauthenticated and another account cannot read or modify a form', async () => {
   const owner = environment.authenticatedContext('owner').firestore();

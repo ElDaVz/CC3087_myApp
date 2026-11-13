@@ -48,8 +48,13 @@ class LocalRequestFlowTest {
         compose.onNodeWithTag("answer-name").assertTextContains("Solo una prueba")
         compose.onNodeWithText("Probar envío").performScrollTo().assertIsDisplayed().performClick()
         val confirmation = "Respuesta de prueba completada. No se envió ningún dato."
-        compose.waitUntil(10_000) {
-            compose.onAllNodesWithText(confirmation).fetchSemanticsNodes().isNotEmpty()
+        try {
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText(confirmation).fetchSemanticsNodes().isNotEmpty()
+            }
+        } finally {
+            // Preserve validation, input and layout semantics in CI's captured logcat.
+            compose.onRoot(useUnmergedTree = true).printToLog("PreviewSubmission")
         }
         compose.onNodeWithText(confirmation).performScrollTo().assertIsDisplayed()
         runBlocking { assertEquals(0, requests.getRequests().size) }

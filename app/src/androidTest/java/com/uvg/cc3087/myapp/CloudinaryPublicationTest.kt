@@ -115,7 +115,9 @@ class CloudinaryPublicationTest {
             source.put(owner, unpublished)
             source.delete(owner, unpublished.id)
             source.delete(owner, unpublished.id)
-            assertNull(client.get(owner, "forms/${unpublished.id}"))
+            assertEquals(true, FirestoreRest.fields(client.get(owner, "forms/${unpublished.id}")!!)["deleted"])
+            source.put(owner, unpublished.copy(title = "Stale unpublished edit"))
+            assertTrue(source.fetch(owner).none { it.id == unpublished.id })
             currentOwner = "another-owner"
             assertTrue(runCatching { publisher.publish(owner, removed) }.isFailure)
         } finally { db.close(); auth.signOut() }
