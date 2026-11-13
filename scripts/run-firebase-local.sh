@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# A dedicated AVD prevents replacing an existing real-project installation.
+# Only the explicitly selected Pixel 9 may receive local development builds.
 project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_dir"
 if (( $# )); then
@@ -20,18 +20,18 @@ if [[ -z "${ANDROID_SERIAL:-}" ]]; then
     while read -r candidate state rest; do
         [[ "$candidate" == emulator-* && "$state" == device ]] || continue
         name="$("$adb" -s "$candidate" emu avd name 2>/dev/null | head -n 1 | tr -d '\r')"
-        [[ "$name" == FormLink_Local_API_37 ]] && matches+=("$candidate")
+        [[ "$name" == Pixel_9_API_37 ]] && matches+=("$candidate")
     done < <("$adb" devices)
     if (( ${#matches[@]} != 1 )); then
-        echo "Start exactly one FormLink_Local_API_37 AVD, or set ANDROID_SERIAL explicitly." >&2
+        echo "Start exactly one Pixel_9_API_37 AVD, or set ANDROID_SERIAL explicitly." >&2
         exit 1
     fi
     ANDROID_SERIAL="${matches[0]}"
 fi
 export ANDROID_SERIAL
 avd_name="$("$adb" -s "$ANDROID_SERIAL" emu avd name | head -n 1 | tr -d '\r')"
-if [[ "$avd_name" != FormLink_Local_API_37 ]]; then
-    echo "Refusing to install: select the dedicated FormLink_Local_API_37 AVD." >&2
+if [[ "$avd_name" != Pixel_9_API_37 ]]; then
+    echo "Refusing to install: select the retained Pixel_9_API_37 AVD." >&2
     exit 1
 fi
 for port in 9099 8080; do

@@ -51,10 +51,10 @@ Sin mise, activar primero Node 24.12 o superior y ejecutar los mismos comandos `
 
 ### AVD dedicado y ejecución
 
-En Device Manager, crear un Pixel 9 API 37 con el nombre exacto `FormLink_Local_API_37`, independiente de los AVD y datos existentes. En esta máquina ya está creado. Iniciarlo en un puerto dedicado:
+El AVD conservado en esta máquina se llama `Pixel_9_API_37`. Se eliminaron los demás AVD por petición del usuario, conservando los datos de este Pixel 9. El launcher solo acepta ese nombre; una ejecución posterior con Run actualiza la instalación de FormLink en ese AVD. Iniciarlo en un puerto dedicado:
 
 ```bash
-"$HOME/Android/Sdk/emulator/emulator" -avd FormLink_Local_API_37 -port 5580
+"$HOME/Android/Sdk/emulator/emulator" -avd Pixel_9_API_37 -port 5580
 ```
 
 En otra terminal, con los servicios iniciados:
@@ -71,7 +71,7 @@ La telemetría está desactivada y el modo emulado no construye el uploader de C
 
 Abrir esta copia de trabajo como proyecto independiente. Elegir **FormLink Firebase local** en el selector de configuraciones y pulsar Run. La configuración compartida `.run/FormLink Firebase local.run.xml` es de tipo Shell Script y ejecuta el launcher, que encuentra el AVD dedicado por su nombre. El plugin Shell Script está incluido en Android Studio de esta máquina; debe estar habilitado. El script fija las dos propiedades en cada ejecución, evitando depender de argumentos temporales de la terminal o del daemon de Gradle. Los servicios y el AVD deben estar iniciados antes de Run.
 
-Esta configuración utiliza exclusivamente el AVD llamado `FormLink_Local_API_37`, independientemente del puerto asignado por Android Studio. El selector de dispositivos del IDE no cambia ese destino; para fijar un serial manualmente se puede definir `ANDROID_SERIAL`, y el launcher seguirá rechazando cualquier AVD con otro nombre. No usar la configuración Android `app` para este flujo: omitir `-PfirebaseEmulators=true` selecciona el modo real por defecto; sin el JSON real solo se dispone del modo invitado. No cambiar el valor global del proyecto para ocultar esa diferencia.
+Esta configuración utiliza exclusivamente el AVD llamado `Pixel_9_API_37`, independientemente del puerto asignado por Android Studio. El selector de dispositivos del IDE no cambia ese destino; para fijar un serial manualmente se puede definir `ANDROID_SERIAL`, y el launcher seguirá rechazando cualquier AVD con otro nombre. No usar la configuración Android `app` para este flujo: omitir `-PfirebaseEmulators=true` selecciona el modo real por defecto; sin el JSON real solo se dispone del modo invitado. No cambiar el valor global del proyecto para ocultar esa diferencia.
 
 ### Comprobaciones reproducibles
 
@@ -103,3 +103,6 @@ Resultados:
 - El launcher rechazó el AVD existente `emulator-5556` antes de instalar o detener nada. Con los servicios apagados rechazó arrancar; una comprobación de UI con credenciales ficticias mostró el error de conexión al intentar login en la app emulada. Después se reiniciaron los servicios locales y el proceso de la app.
 
 No se crearon proyectos reales, no se desplegó Firebase, no se enviaron correos reales ni se subieron imágenes a Cloudinary. Google Sign-In sigue sin implementarse. Los resultados son locales y no acreditan ejecución de GitHub Actions. Las diferencias de finales de línea de `gradlew.bat` quedaron fuera de los commits de esta tarea.
+
+
+Por petición posterior del usuario, se conservaron únicamente el AVD `Pixel_9_API_37` y sus datos. Se eliminaron `Medium_Phone_API_37.0` y `FormLink_Local_API_37`. El launcher ahora reconoce el Pixel 9 conservado. Este ajuste no reinstaló la app ni borró sus datos; la evidencia anterior corresponde al AVD de pruebas que existía en ese momento.
