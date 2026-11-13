@@ -3,8 +3,8 @@ package com.uvg.cc3087.myapp
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.espresso.Espresso.pressBack
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.uvg.cc3087.myapp.data.model.RequestAnswerValue
 import com.uvg.cc3087.myapp.data.model.RequestDetail
 import com.uvg.cc3087.myapp.data.model.RequestDetailAnswer
@@ -19,7 +19,7 @@ import org.junit.Rule
 import org.junit.Test
 
 class RequestNavigationTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun responsesOpensTheSelectedDetailAndBothBackActionsReturnToTheList() {
         launchApp(TestRequests(listOf(request("a"), request("b"))))
@@ -27,7 +27,7 @@ class RequestNavigationTest {
         compose.onNodeWithText("Solicitudes recibidas").assertExists()
         compose.onNodeWithTag("request-a/shared").performClick()
         compose.onNodeWithText("Respuesta de a").assertExists()
-        pressBack()
+        dispatchBack()
         compose.onNodeWithTag("request-b/shared").performClick()
         compose.onNodeWithText("Respuesta de b").assertExists()
         compose.onNodeWithText("Respuesta de a").assertDoesNotExist()
@@ -45,7 +45,7 @@ class RequestNavigationTest {
         restoration.emulateSavedInstanceStateRestore()
         compose.onNodeWithText("Detalle de solicitud").assertExists()
         compose.onNodeWithText("Respuesta de b").assertExists()
-        pressBack()
+        dispatchBack()
         compose.onNodeWithText("Solicitudes recibidas").assertExists()
     }
 
@@ -55,7 +55,7 @@ class RequestNavigationTest {
         compose.onNodeWithTag("request-list").performScrollToNode(hasTestTag("request-form-25/shared"))
         compose.onNodeWithTag("request-form-25/shared").performClick()
         compose.onNodeWithText("Respuesta de form-25").assertExists()
-        pressBack()
+        dispatchBack()
         compose.onNodeWithTag("request-form-25/shared").assertIsDisplayed()
     }
 
@@ -65,7 +65,7 @@ class RequestNavigationTest {
         compose.onNodeWithText("Las solicitudes todavía no están disponibles en esta versión.").assertExists()
         compose.onNodeWithText("Todavía no has recibido solicitudes.").assertDoesNotExist()
         compose.onNodeWithText("Solicitudes de ejemplo. No hay datos de clientes reales conectados.").assertDoesNotExist()
-        pressBack()
+        dispatchBack()
         compose.onNodeWithText("Mis formularios").assertExists()
     }
 
@@ -76,6 +76,12 @@ class RequestNavigationTest {
         compose.onNodeWithText("Todavía no has recibido solicitudes.").assertExists()
         compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Mis formularios").assertExists()
+    }
+
+    private fun dispatchBack() {
+        // Exercise the Activity's BackHandler dispatch without Espresso's window-focus lookup.
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
     }
 
     private fun request(form: String) = RequestDetail(
