@@ -6,6 +6,9 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collectLatest
 import com.uvg.cc3087.myapp.data.model.AuthState
 import com.uvg.cc3087.myapp.BuildConfig
 import com.uvg.cc3087.myapp.data.local.*
@@ -23,7 +26,9 @@ class BackendServices(private val context: Context, private val database: FormLi
         ?: FirebaseApp.initializeApp(context)
     private val http = com.uvg.cc3087.myapp.data.remote.http.FirebaseHttp(BuildConfig.FIREBASE_EMULATORS)
     val deviceCipher = com.uvg.cc3087.myapp.data.security.DeviceCipher(context)
-    val auth = RestAuthRepository(firebase?.options?.apiKey, deviceCipher, http, BuildConfig.FIREBASE_EMULATORS)
+    private val guestImportStore = RoomGuestImportStore(database)
+    val auth = RestAuthRepository(firebase?.options?.apiKey, deviceCipher, http, BuildConfig.FIREBASE_EMULATORS,
+        guestImports = guestImportStore)
     val local: LocalFormStore = RoomFormStore(database, covers)
     val client = firebase?.let { com.uvg.cc3087.myapp.data.remote.http.FirestoreRest(it.options.projectId!!, auth, http, BuildConfig.FIREBASE_EMULATORS) }
     private val remote = client?.let { com.uvg.cc3087.myapp.data.remote.RestFormSource(it) }
@@ -40,6 +45,14 @@ class BackendServices(private val context: Context, private val database: FormLi
     val publisher by lazy { client?.let { com.uvg.cc3087.myapp.data.remote.RestFormPublisher(it, checkNotNull(remote), database,
         { auth.state.value.userId }, { block -> checkNotNull(sync).exclusive(block) }, analytics, covers,
         if (BuildConfig.FIREBASE_EMULATORS) null else com.uvg.cc3087.myapp.data.remote.CloudinaryCoverUploader(BuildConfig.CLOUDINARY_CLOUD_NAME, BuildConfig.CLOUDINARY_UPLOAD_PRESET)) } }
+    val guestImports: GuestImportRepository = GuestDraftImporter(guestImportStore, { auth.state.value.userId }, ::schedule)
+    init {
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+            auth.state.map { it.userId }.distinctUntilChanged().collectLatest { owner ->
+                if (owner != null) guestImports.resume(owner)
+            }
+        }
+    }
     fun repository(owner: String?) = OfflineFirstFormRepository(local, auth, owner, publisher, ::schedule)
     fun requests(owner: String) = client?.let { CloudRequestRepository(database, it, owner, { auth.state.value.userId }, ::schedule) }
 
@@ -62,6 +75,8 @@ class FormSyncWorker(context: Context, params: WorkerParameters, private val ser
     override suspend fun doWork(): Result {
         val owner = inputData.getString("owner") ?: return Result.failure()
         services.auth.state.first { it !is AuthState.Initializing }
+        if (services.auth.state.value.userId != owner) return Result.success()
+        if (!services.guestImports.resume(owner)) return Result.retry()
         if (services.auth.state.value.userId != owner) return Result.success()
         return when (services.sync?.sync(owner)) {
             SyncResult.RETRY -> Result.retry()
