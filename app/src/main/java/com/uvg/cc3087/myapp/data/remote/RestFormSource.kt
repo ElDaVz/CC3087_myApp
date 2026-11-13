@@ -36,12 +36,12 @@ class RestFormSource(private val client: FirestoreRest) : RemoteFormSource {
         val form = client.get(owner, "forms/$id") ?: return
         val published = client.get(owner, "publishedForms/$id")
         val precondition = JSONObject().put("updateTime", form.getString("updateTime"))
-        if (published == null) client.commit(owner, listOf(JSONObject()
-            .put("delete", client.name("forms/$id")).put("currentDocument", precondition)))
-        else client.commit(owner, listOf(
-            client.update("forms/$id", mapOf("deleted" to true, "status" to "ARCHIVED"),
-                listOf("updatedAt"), precondition),
-            client.update("publishedForms/$id", mapOf("active" to false),
-                precondition = JSONObject().put("updateTime", published.getString("updateTime")))))
+        // Unpublished drafts need the same durable tombstone as published forms:
+        // a second device may still have a pending edit for this document ID.
+        val writes = mutableListOf(client.update("forms/$id",
+            mapOf("deleted" to true, "status" to "ARCHIVED"), listOf("updatedAt"), precondition))
+        if (published != null) writes += client.update("publishedForms/$id", mapOf("active" to false),
+            precondition = JSONObject().put("updateTime", published.getString("updateTime")))
+        client.commit(owner, writes)
     }
 }

@@ -144,7 +144,8 @@ service cloud.firestore {
         && (!resource.data.get('deleted', false) || request.resource.data == resource.data
           || (request.resource.data.get('deleted', false) == true
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt'])));
-      allow delete: if signedIn() && (!exists(formPath(id)) || (owns(resource.data) && !exists(publicPath(id))));
+      // Removing a draft or its tombstone would allow stale devices to recreate it.
+      allow delete: if false;
       match /responseChecks/{checkId} {
         allow create: if validGroup(id,checkId);
         allow read, update, delete: if false;
