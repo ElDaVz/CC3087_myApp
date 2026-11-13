@@ -15,6 +15,28 @@ También se pueden proporcionar como propiedades de Gradle del mismo nombre. No 
 
 En Cloudinary, el preset debe ser **Unsigned**, permitir imágenes JPG/JPEG/PNG/WebP, usar identificadores aleatorios y tener **Disallow public ID** activado. La carpeta acordada es `formlink/covers`. La transformación de entrada opcional limita dimensiones a 1600 × 1600 sin ampliar imágenes pequeñas. El preset no ofrece un límite de archivo por preset: el límite de 2 MiB que aplica Android es una comprobación del cliente y no protege frente a clientes externos.
 
+## Publicar una portada mientras Firebase está emulado
+
+Firebase local y Cloudinary se configuran por separado. Por defecto, `-PfirebaseEmulators=true` mantiene las subidas reales a Cloudinary bloqueadas. Para publicar manualmente una portada real en Cloudinary mientras Auth y Firestore siguen en `demo-formlink`, agregar esta opción explícita al `local.properties` ignorado por Git:
+
+```properties
+cloudinary.cloudName=uxrkjzti
+cloudinary.uploadPreset=formlink_covers
+cloudinary.allowUploadsWithEmulators=true
+```
+
+También se puede usar `-Pcloudinary.allowUploadsWithEmulators=true`. La opción afecta únicamente a la integración de portadas de Debug; no cambia los hosts ni el proyecto de Firebase y no activa telemetría. La imagen se sube cuando el propietario pulsa Publicar o Actualizar publicación. Guardar, editar y previsualizar siguen siendo locales. El enlace resultante pertenece al proyecto Firebase emulado; esta configuración no despliega una web pública real.
+
+Las pruebas automáticas deben anular el permiso local explícitamente:
+
+```bash
+./gradlew compileDebugKotlin testDebugUnitTest -PfirebaseEmulators=true -PtelemetryEnabled=false -Pcloudinary.allowUploadsWithEmulators=false
+```
+
+Al ejecutar instrumentadas, usar también `-Pcloudinary.allowUploadsWithEmulators=false` y mantener ausente `realCloudinary=true`. No ejecutar el runner que limpia instalaciones sobre un AVD con datos de usuario sin aislarlo previamente. El caso existente de publicación con uploader simulado comprueba reintentos, reutilización de referencias y conservación de la publicación ante fallos sin subir archivos reales.
+
+La ausencia de esta opción conserva el bloqueo original. Fuera de Firebase emulado se conserva el comportamiento previo de Cloudinary. Los booleanos del entorno se evalúan en tiempo de ejecución para evitar que Kotlin conserve un valor incorporado de una compilación anterior.
+
 ## Qué sucede al cambiar la imagen
 
 Una subida confirmada guarda su URL, public ID y huella SHA-256 en Room, por propietario y formulario. Si Firestore falla después, el siguiente intento reutiliza esa referencia. Publicar lo mismo no genera otra versión ni vuelve a subir la misma copia confirmada.
@@ -35,7 +57,7 @@ Las URLs de portada se limitan a HTTPS y al entorno Cloudinary configurado, sin 
 
 ## Revisión y publicación
 
-La rama es `feat/cloudinary-form-covers`. Se conserva el flujo de revisión local: no hacer push ni desplegar hasta que el usuario revise los cambios.
+La corrección para publicar con Firebase local está en `fix/cloudinary-emulator-publication`. Se conserva el flujo de revisión local: no hacer push ni desplegar hasta que el usuario revise los cambios.
 
 Para compilar y ejecutar pruebas locales Android:
 
@@ -47,7 +69,7 @@ Para las pruebas de publicación y solicitudes, iniciar Auth y Firestore locales
 
 ```bash
 backend-tests/node_modules/.bin/firebase emulators:start --project demo-formlink --only auth,firestore
-./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true
+./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -PtelemetryEnabled=false -Pcloudinary.allowUploadsWithEmulators=false -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true
 ```
 
 La prueba real de Cloudinary requiere además `-Pandroid.testInstrumentationRunnerArguments.realCloudinary=true`. Esta opción sube una imagen sintética pequeña a la cuenta configurada. Sin ella, esa prueba externa se omite explícitamente.
@@ -70,3 +92,15 @@ Verificado el 11 de noviembre de 2026:
 La primera pasada instrumentada encontró un fallo en un caso existente de Preview. Pasó al repetirlo aislado y la segunda suite completa terminó con las 56 pruebas en verde; no se cambió ese caso ni el flujo Preview para ocultarlo.
 
 No se ha desplegado esta integración a Hosting ni se han cambiado reglas del proyecto real. La evidencia de Firebase es local; la única operación externa de esta verificación fue la subida sintética a Cloudinary.
+
+
+## Verificación del desbloqueo de portadas con Firebase local
+
+El 12 de noviembre de 2026 se confirmó en el Pixel 9 el mensaje “Configure Cloudinary to publish a cover”: el uploader era nulo por la condición de Firebase emulado, pese a tener cloud y preset configurados. Se separó el permiso de Cloudinary de la selección del backend Firebase, conservando el bloqueo por defecto y añadiendo el opt-in local documentado arriba.
+
+- Compilación y 164 pruebas unitarias aprobadas con `cloudinary.allowUploadsWithEmulators=false`; se comprobó `CLOUDINARY_UPLOADS_ENABLED=false` en BuildConfig.
+- Lint e instalación con el opt-in habilitado: correctos. Lint terminó sin errores y conservó 69 advertencias.
+- APK actualizado en el Pixel 9 mediante instalación sin desinstalar. Se comprobó `FIREBASE_EMULATORS=true`, `CLOUDINARY_UPLOADS_ENABLED=true` y `TELEMETRY_ENABLED=false`, con Auth y Firestore en localhost.
+- No se ejecutaron pruebas instrumentadas sobre la instalación con datos del usuario ni se activó `realCloudinary=true`. No se publicó el formulario del usuario ni se subieron imágenes durante esta verificación. La disponibilidad actual del preset remoto y la subida real quedan pendientes de la acción explícita Publicar del propietario.
+
+Los cambios anteriores de eliminación permanecen fuera de estos commits. La configuración Cloudinary se conserva en `local.properties`, ignorado por Git; no se agregaron API Secrets ni nuevos SDKs.
