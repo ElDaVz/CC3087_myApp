@@ -170,6 +170,41 @@ class RequestDetailViewModelTest {
         assertEquals(RequestDetailLoadStatus.UNAVAILABLE, model.uiState.value.status)
     }
 
+    @Test fun readingFailureKeepsDetailAndCanRetryWithoutReloadingAnswers() = runTest {
+        var marks = 0
+        var fail = true
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) = detail
+            override suspend fun markRead(formId: String, responseId: String) {
+                marks++
+                if (fail) throw IOException()
+            }
+        })
+        model.markRead(); runCurrent(); assertEquals(0, marks)
+        model.openRequest("form", "response"); runCurrent()
+        assertEquals(0, marks) // Loading alone is not a visit to the visible detail.
+        model.markRead(); runCurrent()
+        assertEquals(detail, model.uiState.value.detail)
+        assertTrue(model.uiState.value.readSaveFailed)
+        fail = false; model.markRead(); runCurrent()
+        assertTrue(model.uiState.value.readSaved)
+        model.markRead(); runCurrent(); assertEquals(2, marks)
+    }
+
+    @Test fun oldReadingCompletionCannotChangeANewSelection() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) = detail.copy(responseId = responseId)
+            override suspend fun markRead(formId: String, responseId: String) {
+                withContext(NonCancellable) { gate.await() }
+            }
+        })
+        model.openRequest("form", "response"); runCurrent(); model.markRead(); runCurrent()
+        model.openRequest("form", "new"); runCurrent(); gate.complete(Unit); runCurrent()
+        assertFalse(model.uiState.value.readSaved)
+        assertEquals("new", model.uiState.value.detail?.responseId)
+    }
+
     private fun model(repository: RequestRepository, saved: SavedStateHandle = SavedStateHandle()) =
         RequestDetailViewModel(repository, saved).also { store.put("detail-${nextModel++}", it) }
 }

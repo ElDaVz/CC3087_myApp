@@ -8,5 +8,8 @@ data class RequestDetailUiState(
     val status: RequestDetailLoadStatus = RequestDetailLoadStatus.IDLE,
     val detail: RequestDetail? = null,
     val savingStatus: Boolean = false,
-    val statusSaveFailed: Boolean = false
+    val statusSaveFailed: Boolean = false,
+    val markingRead: Boolean = false,
+    val readSaved: Boolean = false,
+    val readSaveFailed: Boolean = false
 )

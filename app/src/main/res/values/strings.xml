@@ -317,4 +317,26 @@
     <string name="auth_too_many_attempts">Too many attempts. Try again later.</string>
     <string name="auth_network">Could not connect. Check your connection and try again.</string>
     <string name="auth_unexpected">Something went wrong. Try again.</string>
+    <string name="dashboard_title">Response dashboard</string>
+    <string name="dashboard_total">Total responses</string>
+    <string name="dashboard_recent">Recent responses</string>
+    <string name="dashboard_view_all">View all responses</string>
+    <string name="dashboard_all_forms">All forms</string>
+    <string name="dashboard_week">7 days</string>
+    <string name="dashboard_month">30 days</string>
+    <string name="dashboard_all_time">All time</string>
+    <string name="dashboard_period_empty">No responses match these filters.</string>
+    <string name="dashboard_evolution">Response activity</string>
+    <string name="dashboard_daily">Responses per day · Swipe to explore</string>
+    <string name="dashboard_monthly">Responses per month · Swipe to explore</string>
+    <string name="dashboard_chart_value">%1$s: %2$d responses</string>
+    <string name="dashboard_undated">%1$d responses without a date are included in the total, outside the chart.</string>
+    <string name="dashboard_unknown_count">Without status: %1$d</string>
+    <string name="dashboard_form_label">%1$s · %2$s</string>
+    <string name="dashboard_unread">Unread</string>
+    <string name="dashboard_new_responses">New responses to review</string>
+    <string name="dashboard_all_statuses">All statuses</string>
+    <string name="dashboard_unknown_status">Without status</string>
+    <string name="dashboard_read_error">Could not save reading status.</string>
+    <string name="dashboard_retry_read">Retry marking as read</string>
 </resources>
