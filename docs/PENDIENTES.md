@@ -9,7 +9,7 @@ Las prioridades del usuario son dashboard, Google, botones de Mis formularios y 
 | Orden | Entrega | Motivo y límite |
 |---|---|---|
 | 1 | Dashboard y respuestas nuevas (grupo 7) | Implementado en `feature/responses-dashboard`; verificación al final. |
-| 2 | Importación automática con imágenes (grupo 1) | Resuelve el paso de invitado a cuenta antes de añadir otra forma de acceso. |
+| 2 | Importación automática con imágenes (grupo 1) | Implementado en `feature/automatic-guest-import`; verificación al final. |
 | 3 | Cuenta y sincronización (grupo 2) | Presenta importación, progreso y reintentos en una cuenta clara y utilizable. |
 | 4 | Acceso con Google (grupo 10) | Reutiliza el contrato de incorporación y separación de cuentas anterior. |
 | 5 | Búsqueda, orden y fijados (grupo 5) | Da funcionalidad a búsqueda y más opciones de Mis formularios. |
@@ -22,11 +22,11 @@ Seguimiento de CI de navegación: el log aportado muestra `RootViewWithoutFocusE
 
 ## 1. Incorporación automática de borradores e imágenes
 
-- [ ] Al crear una cuenta desde una sesión invitada, incorporar automáticamente sus borradores a la cuenta y sustituir la selección manual como paso obligatorio. Definir el comportamiento del primer inicio de sesión en una cuenta existente, manteniendo separadas las cuentas previamente autenticadas.
-- [ ] Incluir las portadas e imágenes locales asociadas, conservando sus archivos privados cifrados y referencias al importar. Reutilizar referencias publicadas válidas cuando corresponda; incorporar una imagen a un borrador no debe publicarla ni subirla automáticamente a Cloudinary.
-- [ ] Hacer la incorporación recuperable ante cierre de app, falta de conexión o fallo parcial, sin duplicar formularios ni perder originales. Mostrar progreso, resultado y reintento cuando sea necesario.
+- [x] Tras confirmar registro o login desde invitado, incorporar automáticamente los borradores a la cuenta, incluida una cuenta existente después de cerrar sesión y volver a entrar. Sustituir la selección manual obligatoria y mantener separadas las cuentas previamente autenticadas.
+- [x] Conservar las portadas locales, sus derivados cifrados, referencias e intención de portada al incorporar. No reasignar publicaciones de otro propietario ni publicar o subir imágenes a Cloudinary por importar.
+- [x] Registrar la operación por cuenta en Room y transferir atómicamente, sin duplicados. Reanudar reservas pendientes tras reinicio o al volver a la cuenta, conservar originales ante fallos y mostrar progreso, resultado local y reintento en Mis formularios y Cuenta. La importación local no requiere red; la sincronización conserva su propio estado.
 
-Cambio de contrato: hoy los borradores de invitado no se transfieren automáticamente. Al implementar este grupo, actualizar ese contrato en `AGENTS.md`, conservar los límites entre propietarios y verificar cuenta nueva, cuenta existente, reintento e imágenes.
+Contrato actualizado en `AGENTS.md`: una autenticación explícita captura los borradores invitados disponibles y los reserva para el propietario confirmado antes de persistir la sesión; la transferencia ocurre después. Restaurar una sesión solo reanuda reservas existentes. Las reservas sobreviven al cierre de sesión y otra cuenta no puede apropiárselas. Se conservan las solicitudes de invitado en su partición original. Room v8→v9 no destruye datos. Ver resultados al final.
 
 ## 2. Perfil y navegación de regreso
 
@@ -89,6 +89,22 @@ Ideas adicionales por evaluar dentro de futuras entregas: título/descripción d
 - [ ] Añadir acceso con Google a través de `AuthRepository` y la integración Android apropiada; mantener el acceso por correo y como invitado. Configurar los clientes y las firmas necesarias sin guardar secretos en el repositorio.
 - [ ] Reutilizar la incorporación de borradores e imágenes del grupo 1 al entrar desde invitado, conservando sesión cifrada, cierre de sesión y aislamiento entre propietarios. Definir el comportamiento si el correo ya pertenece a una cuenta para evitar cuentas duplicadas.
 - [ ] Manejar cancelación, desconexión, proveedor no disponible y solicitudes duplicadas. Verificar en un entorno configurado el acceso y cambio de cuenta; los dobles de prueba no verifican por sí solos el acceso real con Google.
+
+## 11. Experiencia de consulta y gestión de respuestas
+
+- [ ] Mejorar la jerarquía visual del resumen, la bandeja y el detalle, manteniendo la identidad de FormLink. Facilitar la lectura de preguntas/respuestas y la gestión de estados, con controles accesibles y estados claros de carga, vacío y error.
+- [ ] Orientar el recorrido a elegir un formulario y consultar sus respuestas y métricas. Mantener también el resumen de todos los formularios; conservar formulario seleccionado, filtros y desplazamiento al abrir un detalle y volver.
+- [ ] Hacer más clara la relación entre filtros, estados de gestión y respuestas sin revisar; mantener el indicador independiente de los filtros y no marcar respuestas leídas solo por entrar en el resumen.
+
+Entrega futura independiente, sin cambiar las prioridades acordadas. Reutilizar el dashboard existente; cerrar este grupo con revisión claro/oscuro, texto grande, navegación y accesibilidad.
+
+## 12. Estadísticas por formulario y componentes
+
+- [ ] Añadir métricas útiles de las preguntas del formulario seleccionado: distribución y porcentajes para opciones/casillas, resumen de valores numéricos y evolución de fechas. Para texto libre, empezar por cantidades respondidas/vacías, sin enviar contenidos a Firebase Analytics.
+- [ ] Calcular desde snapshots de respuestas, conservando tipo de pregunta, identificadores de campo/opción y versión. Definir denominadores, ausencias y tratamiento de cambios de configuración antes de combinar resultados; no agrupar campos incompatibles solo porque tengan el mismo título.
+- [ ] Mantener estadísticas generales de todos los formularios para volumen, estados y evolución temporal, con filtros coherentes. No mezclar preguntas diferentes entre formularios ni presentar conversiones o tiempos de respuesta sin datos que los sustenten.
+
+Entrega futura independiente, coordinada con el grupo 11. El dashboard actual solo agrega resúmenes de solicitudes: estas estadísticas requieren una proyección apropiada de los componentes y respuestas, acotada al propietario.
 
 ## Otros pendientes y seguimiento existente
 
@@ -191,3 +207,34 @@ Comprobaciones realizadas:
 - Se instaló finalmente el APK debug con Firebase real mediante `adb install -r`, se detuvo el proceso y se abrió `MainActivity`: arranque en frío correcto. La huella SHA-256 del APK instalado coincide con la del artefacto comprobado. Se conservan Room v8, borradores, imágenes y sesión; no hubo desinstalación ni limpieza de almacenamiento.
 
 Pendiente de evidencia: login con la cuenta real del usuario y resultado de GitHub Actions. No se han dado por verificados mediante las pruebas locales. Los comandos `connectedDebugAndroidTest` anteriores se reservan para dispositivos de prueba; esta ejecución utilizó instalación con reemplazo e instrumentación directa para conservar los datos existentes.
+
+## Verificación de incorporación automática (2026-11-12)
+
+Implementado en `feature/automatic-guest-import` desde `main` actualizado. Tras registro o login confirmado se abre Mis formularios y se incorporan los borradores invitados capturados al enviar la autenticación. Una cuenta existente recibe el mismo tratamiento al volver a entrar. Se eliminó la selección manual obligatoria del perfil y se añadió un aviso accesible de incorporación en Mis formularios y Cuenta, con progreso, resultado local y reintento. El estado de sincronización remota se presenta por separado.
+
+Room v9 añade `guest_imports` mediante migración explícita no destructiva v8→v9. Las reservas se vinculan al propietario confirmado por Firebase antes de persistir la sesión; no transfieren todavía los borradores. Una vez confirmada la sesión persistida, el coordinador aplica propietario, revisión pendiente y finalización en una misma transacción local. Los trabajos de sincronización también reanudan la incorporación antes de enviar revisiones. Restaurar una sesión solo reanuda reservas existentes: no captura nuevos invitados. Las reservas sobreviven al cierre de sesión, quedan excluidas de nuevas capturas y otra cuenta no puede reemplazarlas.
+
+Se conservan identificadores, preguntas, fechas, intención y referencias de portada; no se copian ni descifran permanentemente los originales. Las portadas y sus derivados siguen cifrados en sus archivos privados. No se publican formularios ni se suben imágenes por incorporar. Las solicitudes históricas de invitado mantienen su partición. Los originales faltantes se conservan como referencias; esta entrega no implementa nuevos tipos de adjuntos ni recupera un archivo privado ya perdido.
+
+Comprobaciones realizadas:
+
+- Compilación Kotlin correcta. `testDebugUnitTest`: 167 pruebas, cero fallos, errores u omisiones. Las seis nuevas del coordinador cubren progreso, envíos simultáneos, reintento tras fallo, reconstrucción, cancelación, cambio de cuenta y fallo del planificador después del commit local.
+- `assembleDebug`, `assembleDebugAndroidTest` y `lintDebug` correctos con `-PfirebaseEmulators=true`, un worker y compilador Kotlin en proceso. La compilación predeterminada `compileDebugKotlin assembleDebug`, sin Firebase emulado, también pasó y quedó como artefacto final.
+- AVD temporal independiente `FormLink_Import_Test`, Android 17/API 37, sin utilizar los datos del AVD habitual. Con Firebase Auth/Firestore locales (`demo-formlink`), pasaron 21 pruebas instrumentadas, cero fallos, errores u omisiones: `GuestImportStoreTest` (4), `GuestImportAuthTest` (3), `GuestImportUiTest` (2), `RoomMigrationTest` (1), `BackendRootTest` (3), `RestBackendIntegrationTest` (3), `AuthScreenTest` (2) y `LocalRequestRepositoryTest` (3).
+- Se comprueban reapertura de una base SQLCipher con reservas pendientes, transferencia única, rollback total ante propietario incompatible, reservas de otra cuenta, borradores nuevos excluidos al restaurar y borradores eliminados. Original y derivado cifrados mantienen exactamente sus bytes tras importar; preguntas, fechas y referencias se conservan y los datos siguen pendientes de sincronización hasta confirmación remota.
+- Las pruebas con Firebase local verifican que un login fallido no reserva ni transfiere; registro y login existente preparan una operación que solo se transfiere después de la sesión; otra cuenta no puede apropiársela; una sesión reconstruida reanuda la operación. Una cancelación entre la reserva y la persistencia de sesión conserva originales y reserva para el siguiente login correcto. Se comprueba envío posterior del borrador al Firestore emulado sin publicación.
+- Compose verifica progreso, reintento, confirmación local sin afirmar sincronización, navegación y cierre de sesión disponibles durante la incorporación, ausencia de selección manual y el recorrido integrado invitado → registro → borrador incorporado → cierre de sesión sin exponerlo como invitado.
+- Migraciones desde v1/v2/v3/v6/v7/v8 hasta v9 conservan borradores y solicitudes; v8 conserva además la lectura existente. `git diff --check` y el comprobador del repositorio pasan. No se enviaron correos reales ni se realizaron subidas a Cloudinary.
+
+Pendiente de evidencia externa: GitHub Actions y prueba con cuenta real. La recepción de correo, Google Sign-In y revisión humana/lector de pantalla no se dan por verificados. No cambió la web. Los grupos 11 y 12 se añadieron como trabajo futuro para experiencia de respuestas y estadísticas por componentes, sin alterar prioridades ni marcarlos como realizados.
+
+Comandos de compilación y pruebas reproducibles:
+
+```sh
+./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug -PfirebaseEmulators=true --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process
+# Instalar ambos APK en un AVD dedicado; sustituir el serial si corresponde.
+adb -s emulator-5556 install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s emulator-5556 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore 'adb -s emulator-5556 shell am instrument -w -r -e backendEmulators true -e class com.uvg.cc3087.myapp.GuestImportStoreTest,com.uvg.cc3087.myapp.GuestImportAuthTest,com.uvg.cc3087.myapp.GuestImportUiTest,com.uvg.cc3087.myapp.RoomMigrationTest,com.uvg.cc3087.myapp.BackendRootTest,com.uvg.cc3087.myapp.RestBackendIntegrationTest,com.uvg.cc3087.myapp.AuthScreenTest,com.uvg.cc3087.myapp.LocalRequestRepositoryTest com.uvg.cc3087.myapp.test/androidx.test.runner.AndroidJUnitRunner'
+./gradlew compileDebugKotlin assembleDebug --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process
+```

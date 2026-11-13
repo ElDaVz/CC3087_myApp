@@ -18,7 +18,7 @@ Google Sign-In, incorporación automática de borradores, exportación e identid
 | Capa | Tecnologías y responsabilidad |
 |---|---|
 | Android | Kotlin, Jetpack Compose y Material 3; Activity, ViewModel, SavedStateHandle, coroutines y Flow. |
-| Datos locales | Room v8 sobre SQLCipher; clave y sesión protegidas mediante Android Keystore. Imágenes en archivos privados cifrados. |
+| Datos locales | Room v9 sobre SQLCipher; clave y sesión protegidas mediante Android Keystore. Imágenes en archivos privados cifrados. |
 | Sincronización | WorkManager y repositorios por propietario; adaptadores HTTPS para Firebase Authentication y Cloud Firestore. |
 | Publicación e imágenes | Firestore conserva la copia pública; Cloudinary recibe una imagen optimizada solo al publicar. |
 | Web | TypeScript, Vite y Firebase JS; Vitest y Playwright para pruebas. |
@@ -58,7 +58,7 @@ Configurar las opciones públicas de Firebase siguiendo `web/.env.example` y la 
 1. **Mis formularios** es la entrada. Crear un formulario nuevo o elegir una plantilla; editar título, preguntas y portada. Los cambios se guardan automáticamente.
 2. **Preview** valida y permite probar el formulario sin insertar solicitudes. **Continuar** valida y espera el último guardado antes de abrir Guardar/Compartir.
 3. Abrir el perfil para iniciar sesión, registrarse o recuperar contraseña. El mensaje «Revisa tu email» confirma la solicitud de recuperación; elegir la contraseña nueva ocurre en la página de Firebase y no inicia sesión automáticamente.
-4. En una cuenta, importar manualmente los borradores de invitado que se desee conservar allí. No se transfieren automáticamente ni se mezclan datos entre cuentas.
+4. Tras registrarse o iniciar sesión desde invitado, los borradores se incorporan automáticamente a esa cuenta. Mis formularios y Cuenta muestran progreso, resultado y reintento. Las imágenes siguen cifradas y privadas hasta publicar; la sincronización remota tiene su propio estado. Una operación pendiente queda reservada para su cuenta y se reanuda al volver a ella, sin mezclar propietarios.
 5. **Publicar** requiere cuenta y conexión. Tras confirmar el backend se puede copiar o compartir el enlace HTTPS. El cliente abre la web, completa y envía; solo se anuncia éxito tras la confirmación de Firestore.
 6. Consultar **Respuestas** para revisar indicadores y solicitudes. Abrir un detalle permite consultar su snapshot y cambiar su estado.
 
@@ -84,7 +84,7 @@ El punto rojo de **Respuestas** indica que hay solicitudes sin revisar en la cue
 - **Portadas:** originales y derivados privados permanecen cifrados; publicar puede subir una copia optimizada. Una portada pública recuperada de otro dispositivo se puede mostrar sin recuperar el original privado.
 - **Web:** ante un fallo conserva el identificador de intento en la pestaña para reintentar sin duplicar el envío. No guarda las respuestas en almacenamiento persistente del navegador ni confirma un envío fallido.
 
-La migración v7→v8 añade únicamente el historial local de lecturas. Se conservan esquemas y migraciones anteriores sin fallback destructivo. Cerrar sesión cambia el repositorio y destruye los ViewModels de la cuenta; las cachés locales permanecen aisladas por propietario.
+La migración v7→v8 añade el historial local de lecturas y v8→v9 registra las incorporaciones de borradores por cuenta. Se conservan esquemas y migraciones anteriores sin fallback destructivo. Cerrar sesión cambia el repositorio y destruye los ViewModels de la cuenta; las cachés locales permanecen aisladas por propietario.
 
 ## Pruebas y desarrollo
 

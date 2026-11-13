@@ -28,7 +28,7 @@
 ### Current local implementation
 
 - Firebase Auth and Firestore are optional integrations. Android controls encrypted Auth persistence through REST adapters. Missing project configuration keeps guest editing usable. Google Sign-In is not implemented.
-- Room schema v8 includes device-local, owner-scoped response reading history, publication metadata, account-owned request snapshots and a deduplicated Analytics ledger. Keep all exported schemas and explicit migrations v1→v8. Room uses SQLCipher with a key protected by Android Keystore; plaintext databases are converted without destructive fallback.
+- Room schema v9 includes owner-bound guest draft import reservations, device-local response reading history, publication metadata, account-owned request snapshots and a deduplicated Analytics ledger. Keep all exported schemas and explicit migrations v1→v9. Room uses SQLCipher with a key protected by Android Keystore; plaintext databases are converted without destructive fallback.
 - Original covers and derivatives stay in encrypted private files, never database blobs. On explicit publication, an optimized copy may be uploaded to Cloudinary; Room stores public image references and owner/form-scoped upload receipts. Continue validates and waits for the latest Room save. Preview is validation-only and never submits.
 - Publication is explicit and online. Private draft edits never change the public copy until republishing. Published web forms accept at most ten questions across the existing nine types. Published covers use Cloudinary; files, signatures and rating remain out of scope.
 - Public submissions are atomic: immutable response snapshot, two private validation groups and a non-sensitive receipt keyed by the stable attempt UUID. Never allow public response reads or mutations. Archive/delete removes public access while preserving existing responses.
@@ -49,6 +49,7 @@
 ### Authentication
 - Email/password uses Firebase Authentication REST behind AuthRepository with a Keystore-encrypted session. Google Sign-In remains planned.
 - Guests may create local-only drafts. Authenticated users own and synchronize their forms. Clear session ViewModels on account changes; never reuse another account’s repository or sync job.
+- On explicit guest sign-up/login, snapshot eligible guest draft IDs, reserve them for the confirmed Firebase owner before persisting the session, and transfer them only after the signed-in session is confirmed. Room commits ownership and completion together, retaining encrypted cover files and pending sync revisions. Reservations survive sign-out and restart; another account cannot claim them. Session restoration resumes existing reservations only. Import never publishes or uploads covers, and never transfers guest response snapshots.
 - UI code accesses authentication through an `AuthRepository`; it must not call Firebase APIs directly.
 
 ### Cloud data model
