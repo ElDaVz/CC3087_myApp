@@ -6,6 +6,7 @@ import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.remote.http.FirestoreRest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -14,8 +15,27 @@ import java.time.Instant
 class CloudRequestRepository(private val db: FormLinkDatabase, private val client: FirestoreRest,
     private val owner: String, private val currentOwner: () -> String?, private val schedule: (String) -> Unit) : RequestRepository {
     private fun checkSession() { if (currentOwner() != owner) throw CancellationException("Session changed") }
-    override fun observeRequests() = db.cloud().observeRequests(owner).map { rows -> checkSession(); rows.map { it.detail().toSummary() } }
-    override suspend fun getRequests(): List<RequestSummary> { checkSession(); return db.cloud().requests(owner).map { it.detail().toSummary() } }
+    private val readScope get() = "account:$owner"
+    override fun observeRequests() = combine(db.cloud().observeRequests(owner), db.requestReads().observe(readScope)) { rows, reads ->
+        checkSession()
+        val read = reads.map { it.formId to it.responseId }.toSet()
+        rows.map { it.summary((it.formId to it.responseId) in read) }
+    }
+    override suspend fun getRequests(): List<RequestSummary> = db.withTransaction {
+        checkSession()
+        val read = db.requestReads().get(readScope).map { it.formId to it.responseId }.toSet()
+        val rows = db.cloud().requests(owner).map { it.summary((it.formId to it.responseId) in read) }
+        checkSession()
+        rows
+    }
+    override suspend fun markRead(formId: String, responseId: String) = db.withTransaction {
+        checkSession()
+        checkNotNull(db.cloud().detail(owner, formId, responseId))
+        checkSession()
+        db.requestReads().markRead(RequestReadEntity(readScope, formId, responseId))
+        checkSession()
+    }
+    override fun requestRefresh() { checkSession(); schedule(owner) }
     override suspend fun getDetail(formId: String, responseId: String): RequestDetail? { checkSession(); return db.cloud().detail(owner, formId, responseId)?.detail() }
     override suspend fun updateStatus(formId: String, responseId: String, status: RequestStatus): RequestDetail {
         checkSession()
@@ -84,3 +104,8 @@ private fun RemoteRequestEntity.detail(): RequestDetail {
         })
     }, requestStatus = RequestStatus.valueOf(status))
 }
+
+private fun RemoteRequestEntity.summary(read: Boolean) = RequestSummary(
+    formId, responseId, formTitle, Instant.ofEpochMilli(submittedAt),
+    requestStatus = RequestStatus.entries.find { it.name == status }, isRead = read
+)

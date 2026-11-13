@@ -8,9 +8,10 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [FormDraftEntity::class, FormFieldEntity::class, RequestEntity::class, PublicationEntity::class, RemoteRequestEntity::class, AnalyticsEventEntity::class, CoverUploadEntity::class], version = 7, exportSchema = true)
+@Database(entities = [FormDraftEntity::class, FormFieldEntity::class, RequestEntity::class, PublicationEntity::class, RemoteRequestEntity::class, AnalyticsEventEntity::class, CoverUploadEntity::class, RequestReadEntity::class], version = 8, exportSchema = true)
 @TypeConverters(FieldOptionConverters::class)
 abstract class FormLinkDatabase : RoomDatabase() {
+    abstract fun requestReads(): RequestReadDao
     abstract fun drafts(): FormDraftDao
     abstract fun requests(): RequestDao
     abstract fun cloud(): CloudDao
@@ -62,12 +63,17 @@ abstract class FormLinkDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS cover_uploads (ownerId TEXT NOT NULL, formId TEXT NOT NULL, hash TEXT NOT NULL, url TEXT NOT NULL, publicId TEXT NOT NULL, PRIMARY KEY(ownerId, formId, hash))")
             }
         }
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS request_reads (scope TEXT NOT NULL, formId TEXT NOT NULL, responseId TEXT NOT NULL, PRIMARY KEY(scope, formId, responseId))")
+            }
+        }
         fun open(context: Context): FormLinkDatabase = Room.databaseBuilder(
             context.applicationContext,
             FormLinkDatabase::class.java,
             "formlink-drafts.db"
         ).openHelperFactory(com.uvg.cc3087.myapp.data.security.EncryptedDatabase.factory(context, "formlink-drafts.db"))
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
         // no usamos migraciones destructivas para resolver cambios futuros borrando formularios
     }
 }
