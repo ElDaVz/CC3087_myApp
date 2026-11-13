@@ -20,6 +20,8 @@ class RestFormSource(private val client: FirestoreRest) : RemoteFormSource {
     override suspend fun put(owner: String, form: FormDraft) {
         require(form.ownerId == owner)
         val existing = client.get(owner, "forms/${form.id}")
+        // A stale device must acknowledge its edit and then discard its local copy on fetch.
+        if (existing?.let(FirestoreRest::fields)?.get("deleted") == true) return
         val values = linkedMapOf<String, Any?>("ownerId" to owner, "title" to form.title,
             "fields" to form.fields.mapIndexed { index, field -> FormFieldWire.encode(field, index) },
             "createdAt" to Instant.ofEpochMilli(form.createdAt), "version" to ((existing?.let(FirestoreRest::fields)?.get("version") as? Number)?.toLong() ?: 0) + 1)
@@ -31,9 +33,15 @@ class RestFormSource(private val client: FirestoreRest) : RemoteFormSource {
             existing?.let { JSONObject().put("updateTime", it.getString("updateTime")) } ?: JSONObject().put("exists", false))))
     }
     override suspend fun delete(owner: String, id: String) {
+        val form = client.get(owner, "forms/$id") ?: return
         val published = client.get(owner, "publishedForms/$id")
-        if (published == null) client.commit(owner, listOf(JSONObject().put("delete", client.name("forms/$id"))))
-        else client.commit(owner, listOf(client.update("forms/$id", mapOf("deleted" to true, "status" to "ARCHIVED"), listOf("updatedAt")),
-            client.update("publishedForms/$id", mapOf("active" to false))))
+        val precondition = JSONObject().put("updateTime", form.getString("updateTime"))
+        if (published == null) client.commit(owner, listOf(JSONObject()
+            .put("delete", client.name("forms/$id")).put("currentDocument", precondition)))
+        else client.commit(owner, listOf(
+            client.update("forms/$id", mapOf("deleted" to true, "status" to "ARCHIVED"),
+                listOf("updatedAt"), precondition),
+            client.update("publishedForms/$id", mapOf("active" to false),
+                precondition = JSONObject().put("updateTime", published.getString("updateTime")))))
     }
 }

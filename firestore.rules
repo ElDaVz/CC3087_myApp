@@ -22,6 +22,9 @@ service cloud.firestore {
         && d.status in ['DRAFT','PUBLISHED','ARCHIVED']
         && d.createdAt is timestamp && d.updatedAt is timestamp
         && (d.publishedAt == null || d.publishedAt is timestamp)
+        && d.get('deleted', false) is bool
+        && (!d.get('deleted', false) || (d.status == 'ARCHIVED'
+          && (!exists(publicPath(id)) || getAfter(publicPath(id)).data.active == false)))
         && d.version is int && d.version > 0
         && (d.status != 'PUBLISHED' || (d.publishedAt is timestamp
           && getAfter(publicPath(id)).data.ownerId == d.ownerId
@@ -49,7 +52,7 @@ service cloud.firestore {
         && d.fingerprint is string && d.templateType is string && d.publishedAt is timestamp && d.firstPublishedAt is timestamp
         && d.title is string && d.title.size() > 0 && d.title.size() <= 200 && d.fields is list
         && d.fields.size() > 0 && d.fields.size() <= 10
-        && (!d.active || (f.status == 'PUBLISHED' && d.fields == f.fields && d.title == f.title && d.version == f.publishedVersion))
+        && (!d.active || (f.get('deleted', false) == false && f.status == 'PUBLISHED' && d.fields == f.fields && d.title == f.title && d.version == f.publishedVersion))
         && validField(fields[0])
         && (count <= 1 || validField(fields[1]))
         && (count <= 2 || validField(fields[2]))
@@ -137,7 +140,10 @@ service cloud.firestore {
       allow get: if signedIn() && (!exists(formPath(id)) || owns(resource.data));
       allow list: if owns(resource.data);
       allow create: if validForm(id) && request.resource.data.status == 'DRAFT';
-      allow update: if owns(resource.data) && validForm(id) && request.resource.data.ownerId == resource.data.ownerId;
+      allow update: if owns(resource.data) && validForm(id) && request.resource.data.ownerId == resource.data.ownerId
+        && (!resource.data.get('deleted', false) || request.resource.data == resource.data
+          || (request.resource.data.get('deleted', false) == true
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt'])));
       allow delete: if signedIn() && (!exists(formPath(id)) || (owns(resource.data) && !exists(publicPath(id))));
       match /responseChecks/{checkId} {
         allow create: if validGroup(id,checkId);

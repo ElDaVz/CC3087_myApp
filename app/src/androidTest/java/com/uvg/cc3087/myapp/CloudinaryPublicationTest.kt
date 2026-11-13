@@ -99,6 +99,23 @@ class CloudinaryPublicationTest {
             val fourth = publisher.publish(owner, removed)
             assertNull(fourth.coverUrl)
             assertNull(FirestoreRest.fields(client.get(owner, "publishedForms/$id")!!)["cover"])
+            // Deletion is retryable and stale devices cannot restore the publication.
+            source.delete(owner, id)
+            source.delete(owner, id)
+            assertEquals(true, FirestoreRest.fields(client.get(owner, "forms/$id")!!)["deleted"])
+            assertEquals(false, FirestoreRest.fields(client.get(owner, "publishedForms/$id")!!)["active"])
+            source.put(owner, removed.copy(title = "Stale edit"))
+            assertTrue(source.fetch(owner).none { it.id == id })
+            assertTrue(runCatching { publisher.publish(owner, removed) }.isFailure)
+            val engine = FormSyncEngine(local, source) { currentOwner }
+            assertEquals(SyncResult.SUCCESS, engine.sync(owner))
+            assertNull(local.get(owner, id))
+            // An unpublished draft can be removed repeatedly as well.
+            val unpublished = base.copy(id = "draft-${UUID.randomUUID()}")
+            source.put(owner, unpublished)
+            source.delete(owner, unpublished.id)
+            source.delete(owner, unpublished.id)
+            assertNull(client.get(owner, "forms/${unpublished.id}"))
             currentOwner = "another-owner"
             assertTrue(runCatching { publisher.publish(owner, removed) }.isFailure)
         } finally { db.close(); auth.signOut() }

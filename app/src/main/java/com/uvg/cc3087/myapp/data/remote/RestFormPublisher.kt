@@ -54,6 +54,7 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
         checkSession(owner)
         val privateDoc = checkNotNull(client.get(owner, "forms/${form.id}"))
         val remote = FirestoreRest.fields(privateDoc)
+        if (remote["deleted"] == true) throw PublicationException(PublicationError.FORM_NOT_FOUND)
         val oldPublicDoc = client.get(owner, "publishedForms/${form.id}")
         val oldPublic = oldPublicDoc?.let(FirestoreRest::fields)
         val previous = CoverAsset.fromWire(oldPublic?.get("cover"))

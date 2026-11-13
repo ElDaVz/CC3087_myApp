@@ -142,3 +142,38 @@ test('ten questions with a cover stay within rule evaluation limits',async()=>{
  const publicDb=environment.unauthenticatedContext().firestore();
  await assertSucceeds(response(publicDb,(await getDoc(doc(publicDb,'publishedForms/f'))).data(),Array(10).fill('5')));
 });
+
+
+test('deletion closes public access, preserves requests and receipts, and prevents revival', async () => {
+ const p = await publish();
+ const owner = environment.authenticatedContext('owner').firestore();
+ const publicDb = environment.unauthenticatedContext().firestore();
+ const id = '00000000-0000-4000-8000-000000000001';
+ await response(publicDb, p, ['Conservar']);
+ const remove = db => {
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'forms/f'), { deleted: true, status: 'ARCHIVED', updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'publishedForms/f'), { active: false });
+  return batch.commit();
+ };
+ await assertFails(remove(environment.authenticatedContext('other').firestore()));
+ await assertFails(remove(publicDb));
+ // The private tombstone and public closure must be committed together.
+ await assertFails(updateDoc(doc(owner, 'forms/f'), { deleted: true, status: 'ARCHIVED' }));
+ await assertSucceeds(remove(owner));
+ await assertSucceeds(remove(owner));
+ await assertFails(getDoc(doc(publicDb, 'publishedForms/f')));
+ await assertFails(response(publicDb, p, ['Tarde'], '00000000-0000-4000-8000-000000000002'));
+ assert.equal((await getDoc(doc(owner, `forms/f/responses/${id}`))).data().answers[0].value, 'Conservar');
+ await assertSucceeds(updateDoc(doc(owner, `forms/f/responses/${id}`), { status: 'COMPLETED' }));
+ await assertSucceeds(getDoc(doc(publicDb, `publishedForms/f/receipts/${id}`)));
+ await assertFails(deleteDoc(doc(owner, `forms/f/responses/${id}`)));
+ await assertFails(deleteDoc(doc(owner, 'forms/f')));
+ await assertFails(setDoc(doc(owner, 'forms/f'), draft('owner')));
+ await assertFails(updateDoc(doc(owner, 'forms/f'), { deleted: false }));
+ await assertFails(updateDoc(doc(owner, 'forms/f'), { title: 'Stale edit' }));
+ const revive = writeBatch(owner);
+ revive.update(doc(owner, 'forms/f'), { status: 'PUBLISHED', publishedVersion: 1 });
+ revive.update(doc(owner, 'publishedForms/f'), { active: true });
+ await assertFails(revive.commit());
+});

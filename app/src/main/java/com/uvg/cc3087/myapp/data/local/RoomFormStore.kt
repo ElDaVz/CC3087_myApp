@@ -40,8 +40,10 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
         val cover = database.withTransaction {
             val old = dao.getDraft(id) ?: return@withTransaction null
             check(old.form.ownerId == owner) { "Form is outside this session" }
+            if (old.form.deleted) return@withTransaction old.form.coverPath
             if (owner == null) dao.deleteDraft(id)
-            else dao.saveDraft(old.form.copy(deleted = true, revision = old.form.revision + 1), old.fields)
+            else dao.saveDraft(old.form.copy(deleted = true,
+                revision = old.form.revision + 1), emptyList())
             old.form.coverPath
         }
         cover?.let { cleanup(it) }

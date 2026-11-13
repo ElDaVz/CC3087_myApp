@@ -11,6 +11,58 @@ import org.junit.Test
 
 class RoomFormStoreTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    @Test fun deletionCascadesFieldsAndUnreferencedCoversButPreservesRequestsAndHistory() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+        val removed = mutableListOf<String>()
+        val covers = object : com.uvg.cc3087.myapp.data.repository.CoverStorage {
+            override suspend fun importImage(source: String) = error("unused")
+            override suspend fun delete(path: String) { removed += path }
+        }
+        try {
+            val local = RoomFormStore(db, covers)
+            val form = FormDraft("f", "Snapshot", listOf(FormFieldDraft("q", FormFieldType.TEXT, "Question")),
+                1, 1, coverPath = "covers/shared.jpg", ownerId = "a")
+            local.save("a", form)
+            local.save(null, form.copy(id = "guest", ownerId = null))
+            db.cloud().saveRequest(RemoteRequestEntity("a", "f", "r", "Snapshot", 1, "COMPLETED", "[]"))
+            val read = RequestReadEntity("account:a", "f", "r")
+            db.requestReads().markRead(read)
+            db.cloud().saveCoverUpload(CoverUploadEntity("a", "f", "hash", "url", "public-id"))
+            local.delete("a", "f")
+            assertNull(local.get("a", "f"))
+            assertTrue(local.observe("a").first().isEmpty())
+            assertTrue(db.drafts().getDraft("f")!!.fields.isEmpty())
+            assertTrue(removed.isEmpty()) // The guest still references the same file.
+            val pending = local.pending("a").single()
+            local.delete("a", "f")
+            assertEquals(pending.revision, local.pending("a").single().revision)
+            assertTrue(runCatching { local.save("a", form) }.isFailure)
+            local.delete(null, "guest")
+            assertEquals(listOf("covers/shared.jpg"), removed)
+            local.acknowledge("a", pending)
+            assertNull(db.drafts().getDraft("f"))
+            assertEquals("Snapshot", db.cloud().detail("a", "f", "r")!!.formTitle)
+            assertEquals(listOf(read), db.requestReads().get("account:a"))
+            assertNotNull(db.cloud().uploadedCover("a", "f", "hash"))
+        } finally { db.close() }
+    }
+
+    @Test fun accountDeletionReleasesPrivateCoverBeforeSynchronization() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+        val removed = mutableListOf<String>()
+        val covers = object : com.uvg.cc3087.myapp.data.repository.CoverStorage {
+            override suspend fun importImage(source: String) = error("unused")
+            override suspend fun delete(path: String) { removed += path }
+        }
+        try {
+            val local = RoomFormStore(db, covers)
+            local.save("a", FormDraft("f", "Title", emptyList(), 1, 1, "covers/private.jpg", "a"))
+            local.delete("a", "f")
+            assertEquals(listOf("covers/private.jpg"), removed)
+            assertTrue(local.pending("a").single().deleted)
+        } finally { db.close() }
+    }
+
     @Test fun latePublicationUpdatesSummariesAndCoverObserversWithinOwnerPartition() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
         try {
