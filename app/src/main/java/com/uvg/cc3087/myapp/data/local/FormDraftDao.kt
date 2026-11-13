@@ -39,6 +39,9 @@ abstract class FormDraftDao {
     @Query("UPDATE form_drafts SET syncedRevision = :revision WHERE id = :id AND ownerId = :owner AND revision = :revision AND deleted = 1")
     abstract suspend fun acknowledgeDeletion(owner: String, id: String, revision: Long): Int
 
+    @Query("UPDATE form_drafts SET ownerId = :owner, revision = revision + 1, syncedRevision = 0 WHERE id = :id AND ownerId IS NULL AND deleted = 0")
+    abstract suspend fun claimGuest(owner: String, id: String): Int
+
     @Upsert
     protected abstract suspend fun upsertForm(form: FormDraftEntity)
 
