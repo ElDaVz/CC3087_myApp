@@ -13,5 +13,8 @@ interface FormRepository {
     suspend fun publication(id: String): FormPublication? = null
     suspend fun publish(id: String): FormPublication = throw PublicationException(PublicationError.SETUP_REQUIRED)
     suspend fun archive(id: String) { throw PublicationException(PublicationError.UNAVAILABLE) }
+    /** Removes the form locally and queues public closure for account forms.
+     * Received request snapshots and reading history survive. Cloudinary assets are retained.
+     */
     suspend fun deleteDraft(id: String)
 }

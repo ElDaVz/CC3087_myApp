@@ -17,7 +17,8 @@ abstract class FormDraftDao {
     @Query("SELECT * FROM form_drafts WHERE id = :id")
     abstract suspend fun getDraft(id: String): FormDraftWithFields?
 
-    @Query("SELECT COUNT(*) FROM form_drafts WHERE coverPath = :path")
+    // Pending deletion rows retain paths for cleanup retries, not ownership of the file.
+    @Query("SELECT COUNT(*) FROM form_drafts WHERE coverPath = :path AND deleted = 0")
     abstract suspend fun coverReferences(path: String): Int
 
     @Transaction
