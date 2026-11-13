@@ -27,6 +27,14 @@ class BackendRootTest {
             androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
         val email = "ui-${java.util.UUID.randomUUID()}@example.com"
         val title = "Pedido UI ${java.util.UUID.randomUUID()}"
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        com.uvg.cc3087.myapp.di.AppContainer.initialize(context)
+        val services = com.uvg.cc3087.myapp.di.AppContainer.backend
+        val guestId = "guest-${java.util.UUID.randomUUID()}"
+        val guestTitle = "Invitado ${java.util.UUID.randomUUID()}"
+        kotlinx.coroutines.runBlocking {
+            services.local.save(null, com.uvg.cc3087.myapp.data.model.FormDraft(guestId, guestTitle, emptyList(), 1, 1))
+        }
         compose.setContent { SpanishTestTheme { FormLinkApp() } }
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Crear una cuenta nueva").performScrollTo().performClick()
@@ -35,7 +43,16 @@ class BackendRootTest {
         compose.onNodeWithText("Confirmar contraseña").performTextInput("password123")
         compose.onNode(hasText("Crear cuenta") and hasClickAction()).performScrollTo().performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Nuevo formulario").performClick()
+        compose.waitUntil(15_000) {
+            kotlinx.coroutines.runBlocking {
+                services.auth.state.value.let { state ->
+                    val uid = (state as? com.uvg.cc3087.myapp.data.model.AuthState.SignedIn)?.session?.userId
+                    uid != null && services.local.get(uid, guestId) != null
+                }
+            }
+        }
+        compose.onNodeWithText(guestTitle).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Nuevo formulario").performScrollTo().performClick()
         compose.onNodeWithText("Formulario de pedido").performClick()
         compose.onNode(hasSetTextAction() and hasText("Formulario de pedido")).performTextReplacement(title)
         compose.onNodeWithTag("editor-list").performScrollToNode(hasText("Continuar"))
@@ -49,6 +66,7 @@ class BackendRootTest {
         compose.onNodeWithText("Cerrar sesión").performScrollTo().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText(title).assertDoesNotExist()
+        compose.onNodeWithText(guestTitle).assertDoesNotExist()
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").performTextInput(email)
         compose.onNodeWithText("Contraseña").performTextInput("password123")

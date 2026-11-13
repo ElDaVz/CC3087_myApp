@@ -273,8 +273,10 @@
     <string name="auth_need_account">Crear una cuenta nueva</string>
     <string name="auth_continue_guest">Continuar como invitado</string>
     <string name="auth_sign_out">Cerrar sesión</string>
-    <string name="import_guest_notice">Los borradores de invitado permanecen locales hasta que los selecciones e importes a tu cuenta. Las portadas siguen siendo locales.</string>
-    <string name="import_selected">Importar borradores seleccionados</string>
+    <string name="guest_import_running">Incorporando tus borradores de invitado a esta cuenta…</string>
+    <string name="guest_import_complete">%1$d borradores de invitado incorporados a tu cuenta en este dispositivo. Las imágenes siguen siendo privadas hasta publicar. La sincronización tiene su propio estado.</string>
+    <string name="guest_import_error">No se pudieron incorporar tus borradores. Siguen guardados en este dispositivo y reservados para esta cuenta.</string>
+    <string name="guest_import_retry">Reintentar importación</string>
     <string name="account_failed">No se pudo completar la operación. Tus borradores siguen guardados; vuelve a intentar.</string>
     <string name="sync_retry">Sincronizar / reintentar</string>
     <string name="sync_error">Guardado localmente. Falló la sincronización; reintenta desde Cuenta.</string>

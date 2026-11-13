@@ -273,8 +273,10 @@
     <string name="auth_need_account">Create a new account</string>
     <string name="auth_continue_guest">Continue as guest</string>
     <string name="auth_sign_out">Sign out</string>
-    <string name="import_guest_notice">Guest drafts stay on this device until you select and import them into your account. Covers stay local.</string>
-    <string name="import_selected">Import selected drafts</string>
+    <string name="guest_import_running">Adding your guest drafts to this account…</string>
+    <string name="guest_import_complete">%1$d guest drafts added to your account on this device. Images remain private until you publish. Cloud synchronization has its own status.</string>
+    <string name="guest_import_error">Could not add your guest drafts. They remain saved on this device and reserved for this account.</string>
+    <string name="guest_import_retry">Retry import</string>
     <string name="account_failed">Could not complete the operation. Your drafts remain stored; retry.</string>
     <string name="sync_retry">Sync now / retry</string>
     <string name="sync_error">Saved locally. Synchronization failed; retry from Account.</string>

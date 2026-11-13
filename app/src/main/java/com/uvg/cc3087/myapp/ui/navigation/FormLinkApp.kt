@@ -105,7 +105,8 @@ internal fun FormLinkRoute(
     coverStorage: com.uvg.cc3087.myapp.data.repository.CoverStorage? = null,
     onAccountClick: (() -> Unit)? = null,
     syncMessage: String? = null,
-    analytics: com.uvg.cc3087.myapp.domain.telemetry.ProductAnalytics = com.uvg.cc3087.myapp.domain.telemetry.NoProductAnalytics
+    analytics: com.uvg.cc3087.myapp.domain.telemetry.ProductAnalytics = com.uvg.cc3087.myapp.domain.telemetry.NoProductAnalytics,
+    guestImportNotice: @Composable () -> Unit = {}
 ) {
     val resources = LocalResources.current
     // los viewmodels comparten el repositorio, no una copia de los formularios
@@ -137,6 +138,7 @@ internal fun FormLinkRoute(
         }
     }
     FormLinkContent(
+        guestImportNotice = guestImportNotice,
         dashboardState = dashboardState,
         onDashboardForm = dashboardModel::selectForm,
         onDashboardPeriod = dashboardModel::selectPeriod,
@@ -185,6 +187,7 @@ internal fun FormLinkRoute(
 
 @Composable
 private fun FormLinkContent(
+    guestImportNotice: @Composable () -> Unit = {},
     onPublish: (() -> Unit)? = null, onArchive: (() -> Unit)? = null,
     formsUiState: FormsUiState,
     chooseTemplateUiState: ChooseTemplateUiState,
@@ -281,6 +284,7 @@ private fun FormLinkContent(
     when (currentDestination) {
         AppDestination.FORMS -> {
             Forms(
+                guestImportNotice = guestImportNotice,
                 onAccountClick = onAccountClick,
                 syncMessage = syncMessage,
                 onResponsesClick = showDashboard,

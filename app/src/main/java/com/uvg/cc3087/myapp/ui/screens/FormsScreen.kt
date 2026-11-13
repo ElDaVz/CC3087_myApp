@@ -81,7 +81,8 @@ fun Forms(
     onDeleteFormClick: (FormSummary) -> Unit = {},
     onConfirmDeletion: () -> Unit = {},
     onDismissDeletion: () -> Unit = {},
-    onConsumeDeletionCompleted: () -> Unit = {}
+    onConsumeDeletionCompleted: () -> Unit = {},
+    guestImportNotice: @Composable () -> Unit = {}
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -164,6 +165,7 @@ fun Forms(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item(key = "guest-import") { guestImportNotice() }
             item(key = "forms-controls") {
                 FormsControls(
                     selectedFilter = uiState.selectedFilter,
