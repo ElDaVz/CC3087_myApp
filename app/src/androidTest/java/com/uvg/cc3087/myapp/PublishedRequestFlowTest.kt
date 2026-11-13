@@ -50,6 +50,13 @@ class PublishedRequestFlowTest {
             val requests = CloudRequestRepository(database, client, owner, { auth.state.value.userId }) {}
             requests.sync()
             assertEquals(1, requests.getRequests().size)
+            val initial = com.uvg.cc3087.myapp.domain.requests.responseDashboard(requests.getRequests(),
+                com.uvg.cc3087.myapp.domain.requests.ResponseFilter(), java.time.Instant.now(), java.time.ZoneId.systemDefault())
+            assertTrue(initial.hasUnread)
+            assertEquals(1, initial.counts[RequestStatus.PENDING])
+            requests.markRead(id, attempt)
+            requests.sync()
+            assertTrue(requests.getRequests().single().isRead)
             requests.updateStatus(id, attempt, RequestStatus.COMPLETED)
             requests.sync(); assertEquals(RequestStatus.COMPLETED, requests.getDetail(id, attempt)!!.requestStatus)
             requests.updateStatus(id, attempt, RequestStatus.PENDING); requests.sync()
@@ -58,6 +65,7 @@ class PublishedRequestFlowTest {
             publisher.archive(owner, id)
             assertTrue(runCatching { http.request("http://10.0.2.2:8080/v1/projects/demo-formlink/databases/(default)/documents/publishedForms/$id") }.isFailure)
             assertEquals("Publicado", requests.getDetail(id, attempt)!!.formTitle)
+            assertTrue(requests.getRequests().single().isRead)
             auth.signOut(); assertTrue(runCatching { requests.getDetail(id, attempt) }.isFailure)
         } finally { database.close(); auth.signOut() }
     }
