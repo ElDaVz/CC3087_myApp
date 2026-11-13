@@ -14,6 +14,10 @@ fun interface RequestRepository {
     /** Both IDs identify a response; null means not found. */
     suspend fun getDetail(formId: String, responseId: String): RequestDetail?
 
+    /** Local reading state only; requesting refresh schedules the existing sync mechanism. */
+    suspend fun markRead(formId: String, responseId: String) = Unit
+    fun requestRefresh() = Unit
+
     suspend fun getRequests(): List<RequestSummary> = throw RequestBackendUnavailableException()
     fun observeRequests(): Flow<List<RequestSummary>> = flow { emit(getRequests()) }
     suspend fun submit(form: FormDraft, responseId: String, answers: Map<String, FormAnswer>, locale: Locale): RequestDetail =

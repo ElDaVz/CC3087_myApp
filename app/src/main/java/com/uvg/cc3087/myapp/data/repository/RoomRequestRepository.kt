@@ -6,6 +6,7 @@ import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.domain.validation.FormDraftValidator
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -15,8 +16,18 @@ import java.util.Locale
 class RoomRequestRepository(private val database: FormLinkDatabase) : RequestRepository {
     private val dao get() = database.requests()
     override suspend fun getDetail(formId: String, responseId: String) = dao.getDetail(formId, responseId)?.toDetail()
-    override suspend fun getRequests() = dao.getRequests().map { it.toSummary() }
-    override fun observeRequests() = dao.observeRequests().map { rows -> rows.map { it.toSummary() } }
+    override suspend fun getRequests() = database.withTransaction {
+        val read = database.requestReads().get("guest").map { it.formId to it.responseId }.toSet()
+        dao.getRequests().map { it.toSummary().copy(isRead = (it.formId to it.responseId) in read) }
+    }
+    override fun observeRequests() = combine(dao.observeRequests(), database.requestReads().observe("guest")) { rows, reads ->
+        val read = reads.map { it.formId to it.responseId }.toSet()
+        rows.map { it.toSummary().copy(isRead = (it.formId to it.responseId) in read) }
+    }
+    override suspend fun markRead(formId: String, responseId: String) = database.withTransaction {
+        checkNotNull(dao.getDetail(formId, responseId))
+        database.requestReads().markRead(RequestReadEntity("guest", formId, responseId))
+    }
 
     override suspend fun submit(form: FormDraft, responseId: String, answers: Map<String, FormAnswer>, locale: Locale): RequestDetail =
         database.withTransaction {

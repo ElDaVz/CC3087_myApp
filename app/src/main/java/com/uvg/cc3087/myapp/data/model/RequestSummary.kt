@@ -8,7 +8,8 @@ data class RequestSummary(
     val formTitle: String,
     val submittedAt: Instant?,
     val statusLabel: String? = null,
-    val requestStatus: RequestStatus? = null
+    val requestStatus: RequestStatus? = null,
+    val isRead: Boolean = false
 ) {
     // A response ID is unique within its form, not across all forms.
     val key: String get() = "$formId/$responseId"

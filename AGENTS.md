@@ -28,11 +28,12 @@
 ### Current local implementation
 
 - Firebase Auth and Firestore are optional integrations. Android controls encrypted Auth persistence through REST adapters. Missing project configuration keeps guest editing usable. Google Sign-In is not implemented.
-- Room schema v7 includes publication metadata, account-owned request snapshots and a deduplicated Analytics ledger. Keep all exported schemas and explicit migrations v1→v7. Room uses SQLCipher with a key protected by Android Keystore; plaintext databases are converted without destructive fallback.
+- Room schema v8 includes device-local, owner-scoped response reading history, publication metadata, account-owned request snapshots and a deduplicated Analytics ledger. Keep all exported schemas and explicit migrations v1→v8. Room uses SQLCipher with a key protected by Android Keystore; plaintext databases are converted without destructive fallback.
 - Original covers and derivatives stay in encrypted private files, never database blobs. On explicit publication, an optimized copy may be uploaded to Cloudinary; Room stores public image references and owner/form-scoped upload receipts. Continue validates and waits for the latest Room save. Preview is validation-only and never submits.
 - Publication is explicit and online. Private draft edits never change the public copy until republishing. Published web forms accept at most ten questions across the existing nine types. Published covers use Cloudinary; files, signatures and rating remain out of scope.
 - Public submissions are atomic: immutable response snapshot, two private validation groups and a non-sensitive receipt keyed by the stable attempt UUID. Never allow public response reads or mutations. Archive/delete removes public access while preserving existing responses.
 - Account requests use a separate owner-scoped Room projection and durable pending status revisions. Existing local requests remain in the guest partition; no automatic transfer. The mobile Responder entry remains disabled; answering uses the published web link.
+- Reading history is local to this device and partitioned by guest/account plus form/response IDs. Opening a successfully loaded detail marks it read; synchronization and status changes never reset reading history.
 - Requests store immutable title/question/answer snapshots and survive source draft edits or deletion. Status is `PENDING`, `IN_PROGRESS`, or `COMPLETED`; local transitions allow reopening requests.
 - Use a stable submission ID for retry/process restoration, validate before insertion, and derive counts from stored requests. UI depends on repository interfaces, not Room DAOs.
 
