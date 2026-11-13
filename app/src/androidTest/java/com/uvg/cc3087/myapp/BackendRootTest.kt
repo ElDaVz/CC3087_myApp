@@ -5,9 +5,23 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.uvg.cc3087.myapp.ui.navigation.FormLinkApp
 import org.junit.Rule
 import org.junit.Test
+import kotlinx.coroutines.flow.first
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class BackendRootTest {
-    @get:Rule val compose = createComposeRule()
+    // Sync emits from worker threads. Queue recomposition instead of resuming it unconfined there.
+    @get:Rule val compose = createComposeRule(effectContext = kotlinx.coroutines.test.StandardTestDispatcher())
+
+    @org.junit.Before @org.junit.After fun resetEmulatorSession() = kotlinx.coroutines.runBlocking {
+        if (BuildConfig.FIREBASE_EMULATORS) {
+            val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+            com.uvg.cc3087.myapp.di.AppContainer.initialize(context)
+            val services = com.uvg.cc3087.myapp.di.AppContainer.backend
+            val state = services.auth.state.first { it !is com.uvg.cc3087.myapp.data.model.AuthState.Initializing }
+            (state as? com.uvg.cc3087.myapp.data.model.AuthState.SignedIn)?.session?.userId?.let(services::cancel)
+            services.auth.signOut()
+        }
+    }
     @Test fun realSignupUsesWorkManagerAndSignOutClearsTheAccountEditor() {
         org.junit.Assume.assumeTrue(BuildConfig.FIREBASE_EMULATORS &&
             androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
