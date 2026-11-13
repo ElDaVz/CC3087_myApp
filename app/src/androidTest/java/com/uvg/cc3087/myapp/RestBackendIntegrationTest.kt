@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp
 
+import android.content.ContextWrapper
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.remote.RestFormSource
@@ -9,14 +10,27 @@ import com.uvg.cc3087.myapp.data.security.DeviceCipher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
+import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.util.UUID
+import java.io.File
 
 class RestBackendIntegrationTest {
+    // Each test owns its encrypted session; never replace the installed app's session.
+    private val context by lazy {
+        object : ContextWrapper(InstrumentationRegistry.getInstrumentation().targetContext) {
+            private val sessionDirectory = File(cacheDir, "rest-auth-test-${UUID.randomUUID()}").apply { mkdirs() }
+            override fun getNoBackupFilesDir(): File = sessionDirectory
+        }
+    }
+
+    @After fun removeTestSession() {
+        context.noBackupFilesDir.deleteRecursively()
+    }
+
     @Test fun passwordResetUsesEmulatorCodeWithoutStartingSession() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
         val http = FirebaseHttp(true)
         val auth = RestAuthRepository("demo-api-key", DeviceCipher(context), http, true)
         auth.state.first { it !is AuthState.Initializing }; auth.signOut()
@@ -42,7 +56,6 @@ class RestBackendIntegrationTest {
     }
     @Test fun missingOrDifferentProjectConfigDoesNotRestoreAnEncryptedSession() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
-        val context=InstrumentationRegistry.getInstrumentation().targetContext
         val cipher=DeviceCipher(context)
         val auth=RestAuthRepository("demo-api-key",cipher,FirebaseHttp(true),true)
         auth.state.first { it !is AuthState.Initializing };auth.signOut()
@@ -58,7 +71,6 @@ class RestBackendIntegrationTest {
     }
     @Test fun encryptedRestSessionCanSignOutSignInAndRecoverOwnerForm() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
         var clock = System.currentTimeMillis()
         val auth = RestAuthRepository("demo-api-key", DeviceCipher(context), FirebaseHttp(true), true, now = { clock })
         auth.state.first { it !is AuthState.Initializing }
