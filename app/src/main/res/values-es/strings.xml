@@ -317,4 +317,26 @@
     <string name="auth_too_many_attempts">Demasiados intentos. Vuelve a intentar más tarde.</string>
     <string name="auth_network">No se pudo conectar. Revisa tu conexión y vuelve a intentar.</string>
     <string name="auth_unexpected">Ocurrió un error inesperado. Vuelve a intentar.</string>
+    <string name="dashboard_title">Dashboard de respuestas</string>
+    <string name="dashboard_total">Total de respuestas</string>
+    <string name="dashboard_recent">Respuestas recientes</string>
+    <string name="dashboard_view_all">Ver todas las respuestas</string>
+    <string name="dashboard_all_forms">Todos los formularios</string>
+    <string name="dashboard_week">7 días</string>
+    <string name="dashboard_month">30 días</string>
+    <string name="dashboard_all_time">Todo</string>
+    <string name="dashboard_period_empty">No hay respuestas para estos filtros.</string>
+    <string name="dashboard_evolution">Evolución de respuestas</string>
+    <string name="dashboard_daily">Respuestas por día · Desliza para explorar</string>
+    <string name="dashboard_monthly">Respuestas por mes · Desliza para explorar</string>
+    <string name="dashboard_chart_value">%1$s: %2$d respuestas</string>
+    <string name="dashboard_undated">El total incluye %1$d respuestas sin fecha que no aparecen en la gráfica.</string>
+    <string name="dashboard_unknown_count">Sin estado: %1$d</string>
+    <string name="dashboard_form_label">%1$s · %2$s</string>
+    <string name="dashboard_unread">Sin revisar</string>
+    <string name="dashboard_new_responses">Hay respuestas nuevas por revisar</string>
+    <string name="dashboard_all_statuses">Todos los estados</string>
+    <string name="dashboard_unknown_status">Sin estado</string>
+    <string name="dashboard_read_error">No se pudo guardar la lectura.</string>
+    <string name="dashboard_retry_read">Reintentar marcar como revisada</string>
 </resources>

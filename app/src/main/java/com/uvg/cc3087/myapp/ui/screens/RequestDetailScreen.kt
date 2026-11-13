@@ -55,7 +55,8 @@ fun RequestDetailScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     isDemo: Boolean = false,
-    onStatusChange: (RequestStatus) -> Unit = {}
+    onStatusChange: (RequestStatus) -> Unit = {},
+    onRetryRead: () -> Unit = {}
 ) {
     Scaffold(
         modifier = modifier,
@@ -83,6 +84,12 @@ fun RequestDetailScreen(
             val detail = uiState.detail
             if (uiState.status == RequestDetailLoadStatus.CONTENT && detail != null) {
                 item { RequestMetadata(detail) }
+                if (uiState.readSaveFailed) item {
+                    Column {
+                        Text(stringResource(R.string.dashboard_read_error), color = MaterialTheme.colorScheme.error)
+                        OutlinedButton(onClick = onRetryRead, enabled = !uiState.markingRead) { Text(stringResource(R.string.dashboard_retry_read)) }
+                    }
+                }
                 if (detail.requestStatus != null) item {
                     Column {
                         Text(stringResource(R.string.request_change_status))

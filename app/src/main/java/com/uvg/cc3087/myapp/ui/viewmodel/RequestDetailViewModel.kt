@@ -25,6 +25,7 @@ class RequestDetailViewModel(
     private val mutableUiState = MutableStateFlow(RequestDetailUiState())
     val uiState = mutableUiState.asStateFlow()
     private var loadJob: Job? = null
+    private var readJob: Job? = null
     private var revision = 0L
     private var selection: Pair<String, String>? = null
 
@@ -47,6 +48,23 @@ class RequestDetailViewModel(
         selection?.let { (formId, responseId) -> load(formId, responseId) }
     }
 
+    fun markRead() {
+        val state = mutableUiState.value
+        val detail = state.detail ?: return
+        if (state.status != RequestDetailLoadStatus.CONTENT || state.readSaved || state.markingRead) return
+        val stamp = revision
+        mutableUiState.value = state.copy(markingRead = true, readSaveFailed = false)
+        readJob = viewModelScope.launch {
+            try {
+                repository.markRead(detail.formId, detail.responseId)
+                if (stamp == revision) mutableUiState.value = mutableUiState.value.copy(markingRead = false, readSaved = true)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (stamp == revision) mutableUiState.value = mutableUiState.value.copy(markingRead = false, readSaveFailed = true)
+            }
+        }
+    }
+
     fun changeStatus(status: com.uvg.cc3087.myapp.data.model.RequestStatus) {
         val state = mutableUiState.value
         val detail = state.detail ?: return
@@ -57,11 +75,11 @@ class RequestDetailViewModel(
             try {
                 val updated = repository.updateStatus(detail.formId, detail.responseId, status)
                 check(updated.formId == detail.formId && updated.responseId == detail.responseId)
-                if (revision == currentRevision) mutableUiState.value = state.copy(detail = updated, savingStatus = false, statusSaveFailed = false)
+                if (revision == currentRevision) mutableUiState.value = mutableUiState.value.copy(detail = updated, savingStatus = false, statusSaveFailed = false)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                if (revision == currentRevision) mutableUiState.value = state.copy(statusSaveFailed = true)
+                if (revision == currentRevision) mutableUiState.value = mutableUiState.value.copy(savingStatus = false, statusSaveFailed = true)
             }
         }
     }
@@ -69,6 +87,7 @@ class RequestDetailViewModel(
     private fun load(formId: String, responseId: String) {
         val currentRevision = ++revision
         loadJob?.cancel()
+        readJob?.cancel()
         // Clear previous answers immediately so another selection never shows stale client data.
         mutableUiState.value = RequestDetailUiState(RequestDetailLoadStatus.LOADING)
         if (formId.isBlank() || responseId.isBlank()) {

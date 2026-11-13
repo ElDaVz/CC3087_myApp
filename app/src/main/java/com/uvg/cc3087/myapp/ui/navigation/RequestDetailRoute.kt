@@ -28,5 +28,9 @@ fun RequestDetailRoute(
     // Do not render the previous selection while the new load effect is being scheduled.
     val visibleState = if (state.detail?.let { it.formId != formId || it.responseId != responseId } == true)
         RequestDetailUiState(RequestDetailLoadStatus.LOADING) else state
-    RequestDetailScreen(visibleState, onBack, model::retryLoading, isDemo = isDemo, onStatusChange = model::changeStatus)
+    RequestDetailScreen(visibleState, onBack, model::retryLoading, isDemo = isDemo, onStatusChange = model::changeStatus, onRetryRead = model::markRead)
+    LaunchedEffect(visibleState.status, formId, responseId) {
+        if (visibleState.status == RequestDetailLoadStatus.CONTENT) model.markRead()
+    }
+
 }
