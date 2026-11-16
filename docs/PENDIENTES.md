@@ -2,13 +2,28 @@
 
 Entregas propuestas de alcance moderado, ordenadas para poder completarlas por grupo. Cada grupo tendrá una rama propia y commits por tarea pequeña; los grupos dependientes se iniciarán desde `main` cuando su base esté integrada. Este checklist define trabajo futuro: no implica que las funciones estén implementadas o verificadas.
 
+## Estado de integración (2026-11-16)
+
+- **Implementado en main:** dashboard y lectura local de respuestas (grupo 7), autenticación por correo, recuperación de contraseña, recuperación de portadas y eliminación con confirmación. Eliminar retira el acceso público y conserva respuestas y tombstones remotos; no implica recuperación ni deshacer.
+- **Disponible en otra rama:** `feature/automatic-guest-import` contiene incorporación automática, reservas persistentes, imágenes y reintentos. Falta reactivarla selectivamente sobre la eliminación actual y verificarla; no está habilitada en main.
+- **Cambios locales sin integrar:** Room v9, entidad/esquema de reservas de importación y ajustes de pruebas de migración y solicitudes. Se conservan fuera de este commit documental.
+- **Pendiente:** Cuenta y estado real de sincronización, integración de importación, Google, búsqueda/orden/fijados, menú, recuperación/deshacer y restantes mejoras de presentación.
+
+La siguiente entrega después de Cuenta será navegación en otra rama: rutas tipadas y Navigation 3, conexión con ViewModels separada de presentación, conservando restauración, filtros, regreso, aislamiento por cuenta y estado cifrado del editor.
+
+## Experiencia de respuestas y estadísticas por componentes
+
+- [ ] Mejorar bandeja y detalle de respuestas: jerarquía, búsqueda, filtros, estados vacíos, accesibilidad y navegación conservando lectura e instantáneas.
+- [ ] Añadir estadísticas por pregunta/componente con agregación adecuada a cada tipo, valores ausentes y filtros consistentes; no registrar respuestas en Analytics.
+- [ ] Definir exportación y comprobar conjuntos vacíos, formularios editados/eliminados y separación de propietarios.
+
 ## Prioridad de ejecución acordada
 
 Las prioridades del usuario son dashboard, Google, botones de Mis formularios y cuenta con sincronización/importación, sin orden entre ellas. Se propone esta secuencia por dependencias, manteniendo entregas pequeñas:
 
 | Orden | Entrega | Motivo y límite |
 |---|---|---|
-| 1 | Dashboard y respuestas nuevas (grupo 7) | Implementado en `feature/responses-dashboard`; verificación al final. |
+| 1 | Dashboard y respuestas nuevas (grupo 7) | Integrado en main; evidencia histórica al final. |
 | 2 | Importación automática con imágenes (grupo 1) | Resuelve el paso de invitado a cuenta antes de añadir otra forma de acceso. |
 | 3 | Cuenta y sincronización (grupo 2) | Presenta importación, progreso y reintentos en una cuenta clara y utilizable. |
 | 4 | Acceso con Google (grupo 10) | Reutiliza el contrato de incorporación y separación de cuentas anterior. |
@@ -54,7 +69,9 @@ Cierre del grupo: comprobar claro/oscuro, texto grande, teclado, navegación atr
 
 ## 6. Eliminación con confirmación y recuperación
 
-- [ ] Definir qué significa eliminar: retirar acceso público, conservar o eliminar solicitudes históricas, tratamiento de imágenes y diferencia entre archivado y eliminación definitiva. El comportamiento actual conserva respuestas; no cambiarlo de forma implícita.
+Implementado en main: eliminación explícita confirmada, retirada de publicación y conservación de solicitudes. Siguen pendientes el menú ampliado, recuperación/deshacer y selección múltiple.
+
+- [x] Definir qué significa eliminar: retirar acceso público, conservar o eliminar solicitudes históricas, tratamiento de imágenes y diferencia entre archivado y eliminación definitiva. El comportamiento actual conserva respuestas; no cambiarlo de forma implícita.
 - [ ] Conectar «Eliminar» del menú de más opciones a una interacción clara. Evaluar deslizar para eliminar o confirmar, inspirado en Spotify; si el gesto resulta poco descubrible o incómodo, usar confirmación explícita. Mantener siempre una alternativa accesible mediante botón y contemplar selección múltiple cuando corresponda.
 - [ ] Añadir deshacer cuando la operación sea reversible; para una eliminación definitiva, mostrar sus consecuencias antes de confirmar. Evitar borrados accidentales y permitir reintentar ante fallos.
 
