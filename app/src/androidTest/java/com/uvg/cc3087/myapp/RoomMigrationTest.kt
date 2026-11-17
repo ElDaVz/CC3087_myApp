@@ -13,10 +13,10 @@ import org.junit.Test
 import java.util.UUID
 
 class RoomMigrationTest {
-    @Test fun versionTwoAndThreeKeepDraftsRequestsAndOptionalCovers() = runBlocking {
+    @Test fun existingVersionsKeepDraftsRequestsAndOptionalCovers() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val assets = InstrumentationRegistry.getInstrumentation().context.assets
-        for (version in listOf(2, 3, 6, 7, 8)) {
+        for (version in (2..9)) {
             val name = "migration-$version-${UUID.randomUUID()}.db"
             try {
                 val schema = assets.open("com.uvg.cc3087.myapp.data.local.FormLinkDatabase/$version.json")
@@ -36,11 +36,16 @@ class RoomMigrationTest {
                     old.execSQL("INSERT INTO form_drafts (id,title,createdAt,updatedAt) VALUES ('old','Conservar',1,2)")
                     if (version >= 3) old.execSQL("UPDATE form_drafts SET coverPath='covers/old.jpg' WHERE id='old'")
                     old.execSQL("INSERT INTO local_requests VALUES ('old','response','Snapshot',2,'PENDING','[]')")
-                    if (version >= 6) {
+                    if (version >= 5) {
                         old.execSQL("INSERT INTO form_publications (formId,ownerId,status,url,publishedAt,version,fingerprint,firstPublishedAt) VALUES ('old','owner','PUBLISHED','https://example.test/f/old',2,1,'hash',2)")
-                        old.execSQL("INSERT INTO analytics_events VALUES ('event','form_creation_started','{}',0)")
                     }
+                    if (version >= 6) old.execSQL("INSERT INTO analytics_events VALUES ('event','form_creation_started','{}',0)")
                     if (version >= 8) old.execSQL("INSERT INTO request_reads VALUES ('guest','old','response')")
+                    if (version >= 9) {
+                        old.execSQL("INSERT INTO guest_imports VALUES ('old','owner',0)")
+                        old.execSQL("INSERT INTO guest_imports VALUES ('completed','owner',1)")
+                        old.execSQL("INSERT INTO guest_imports VALUES ('other','other-owner',0)")
+                    }
                     old.version = version
                 }
                 val db = Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
@@ -50,13 +55,20 @@ class RoomMigrationTest {
                     assertEquals("Conservar", draft.title)
                     assertEquals("KEEP", draft.coverAction)
                     assertEquals(if (version >= 8) 1 else 0, db.requestReads().get("guest").size)
-                    assertTrue(db.guestImports().pending("owner").isEmpty())
+                    assertEquals(if (version >= 9) listOf("old") else emptyList<String>(),
+                        db.guestImports().pending("owner").map { it.formId })
+                    if (version >= 9) {
+                        assertEquals("owner", db.guestImports().get("old")!!.ownerId)
+                        assertTrue(db.guestImports().get("completed")!!.completed)
+                        assertEquals("other-owner", db.guestImports().get("other")!!.ownerId)
+                    }
+                    assertEquals(9, db.openHelper.readableDatabase.version)
                     assertNull(draft.ownerId)
-                    if (version >= 6) {
+                    if (version >= 5) {
                         assertEquals("hash", db.cloud().publication("owner", "old")!!.fingerprint)
                         assertNull(db.cloud().publication("owner", "old")!!.coverUrl)
-                        assertEquals(1, db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM analytics_events").use { it.moveToFirst(); it.getInt(0) })
                     }
+                    assertEquals(if (version >= 6) 1 else 0, db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM analytics_events").use { it.moveToFirst(); it.getInt(0) })
                     assertEquals(if (version >= 3) "covers/old.jpg" else null, draft.coverPath)
                     assertEquals("Snapshot", RoomRequestRepository(db).getDetail("old", "response")!!.formTitle)
                 } finally { db.close() }
