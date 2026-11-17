@@ -5,6 +5,11 @@
 - **Package Namespace**: `com.uvg.cc3087.myapp`
 - **Main Entrypoint**: `app/src/main/java/com/uvg/cc3087/myapp/MainActivity.kt`
 
+## Git workflow
+- Work in the original project checkout. Do not create temporary checkouts or worktrees in `/tmp` or elsewhere.
+- Handle small tasks with focused commits; use a dedicated branch for every new feature or fix.
+- Preserve unrelated local files and changes. Do not merge a pull request unless the user requests it.
+
 ## Verification & Build Commands
 - **Quick Kotlin compile check**: `./gradlew compileDebugKotlin`
 - **Build debug APK**: `./gradlew assembleDebug`

@@ -6,7 +6,7 @@ Entregas propuestas de alcance moderado, ordenadas para poder completarlas por g
 
 - **Implementado en main:** dashboard y lectura local de respuestas (grupo 7), autenticación por correo, recuperación de contraseña, recuperación de portadas y eliminación con confirmación. Eliminar retira el acceso público y conserva respuestas y tombstones remotos; no implica recuperación ni deshacer.
 - **Disponible en otra rama:** `feature/automatic-guest-import` contiene incorporación automática, reservas persistentes, imágenes y reintentos. Se reactiva sobre la eliminación actual en `feature/account-sync-clarity`, que añade Cuenta y sincronización; ver evidencia al final. No está habilitada en main.
-- **Cambios locales sin integrar:** Room v9, entidad/esquema de reservas de importación y ajustes de pruebas de migración y solicitudes. Se conservan fuera de este commit documental.
+- **Consolidado en esta rama:** esquema y reservas de Room v9, más las pruebas locales ampliadas de migración y cifrado. La entrega completa se revisa en una única PR; `main` no incorpora todavía estos cambios. Los archivos npm de la raíz y la copia antigua de Pendientes se conservan fuera de la entrega.
 - **Pendiente:** integrar y revisar la entrega de Cuenta/importación, navegación tipada, Google, búsqueda/orden/fijados, menú, recuperación/deshacer y restantes mejoras de presentación.
 
 La siguiente entrega después de Cuenta será navegación en otra rama: rutas tipadas y Navigation 3, conexión con ViewModels separada de presentación, conservando restauración, filtros, regreso, aislamiento por cuenta y estado cifrado del editor.
@@ -217,7 +217,7 @@ Pendiente de evidencia: login con la cuenta real del usuario y resultado de GitH
 
 ## Verificación de Cuenta e incorporación automática (2026-11-16)
 
-Entrega en `feature/account-sync-clarity`, checkout aislado `/tmp/formlink-account-sync`, desde el commit documental `dc436dd` de main. Se reutilizaron selectivamente los cuatro commits de implementación de `feature/automatic-guest-import`, conservando la eliminación con tombstones y la configuración actual de Cloudinary. Los cambios locales iniciales del checkout principal quedaron intactos; su esquema v9 coincide exactamente con el integrado aquí.
+Entrega en `feature/account-sync-clarity`, activa en la carpeta original del proyecto, desde el commit documental `dc436dd` de main. Se reutilizaron selectivamente los cuatro commits de implementación de `feature/automatic-guest-import`, conservando la eliminación con tombstones y la configuración actual de Cloudinary. Los cambios útiles del checkout principal se consolidan en esta rama: el esquema v9 coincide exactamente y se incorporan sus comprobaciones ampliadas de migraciones y conservación durante cifrado.
 
 Cuenta presenta identidad real, estado remoto y resultado local de incorporación en tarjetas independientes, con paleta morada clara/oscura, desplazamiento y regreso mediante flecha accesible. El cierre de sesión conserva datos y reservas, cancela trabajo por propietario y permite cancelar o confirmar cuando existen operaciones pendientes. No incorpora Google, perfil editable ni navegación nueva.
 
@@ -234,7 +234,7 @@ Comprobaciones locales:
 - Firebase local confirma importación privada sin publicación, eliminación con tombstone y fallo de escritura de un estado de respuesta inexistente: este último mantiene el contador pendiente y no adelanta la última comprobación. Las unitarias inyectan por separado fallos de formularios, publicaciones y respuestas.
 - Compose verifica acciones, flecha accesible, confirmación/cancelación de salida, importación y desplazamiento hasta cerrar sesión. Capturas sintéticas revisadas: [claro](evidence/account/account-light-top.png), [oscuro](evidence/account/account-dark-top.png), [texto al 150 %](evidence/account/account-large-text-top.png) y [controles inferiores con texto grande](evidence/account/account-large-text-bottom.png). Las capturas pueden mostrar posiciones intermedias de desplazamiento, no una página completa. No equivalen a revisión humana ni a uso con lector de pantalla.
 
-Límites: no se han desplegado servicios, enviado correos reales, subido imágenes reales ni ejecutado GitHub Actions. La restauración se comprueba recreando repositorios y reabriendo Room; no se afirma una prueba completa de muerte del proceso Android. Falta revisión humana, TalkBack y teclado físico. La web permanece sin cambios y no se repiten pruebas de navegador. Navegación tipada/Navigation 3 sigue pendiente en otra rama. La PR queda a cargo del usuario.
+Límites: no se han desplegado servicios, enviado correos reales, subido imágenes reales ni ejecutado GitHub Actions. La restauración se comprueba recreando repositorios y reabriendo Room; no se afirma una prueba completa de muerte del proceso Android. Falta revisión humana, TalkBack y teclado físico. La web permanece sin cambios y no se repiten pruebas de navegador. Navegación tipada/Navigation 3 sigue pendiente en otra rama. La entrega se publica en una única PR hacia `main`; la evaluación humana y el merge quedan a cargo del usuario.
 
 Comandos reproducibles (requieren Firebase local y un dispositivo de pruebas aislado):
 
@@ -244,3 +244,14 @@ adb -s emulator-5556 install -r app/build/outputs/apk/debug/app-debug.apk
 adb -s emulator-5556 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb -s emulator-5556 shell am instrument -w -r -e backendEmulators true -e class com.uvg.cc3087.myapp.AccountScreenTest,com.uvg.cc3087.myapp.AccountSyncIntegrationTest,com.uvg.cc3087.myapp.GuestImportStoreTest,com.uvg.cc3087.myapp.GuestImportAuthTest,com.uvg.cc3087.myapp.GuestImportUiTest,com.uvg.cc3087.myapp.AuthScreenTest,com.uvg.cc3087.myapp.BackendRootTest,com.uvg.cc3087.myapp.RoomMigrationTest,com.uvg.cc3087.myapp.NetworkConnectionTest com.uvg.cc3087.myapp.test/androidx.test.runner.AndroidJUnitRunner
 ```
+
+
+## Normalización de la entrega para revisión en GitHub
+
+`feature/account-sync-clarity` queda activa en la carpeta original del proyecto. El worktree temporal se retiró después de comprobar que todos sus commits estaban conservados. La configuración IDE distinta y el log local de aquel checkout se guardaron, fuera de Git, en `app/build/normalization-backup/retired-account-worktree/`. No se añadieron commits a `main` durante esta consolidación.
+
+Se incorporan las pruebas locales ampliadas: `RoomMigrationTest` cubre v2→v9 hasta v9 existente, incluida ahora v4/v5; `LocalRequestRepositoryTest` cubre v1→v9. `SecureStorageTest` conserva reservas pendientes, completadas y de otro propietario durante conversión a SQLCipher y dos reaperturas. El esquema v9 y su implementación coinciden con los cambios locales anteriores.
+
+Verificación de la rama consolidada desde la carpeta original: `compileDebugKotlin`, `testDebugUnitTest`, `lintDebug` y `assembleDebugAndroidTest` correctos; 184 unitarias sin fallos ni omisiones y Lint con cero errores, 72 advertencias y una sugerencia. Las pruebas instrumentadas modificadas se compilaron pero no se volvieron a ejecutar localmente: las 20 instrumentadas documentadas arriba corresponden a la revisión anterior. El workflow de la PR está configurado para ejecutar instrumentadas en Android 17 con Firebase local; su resultado debe comprobarse en GitHub.
+
+Los archivos npm de la raíz y la copia antigua de Pendientes permanecen fuera de la entrega. Las futuras tareas pequeñas se guardan con commits en el proyecto; las features y fixes usan ramas, sin nuevos worktrees temporales. La PR reúne Cuenta, sincronización, importación y las pruebas de compatibilidad, y se deja al usuario la evaluación humana y el merge.

@@ -84,7 +84,7 @@ El punto rojo de **Respuestas** indica que hay solicitudes sin revisar en la cue
 - **Portadas:** originales y derivados privados permanecen cifrados; publicar puede subir una copia optimizada. Una portada pública recuperada de otro dispositivo se puede mostrar sin recuperar el original privado.
 - **Web:** ante un fallo conserva el identificador de intento en la pestaña para reintentar sin duplicar el envío. No guarda las respuestas en almacenamiento persistente del navegador ni confirma un envío fallido.
 
-La migración v7→v8 añade el historial local de lecturas; v8→v9 añade reservas duraderas de incorporación por propietario. Se conservan esquemas y migraciones anteriores sin fallback destructivo. Cerrar sesión cambia el repositorio y destruye los ViewModels de la cuenta; las cachés locales permanecen aisladas por propietario.
+La migración v7→v8 añade el historial local de lecturas; v8→v9 añade reservas duraderas de incorporación por propietario y conserva la compatibilidad con bases v9 existentes. Se conservan esquemas y migraciones anteriores sin fallback destructivo. Cerrar sesión cambia el repositorio y destruye los ViewModels de la cuenta; las cachés locales permanecen aisladas por propietario.
 
 ## Pruebas y desarrollo
 
