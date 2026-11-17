@@ -41,6 +41,10 @@ class BackendServices(private val context: Context, private val database: FormLi
             try { analytics.flush() } catch (_: Exception) { /* Retry ledger next startup. */ }
         }
     }
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val connection = NetworkConnection(context)
+    private val pendingChanges = AccountPendingStore(database)
+    private val cancelledOwners = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     val sync = remote?.let { FormSyncEngine(local, it) { auth.state.value.userId } }
     val publisher by lazy { client?.let { com.uvg.cc3087.myapp.data.remote.RestFormPublisher(it, checkNotNull(remote), database,
         { auth.state.value.userId }, { block -> checkNotNull(sync).exclusive(block) }, analytics, covers,
@@ -48,10 +52,39 @@ class BackendServices(private val context: Context, private val database: FormLi
             com.uvg.cc3087.myapp.data.remote.CloudinaryCoverUploader(BuildConfig.CLOUDINARY_CLOUD_NAME, BuildConfig.CLOUDINARY_UPLOAD_PRESET)
         else null) } }
     val guestImports: GuestImportRepository = GuestDraftImporter(guestImportStore, { auth.state.value.userId }, ::schedule)
+    private val accountPass = AccountSyncPass({ auth.state.value.userId },
+        forms = { owner -> sync?.sync(owner) ?: SyncResult.RETRY },
+        publications = { owner -> checkNotNull(publisher).refresh(owner) },
+        responses = { owner -> checkNotNull(requests(owner)).sync() })
+    val accountSync = DefaultAccountSyncRepository(connection.connected, pendingChanges::observe, pendingChanges::snapshot,
+        { auth.state.value.userId }, ::schedule, synchronize = accountPass::run)
+    private val scheduler = BoundedSyncScheduler(
+        isCurrent = { auth.state.value.userId == it && it !in cancelledOwners },
+        unfinished = { owner -> WorkManager.getInstance(context).getWorkInfosForUniqueWork("form-sync-$owner")
+            .get().count { !it.state.isFinished } },
+        enqueue = { owner ->
+            val request = OneTimeWorkRequestBuilder<FormSyncWorker>()
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setInputData(workDataOf("owner" to owner)).addTag("form-sync-$owner").build()
+            WorkManager.getInstance(context).enqueueUniqueWork("form-sync-$owner", ExistingWorkPolicy.APPEND_OR_REPLACE, request).result.get()
+        },
+        cancelWork = { owner -> WorkManager.getInstance(context).cancelAllWorkByTag("form-sync-$owner").result.get() }
+    )
     init {
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+        scope.launch {
+            var previous: String? = null
             auth.state.map { it.userId }.distinctUntilChanged().collectLatest { owner ->
-                if (owner != null) guestImports.resume(owner)
+                previous?.let { old ->
+                    cancelledOwners.add(old)
+                    stopWork(old)
+                }
+                accountSync.resetSession()
+                previous = owner
+                if (owner != null) {
+                    cancelledOwners.remove(owner)
+                    guestImports.resume(owner)
+                    accountSync.requestSync(owner)
+                }
             }
         }
     }
@@ -59,18 +92,23 @@ class BackendServices(private val context: Context, private val database: FormLi
     fun requests(owner: String) = client?.let { CloudRequestRepository(database, it, owner, { auth.state.value.userId }, ::schedule) }
 
     fun schedule(owner: String) {
-        if (sync == null || auth.state.value.userId != owner) return
-        val request = OneTimeWorkRequestBuilder<FormSyncWorker>()
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .setInputData(workDataOf("owner" to owner)).addTag("form-sync-$owner").build()
-        try {
-            WorkManager.getInstance(context).enqueueUniqueWork("form-sync-$owner", ExistingWorkPolicy.APPEND_OR_REPLACE, request)
-        } catch (_: RuntimeException) {
-            // A scheduler failure cannot undo a committed local edit.
-            sync?.schedulingFailed(owner)
+        if (sync == null || auth.state.value.userId != owner || owner in cancelledOwners) return
+        scope.launch {
+            try { scheduler.request(owner) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { accountSync.schedulingFailed(owner) }
         }
     }
-    fun cancel(owner: String) { WorkManager.getInstance(context).cancelAllWorkByTag("form-sync-$owner") }
+    fun cancel(owner: String) {
+        if (!cancelledOwners.add(owner)) return
+        scope.launch { stopWork(owner) }
+    }
+
+    private suspend fun stopWork(owner: String) {
+        try { scheduler.cancel(owner) }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { accountSync.schedulingFailed(owner) }
+    }
 }
 
 class FormSyncWorker(context: Context, params: WorkerParameters, private val services: BackendServices) : CoroutineWorker(context, params) {
@@ -80,15 +118,9 @@ class FormSyncWorker(context: Context, params: WorkerParameters, private val ser
         if (services.auth.state.value.userId != owner) return Result.success()
         if (!services.guestImports.resume(owner)) return Result.retry()
         if (services.auth.state.value.userId != owner) return Result.success()
-        return when (services.sync?.sync(owner)) {
+        return when (services.accountSync.run(owner)) {
+            SyncResult.SUCCESS, SyncResult.SESSION_CHANGED -> Result.success()
             SyncResult.RETRY -> Result.retry()
-            SyncResult.SESSION_CHANGED -> Result.success()
-            else -> try {
-                services.publisher?.refresh(owner)
-                services.requests(owner)?.sync()
-                Result.success()
-            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch (_: Exception) { services.sync?.schedulingFailed(owner); Result.retry() }
         }
     }
 }
