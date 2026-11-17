@@ -18,7 +18,7 @@ Google Sign-In, incorporación automática de borradores, exportación e identid
 | Capa | Tecnologías y responsabilidad |
 |---|---|
 | Android | Kotlin, Jetpack Compose y Material 3; Activity, ViewModel, SavedStateHandle, coroutines y Flow. |
-| Datos locales | Room v8 sobre SQLCipher; clave y sesión protegidas mediante Android Keystore. Imágenes en archivos privados cifrados. |
+| Datos locales | Room v9 sobre SQLCipher; clave y sesión protegidas mediante Android Keystore. Imágenes en archivos privados cifrados. |
 | Sincronización | WorkManager y repositorios por propietario; adaptadores HTTPS para Firebase Authentication y Cloud Firestore. |
 | Publicación e imágenes | Firestore conserva la copia pública; Cloudinary recibe una imagen optimizada solo al publicar. |
 | Web | TypeScript, Vite y Firebase JS; Vitest y Playwright para pruebas. |
@@ -58,7 +58,7 @@ Configurar las opciones públicas de Firebase siguiendo `web/.env.example` y la 
 1. **Mis formularios** es la entrada. Crear un formulario nuevo o elegir una plantilla; editar título, preguntas y portada. Los cambios se guardan automáticamente.
 2. **Preview** valida y permite probar el formulario sin insertar solicitudes. **Continuar** valida y espera el último guardado antes de abrir Guardar/Compartir.
 3. Abrir el perfil para iniciar sesión, registrarse o recuperar contraseña. El mensaje «Revisa tu email» confirma la solicitud de recuperación; elegir la contraseña nueva ocurre en la página de Firebase y no inicia sesión automáticamente.
-4. En una cuenta, importar manualmente los borradores de invitado que se desee conservar allí. No se transfieren automáticamente ni se mezclan datos entre cuentas.
+4. Al registrarse o iniciar sesión desde invitado, los borradores disponibles se incorporan automáticamente a la cuenta confirmada, con sus imágenes privadas cifradas. Cuenta muestra progreso, resultado y reintento de la incorporación, separado de la sincronización remota. Restaurar una sesión solo reanuda reservas existentes. No se importan solicitudes ni borradores eliminados; incorporar no publica ni sube imágenes.
 5. **Publicar** requiere cuenta y conexión. Tras confirmar el backend se puede copiar o compartir el enlace HTTPS. El cliente abre la web, completa y envía; solo se anuncia éxito tras la confirmación de Firestore.
 6. Consultar **Respuestas** para revisar indicadores y solicitudes. Abrir un detalle permite consultar su snapshot y cambiar su estado.
 
@@ -84,7 +84,7 @@ El punto rojo de **Respuestas** indica que hay solicitudes sin revisar en la cue
 - **Portadas:** originales y derivados privados permanecen cifrados; publicar puede subir una copia optimizada. Una portada pública recuperada de otro dispositivo se puede mostrar sin recuperar el original privado.
 - **Web:** ante un fallo conserva el identificador de intento en la pestaña para reintentar sin duplicar el envío. No guarda las respuestas en almacenamiento persistente del navegador ni confirma un envío fallido.
 
-La migración v7→v8 añade únicamente el historial local de lecturas. Se conservan esquemas y migraciones anteriores sin fallback destructivo. Cerrar sesión cambia el repositorio y destruye los ViewModels de la cuenta; las cachés locales permanecen aisladas por propietario.
+La migración v7→v8 añade el historial local de lecturas; v8→v9 añade reservas duraderas de incorporación por propietario. Se conservan esquemas y migraciones anteriores sin fallback destructivo. Cerrar sesión cambia el repositorio y destruye los ViewModels de la cuenta; las cachés locales permanecen aisladas por propietario.
 
 ## Pruebas y desarrollo
 
@@ -121,3 +121,11 @@ El workflow `.github/workflows/quality.yml` define compilación, unitarias, Lint
 - [Consultas de métricas](docs/analytics/metrics.sql).
 - [Checklist de QA](docs/QA_CHECKLIST.md).
 - [Entrega académica de la fase 3](docs/PHASE3_DELIVERY.md).
+
+### Cuenta y sincronización
+
+Cuenta muestra identidad, sincronización e incorporación local por separado. Distingue sin comprobar, en cola, esperando conexión, sincronizando, al día en la última comprobación y error. Los contadores separan borradores modificados, eliminaciones y cambios de estado de respuestas; las imágenes privadas requieren Publicar explícitamente.
+
+Solo se confirma una comprobación exitosa tras sincronizar formularios, refrescar publicaciones, sincronizar respuestas y verificar que no quedan revisiones pendientes en Room. La hora se conserva únicamente durante la sesión del proceso y se invalida al cambiar de sesión. WorkManager conserva como máximo dos trabajos sin terminar por cuenta: un pase activo y uno posterior; las revisiones pendientes también fuerzan reintento. Cerrar sesión cancela el trabajo de esa cuenta y conserva datos y reservas locales; si hay operaciones pendientes, permite cancelar la salida o continuar.
+
+Implementación en `feature/account-sync-clarity`; verificación y límites en [Pendientes](docs/PENDIENTES.md). La refactorización de navegación con rutas tipadas y Navigation 3 queda para otra rama.

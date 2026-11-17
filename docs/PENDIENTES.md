@@ -5,9 +5,9 @@ Entregas propuestas de alcance moderado, ordenadas para poder completarlas por g
 ## Estado de integración (2026-11-16)
 
 - **Implementado en main:** dashboard y lectura local de respuestas (grupo 7), autenticación por correo, recuperación de contraseña, recuperación de portadas y eliminación con confirmación. Eliminar retira el acceso público y conserva respuestas y tombstones remotos; no implica recuperación ni deshacer.
-- **Disponible en otra rama:** `feature/automatic-guest-import` contiene incorporación automática, reservas persistentes, imágenes y reintentos. Falta reactivarla selectivamente sobre la eliminación actual y verificarla; no está habilitada en main.
+- **Disponible en otra rama:** `feature/automatic-guest-import` contiene incorporación automática, reservas persistentes, imágenes y reintentos. Se reactiva sobre la eliminación actual en `feature/account-sync-clarity`, que añade Cuenta y sincronización; ver evidencia al final. No está habilitada en main.
 - **Cambios locales sin integrar:** Room v9, entidad/esquema de reservas de importación y ajustes de pruebas de migración y solicitudes. Se conservan fuera de este commit documental.
-- **Pendiente:** Cuenta y estado real de sincronización, integración de importación, Google, búsqueda/orden/fijados, menú, recuperación/deshacer y restantes mejoras de presentación.
+- **Pendiente:** integrar y revisar la entrega de Cuenta/importación, navegación tipada, Google, búsqueda/orden/fijados, menú, recuperación/deshacer y restantes mejoras de presentación.
 
 La siguiente entrega después de Cuenta será navegación en otra rama: rutas tipadas y Navigation 3, conexión con ViewModels separada de presentación, conservando restauración, filtros, regreso, aislamiento por cuenta y estado cifrado del editor.
 
@@ -16,6 +16,10 @@ La siguiente entrega después de Cuenta será navegación en otra rama: rutas ti
 - [ ] Mejorar bandeja y detalle de respuestas: jerarquía, búsqueda, filtros, estados vacíos, accesibilidad y navegación conservando lectura e instantáneas.
 - [ ] Añadir estadísticas por pregunta/componente con agregación adecuada a cada tipo, valores ausentes y filtros consistentes; no registrar respuestas en Analytics.
 - [ ] Definir exportación y comprobar conjuntos vacíos, formularios editados/eliminados y separación de propietarios.
+
+## Entrega de Cuenta en esta rama
+
+En `feature/account-sync-clarity` se reactiva la incorporación automática sobre la eliminación de main y se añade Cuenta con identidad, sincronización e incorporación local separadas. Estas funciones siguen **sin integrar en main** hasta que el usuario integre la rama. Room v9 conserva exactamente el esquema del trabajo local previo.
 
 ## Prioridad de ejecución acordada
 
@@ -26,10 +30,11 @@ Las prioridades del usuario son dashboard, Google, botones de Mis formularios y 
 | 1 | Dashboard y respuestas nuevas (grupo 7) | Integrado en main; evidencia histórica al final. |
 | 2 | Importación automática con imágenes (grupo 1) | Resuelve el paso de invitado a cuenta antes de añadir otra forma de acceso. |
 | 3 | Cuenta y sincronización (grupo 2) | Presenta importación, progreso y reintentos en una cuenta clara y utilizable. |
-| 4 | Acceso con Google (grupo 10) | Reutiliza el contrato de incorporación y separación de cuentas anterior. |
-| 5 | Búsqueda, orden y fijados (grupo 5) | Da funcionalidad a búsqueda y más opciones de Mis formularios. |
-| 6 | Accesos de configuración (primera tarea del grupo 8) | Conecta perfil y estadísticas ya existentes; exportación tendrá su propia entrega. |
-| 7 | Eliminar desde más opciones (grupo 6) | Completa los botones tras definir conservación de datos y confirmación. |
+| 4 | Navegación tipada y Navigation 3 | Siguiente entrega después de Cuenta, en otra rama; conservar restauración y separación por cuenta. |
+| 5 | Acceso con Google (grupo 10) | Reutiliza el contrato de incorporación y separación de cuentas anterior. |
+| 6 | Búsqueda, orden y fijados (grupo 5) | Da funcionalidad a búsqueda y más opciones de Mis formularios. |
+| 7 | Accesos de configuración (primera tarea del grupo 8) | Conecta perfil y estadísticas ya existentes; exportación tendrá su propia entrega. |
+| — | Eliminar desde más opciones (grupo 6) | Completa los botones tras definir conservación de datos y confirmación. |
 
 Después: identidad visual (grupo 3), regreso tras publicación (grupo 4), preferencias/exportación restantes (grupo 8) e identidad empresarial/Open Graph (grupo 9). El banner empresarial sigue siendo una propuesta opcional.
 
@@ -37,19 +42,20 @@ Seguimiento de CI de navegación: el log aportado muestra `RootViewWithoutFocusE
 
 ## 1. Incorporación automática de borradores e imágenes
 
-- [ ] Al crear una cuenta desde una sesión invitada, incorporar automáticamente sus borradores a la cuenta y sustituir la selección manual como paso obligatorio. Definir el comportamiento del primer inicio de sesión en una cuenta existente, manteniendo separadas las cuentas previamente autenticadas.
-- [ ] Incluir las portadas e imágenes locales asociadas, conservando sus archivos privados cifrados y referencias al importar. Reutilizar referencias publicadas válidas cuando corresponda; incorporar una imagen a un borrador no debe publicarla ni subirla automáticamente a Cloudinary.
-- [ ] Hacer la incorporación recuperable ante cierre de app, falta de conexión o fallo parcial, sin duplicar formularios ni perder originales. Mostrar progreso, resultado y reintento cuando sea necesario.
+- [x] Al crear una cuenta desde una sesión invitada, incorporar automáticamente sus borradores a la cuenta y sustituir la selección manual como paso obligatorio. Definir el comportamiento del primer inicio de sesión en una cuenta existente, manteniendo separadas las cuentas previamente autenticadas.
+- [x] Incluir las portadas e imágenes locales asociadas, conservando sus archivos privados cifrados y referencias al importar. Reutilizar referencias publicadas válidas cuando corresponda; incorporar una imagen a un borrador no debe publicarla ni subirla automáticamente a Cloudinary.
+- [x] Hacer la incorporación recuperable ante cierre de app, falta de conexión o fallo parcial, sin duplicar formularios ni perder originales. Mostrar progreso, resultado y reintento cuando sea necesario.
 
-Cambio de contrato: hoy los borradores de invitado no se transfieren automáticamente. Al implementar este grupo, actualizar ese contrato en `AGENTS.md`, conservar los límites entre propietarios y verificar cuenta nueva, cuenta existente, reintento e imágenes.
+Contrato de esta rama: registro e inicio de sesión explícitos desde invitado reservan e incorporan borradores tras confirmar la cuenta. Restaurar la sesión solo reanuda reservas anteriores. Se conservan límites entre propietarios; importar no publica ni sube imágenes. `main` conserva el comportamiento anterior hasta integrar esta entrega.
 
 ## 2. Perfil y navegación de regreso
 
-- [ ] Rediseñar el perfil tomando como referencia la imagen compartida: cabecera de identidad y opciones agrupadas en tarjetas o filas con iconos y jerarquía clara, usando morado, logo y tipografía de FormLink. Conservar sincronización y cierre de sesión; adaptar la importación al grupo 1. La referencia orienta la composición, sin añadir funciones inexistentes por copiar sus filas.
-- [ ] Mostrar el estado real de sincronización de la cuenta (pendiente, en curso, completado o fallo), con reintento y resultado de la incorporación automática de borradores e imágenes del grupo 1. Verificar reinicio, desconexión y cambio de cuenta sin mezclar datos.
-- [ ] Sustituir el texto «Volver» por una flecha con descripción accesible y área pulsable suficiente en perfil y autenticación; revisar la coherencia de los controles de regreso en el recorrido del editor y publicación.
+- [x] Rediseñar el perfil tomando como referencia la imagen compartida: cabecera de identidad y opciones agrupadas en tarjetas o filas con iconos y jerarquía clara, usando morado, logo y tipografía de FormLink. Conservar sincronización y cierre de sesión; adaptar la importación al grupo 1. La referencia orienta la composición, sin añadir funciones inexistentes por copiar sus filas.
+- [x] Mostrar el estado real de sincronización de la cuenta (pendiente, en curso, completado o fallo), con reintento y resultado de la incorporación automática de borradores e imágenes del grupo 1. Verificar reinicio, desconexión y cambio de cuenta sin mezclar datos.
+- [x] Sustituir el texto «Volver» por una flecha con descripción accesible y área pulsable suficiente en perfil y autenticación.
+- [ ] Revisar la coherencia de los controles de regreso en el recorrido del editor y publicación.
 
-Cierre del grupo: comprobar claro/oscuro, texto grande, teclado, navegación atrás y separación entre perfil y autenticación.
+Cuenta y autenticación: verificación local al final. Quedan revisión humana, lector de pantalla, teclado físico y coherencia del regreso en editor/publicación.
 
 ## 3. Identidad visual en Mis formularios y login
 
@@ -208,3 +214,33 @@ Comprobaciones realizadas:
 - Se instaló finalmente el APK debug con Firebase real mediante `adb install -r`, se detuvo el proceso y se abrió `MainActivity`: arranque en frío correcto. La huella SHA-256 del APK instalado coincide con la del artefacto comprobado. Se conservan Room v8, borradores, imágenes y sesión; no hubo desinstalación ni limpieza de almacenamiento.
 
 Pendiente de evidencia: login con la cuenta real del usuario y resultado de GitHub Actions. No se han dado por verificados mediante las pruebas locales. Los comandos `connectedDebugAndroidTest` anteriores se reservan para dispositivos de prueba; esta ejecución utilizó instalación con reemplazo e instrumentación directa para conservar los datos existentes.
+
+## Verificación de Cuenta e incorporación automática (2026-11-16)
+
+Entrega en `feature/account-sync-clarity`, checkout aislado `/tmp/formlink-account-sync`, desde el commit documental `dc436dd` de main. Se reutilizaron selectivamente los cuatro commits de implementación de `feature/automatic-guest-import`, conservando la eliminación con tombstones y la configuración actual de Cloudinary. Los cambios locales iniciales del checkout principal quedaron intactos; su esquema v9 coincide exactamente con el integrado aquí.
+
+Cuenta presenta identidad real, estado remoto y resultado local de incorporación en tarjetas independientes, con paleta morada clara/oscura, desplazamiento y regreso mediante flecha accesible. El cierre de sesión conserva datos y reservas, cancela trabajo por propietario y permite cancelar o confirmar cuando existen operaciones pendientes. No incorpora Google, perfil editable ni navegación nueva.
+
+`AccountSyncRepository` entrega seis estados y contadores separados de borradores, eliminaciones y revisiones de estado de respuestas. El éxito requiere formularios, publicaciones, respuestas y comprobación transaccional de pendientes. Las imágenes privadas no se contabilizan como subidas pendientes. La última comprobación vive solo en memoria, ligada a la sesión; se descartan resultados anteriores incluso al volver a la misma cuenta. WorkManager agrupa solicitudes en un máximo de dos trabajos sin terminar por propietario; los cambios durante un pase conservan su revisión pendiente y provocan reintento o un pase posterior.
+
+La incorporación reserva solo después de autenticar, se aplica atómicamente y conserva los archivos cifrados sin copiarlos ni subirlos. Restaurar la sesión reanuda reservas sin capturar nuevos invitados. Se omiten borradores eliminados antes de capturar o después de reservar; los tombstones impiden recrearlos desde editores antiguos. Room conserva esquemas y migraciones v1→v9, sin fallback destructivo.
+
+Comprobaciones locales:
+
+- Compilación Kotlin, APK debug y APK de pruebas correctos; 184 pruebas unitarias sin fallos ni omisiones. Cubren etapas remotas bloqueadas/fallidas, ausencia de éxito prematuro, revisiones durante un pase, coalescencia de cien solicitudes, cancelación, cuenta anterior, nueva sesión de la misma cuenta y reinicio del estado en memoria.
+- Android Lint (`lintDebug`): cero errores, 72 advertencias y una sugerencia; no se amplía el alcance para corregir esas advertencias.
+- Primera tanda de 19 instrumentadas en Pixel 9 Android 17/API 37, con datos temporales aislados y Firebase Auth/Firestore locales: cero fallos u omisiones. Incluye `AccountScreenTest` (3), `AccountSyncIntegrationTest` (1), `GuestImportStoreTest` (4), `GuestImportAuthTest` (3), `GuestImportUiTest` (2), `AuthScreenTest` (2), `BackendRootTest` (3) y `RoomMigrationTest` (1).
+- Tanda definitiva tras el último cambio: **20 instrumentadas correctas, sin fallos ni omisiones**, incluidas las diecinueve anteriores y `NetworkConnectionTest`. Esta última deshabilita y restablece Wi-Fi/datos del dispositivo temporal, comprueba la espera por conexión y evita afirmar éxito al reconectar. El emulador se había cerrado antes de esta tanda; se reinició con datos temporales y se reinstalaron los APKs de pruebas.
+- Firebase local confirma importación privada sin publicación, eliminación con tombstone y fallo de escritura de un estado de respuesta inexistente: este último mantiene el contador pendiente y no adelanta la última comprobación. Las unitarias inyectan por separado fallos de formularios, publicaciones y respuestas.
+- Compose verifica acciones, flecha accesible, confirmación/cancelación de salida, importación y desplazamiento hasta cerrar sesión. Capturas sintéticas revisadas: [claro](evidence/account/account-light-top.png), [oscuro](evidence/account/account-dark-top.png), [texto al 150 %](evidence/account/account-large-text-top.png) y [controles inferiores con texto grande](evidence/account/account-large-text-bottom.png). Las capturas pueden mostrar posiciones intermedias de desplazamiento, no una página completa. No equivalen a revisión humana ni a uso con lector de pantalla.
+
+Límites: no se han desplegado servicios, enviado correos reales, subido imágenes reales ni ejecutado GitHub Actions. La restauración se comprueba recreando repositorios y reabriendo Room; no se afirma una prueba completa de muerte del proceso Android. Falta revisión humana, TalkBack y teclado físico. La web permanece sin cambios y no se repiten pruebas de navegador. Navegación tipada/Navigation 3 sigue pendiente en otra rama. La PR queda a cargo del usuario.
+
+Comandos reproducibles (requieren Firebase local y un dispositivo de pruebas aislado):
+
+```sh
+./gradlew compileDebugKotlin testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug -PfirebaseEmulators=true --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process
+adb -s emulator-5556 install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s emulator-5556 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s emulator-5556 shell am instrument -w -r -e backendEmulators true -e class com.uvg.cc3087.myapp.AccountScreenTest,com.uvg.cc3087.myapp.AccountSyncIntegrationTest,com.uvg.cc3087.myapp.GuestImportStoreTest,com.uvg.cc3087.myapp.GuestImportAuthTest,com.uvg.cc3087.myapp.GuestImportUiTest,com.uvg.cc3087.myapp.AuthScreenTest,com.uvg.cc3087.myapp.BackendRootTest,com.uvg.cc3087.myapp.RoomMigrationTest,com.uvg.cc3087.myapp.NetworkConnectionTest com.uvg.cc3087.myapp.test/androidx.test.runner.AndroidJUnitRunner
+```
