@@ -1,5 +1,7 @@
 # Solicitudes guardadas en el dispositivo
 
+Documento histórico de la entrega local v2. La app actual incluye cuentas, publicación web y Room v9; consultar `AGENTS.md` y `PENDIENTES.md` para el contrato vigente. La limpieza posterior conserva estos escenarios sobre los repositorios de producción.
+
 ## Disponibilidad y recorrido
 
 Room solo tiene borradores; no hay estado ni flujo de publicación. **Responder** está deshabilitado en las tarjetas y la navegación normal no conecta con `SubmitRequestRoute`. Habilitarlo requiere primero implementar publicación y comprobar que el formulario está publicado. El envío público queda fuera de esta integración.
@@ -16,7 +18,7 @@ La configuración debug **DetalleSolicitudDemo** abre ejemplos de lectura identi
 - Cada solicitud conserva el título y las etiquetas/valores de las preguntas como una instantánea JSON, además de IDs, fecha y estado. Las opciones conservan sus etiquetas y las casillas conservan su valor booleano.
 - `RoomRequestRepository` valida el formulario y las respuestas dentro de una transacción. Si el formulario cambió desde que se abrió, se pide volver a abrirlo; no se mezclan versiones.
 - Las solicitudes permanecen aunque se elimine el borrador original. No se implementa eliminación de solicitudes en esta entrega.
-- `RequestListViewModel` observa Room; `RoomFormRepository` combina formularios con conteos. Las pantallas no acceden directamente a la base.
+- Actualmente `ResponseDashboardViewModel` observa respuestas; `OfflineFirstFormRepository` utiliza `RoomFormStore` para combinar formularios con conteos y aislar propietarios. Las pantallas no acceden directamente a la base.
 - Los tres estados pueden seleccionarse libremente, incluyendo reabrir una solicitud completada.
 
 ## Límites
@@ -28,7 +30,7 @@ Los registros pertenecen a esta instalación de la app. No hay backend, autentic
 - `LocalRequestFlowTest`: confirmar que **Responder** está deshabilitado para un borrador y que Preview no crea registros; capturar desde un fixture aislado, validar, guardar, abrir detalle, cambiar estado y comprobar conteos.
 - `LocalRequestRepositoryTest`: persistencia al reabrir la base en disco, instantáneas tras editar/eliminar el borrador, validación, IDs compuestos, reintentos sin duplicados y migración v1 → v2 conservando formularios y preguntas.
 - `SubmitRequestViewModelTest`: API de validación centralizada, doble toque, fallo/reintento y restauración de un envío ya guardado.
-- `RequestDetailViewModelTest`, `RequestListViewModelTest`, `RequestNavigationTest`, `RequestDetailScreenTest`: estados de carga/error, selección, restauración y navegación.
+- `RequestDetailViewModelTest`, `ResponseDashboardInboxTest`, `RequestNavigationTest`, `RequestDetailScreenTest`: estados de carga/error, selección, restauración y navegación. Los escenarios de la antigua bandeja se trasladaron al dashboard de producción.
 - `FormDraftFlowTest`: regresión del editor y guardado de borradores.
 
 Compilación y pruebas unitarias: `./gradlew compileDebugKotlin testDebugUnitTest compileDebugAndroidTestKotlin assembleDebug` con JDK 21. Ejecutar las instrumentadas con `./gradlew connectedDebugAndroidTest` en emulador o dispositivo; compilar su código no sustituye su ejecución. En Windows usar `gradlew.bat`.

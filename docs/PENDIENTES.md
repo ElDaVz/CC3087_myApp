@@ -4,12 +4,12 @@ Entregas propuestas de alcance moderado, ordenadas para poder completarlas por g
 
 ## Estado de integración (2026-11-16)
 
-- **Implementado en main:** dashboard y lectura local de respuestas (grupo 7), autenticación por correo, recuperación de contraseña, recuperación de portadas y eliminación con confirmación. Eliminar retira el acceso público y conserva respuestas y tombstones remotos; no implica recuperación ni deshacer.
-- **Disponible en otra rama:** `feature/automatic-guest-import` contiene incorporación automática, reservas persistentes, imágenes y reintentos. Se reactiva sobre la eliminación actual en `feature/account-sync-clarity`, que añade Cuenta y sincronización; ver evidencia al final. No está habilitada en main.
-- **Consolidado en esta rama:** esquema y reservas de Room v9, más las pruebas locales ampliadas de migración y cifrado. La entrega completa se revisa en una única PR; `main` no incorpora todavía estos cambios. Los archivos npm de la raíz y la copia antigua de Pendientes se conservan fuera de la entrega.
-- **Pendiente:** integrar y revisar la entrega de Cuenta/importación, navegación tipada, Google, búsqueda/orden/fijados, menú, recuperación/deshacer y restantes mejoras de presentación.
+- **Implementado en main:** dashboard, lectura local de respuestas, autenticación y recuperación por correo, eliminación con confirmación, Cuenta, sincronización e incorporación automática con reservas de Room v9. La PR #33 se integró; su fix de cierre de sesión pasó los tres jobs de GitHub Actions.
+- **Disponible en otra rama:** `refactor/remove-unused-paths` retira rutas antiguas y traslada sus pruebas útiles al código de producción. Su verificación se documenta al final; todavía requiere revisión e integración.
+- **Archivos locales retirados:** los archivos npm sin consumidores de la raíz y la copia antigua de Pendientes se eliminaron durante la limpieza; nunca estuvieron versionados. Los esquemas Room y las configuraciones necesarias se conservan.
+- **Pendiente:** integrar la limpieza, búsqueda/orden/fijados, navegación tipada, Google y las mejoras restantes.
 
-La siguiente entrega después de Cuenta será navegación en otra rama: rutas tipadas y Navigation 3, conexión con ViewModels separada de presentación, conservando restauración, filtros, regreso, aislamiento por cuenta y estado cifrado del editor.
+Secuencia acordada: integrar Cuenta → limpiar con cobertura en una rama → integrar la limpieza → implementar búsqueda y organización en `feature/forms-search-organization`. Navegación y Google quedan para entregas posteriores. No crear checkouts temporales ni fusionar PRs sin petición del usuario.
 
 ## Experiencia de respuestas y estadísticas por componentes
 
@@ -17,9 +17,9 @@ La siguiente entrega después de Cuenta será navegación en otra rama: rutas ti
 - [ ] Añadir estadísticas por pregunta/componente con agregación adecuada a cada tipo, valores ausentes y filtros consistentes; no registrar respuestas en Analytics.
 - [ ] Definir exportación y comprobar conjuntos vacíos, formularios editados/eliminados y separación de propietarios.
 
-## Entrega de Cuenta en esta rama
+## Entrega de Cuenta integrada
 
-En `feature/account-sync-clarity` se reactiva la incorporación automática sobre la eliminación de main y se añade Cuenta con identidad, sincronización e incorporación local separadas. Estas funciones siguen **sin integrar en main** hasta que el usuario integre la rama. Room v9 conserva exactamente el esquema del trabajo local previo.
+La PR #33 integró `feature/account-sync-clarity`: Cuenta, sincronización e incorporación automática sobre la eliminación existente, con compatibilidad de Room v9. La evidencia histórica de desarrollo se conserva al final.
 
 ## Prioridad de ejecución acordada
 
@@ -30,10 +30,11 @@ Las prioridades del usuario son dashboard, Google, botones de Mis formularios y 
 | 1 | Dashboard y respuestas nuevas (grupo 7) | Integrado en main; evidencia histórica al final. |
 | 2 | Importación automática con imágenes (grupo 1) | Resuelve el paso de invitado a cuenta antes de añadir otra forma de acceso. |
 | 3 | Cuenta y sincronización (grupo 2) | Presenta importación, progreso y reintentos en una cuenta clara y utilizable. |
-| 4 | Navegación tipada y Navigation 3 | Siguiente entrega después de Cuenta, en otra rama; conservar restauración y separación por cuenta. |
-| 5 | Acceso con Google (grupo 10) | Reutiliza el contrato de incorporación y separación de cuentas anterior. |
-| 6 | Búsqueda, orden y fijados (grupo 5) | Da funcionalidad a búsqueda y más opciones de Mis formularios. |
-| 7 | Accesos de configuración (primera tarea del grupo 8) | Conecta perfil y estadísticas ya existentes; exportación tendrá su propia entrega. |
+| 4 | Limpieza con cobertura | Retirar caminos sin consumidores, trasladando primero sus escenarios útiles. |
+| 5 | Búsqueda, orden y fijados (grupo 5) | Siguiente feature acordada, después de integrar la limpieza. |
+| 6 | Navegación tipada y Navigation 3 | Conservar restauración y separación por cuenta. |
+| 7 | Acceso con Google (grupo 10) | Reutilizar incorporación y separación de cuentas. |
+| 8 | Accesos de configuración (primera tarea del grupo 8) | Conecta perfil y estadísticas ya existentes; exportación tendrá su propia entrega. |
 | — | Eliminar desde más opciones (grupo 6) | Completa los botones tras definir conservación de datos y confirmación. |
 
 Después: identidad visual (grupo 3), regreso tras publicación (grupo 4), preferencias/exportación restantes (grupo 8) e identidad empresarial/Open Graph (grupo 9). El banner empresarial sigue siendo una propuesta opcional.
@@ -46,7 +47,7 @@ Seguimiento de CI de navegación: el log aportado muestra `RootViewWithoutFocusE
 - [x] Incluir las portadas e imágenes locales asociadas, conservando sus archivos privados cifrados y referencias al importar. Reutilizar referencias publicadas válidas cuando corresponda; incorporar una imagen a un borrador no debe publicarla ni subirla automáticamente a Cloudinary.
 - [x] Hacer la incorporación recuperable ante cierre de app, falta de conexión o fallo parcial, sin duplicar formularios ni perder originales. Mostrar progreso, resultado y reintento cuando sea necesario.
 
-Contrato de esta rama: registro e inicio de sesión explícitos desde invitado reservan e incorporan borradores tras confirmar la cuenta. Restaurar la sesión solo reanuda reservas anteriores. Se conservan límites entre propietarios; importar no publica ni sube imágenes. `main` conserva el comportamiento anterior hasta integrar esta entrega.
+Contrato integrado de Cuenta: registro e inicio de sesión explícitos desde invitado reservan e incorporan borradores tras confirmar la cuenta. Restaurar la sesión solo reanuda reservas anteriores. Se conservan límites entre propietarios; importar no publica ni sube imágenes. Disponible en `main` desde la PR #33.
 
 ## 2. Perfil y navegación de regreso
 
@@ -72,6 +73,14 @@ Cuenta y autenticación: verificación local al final. Quedan revisión humana, 
 - [ ] Buscar títulos similares sin exigir coincidencia exacta: ignorar mayúsculas, tildes y espacios externos, aceptar coincidencias parciales y tolerar errores tipográficos razonables. Definir ejemplos de relevancia y un estado sin resultados.
 - [ ] Habilitar en el menú de más opciones la ordenación por fecha y por cantidad de respuestas, con dirección ascendente/descendente y etiquetas claras. Definir qué fecha se utiliza y derivar las cantidades de respuestas almacenadas.
 - [ ] Permitir fijar y desfijar formularios, mantener los fijados visibles al ordenar y conservar la preferencia por propietario, incluido invitado. El menú incluirá también la acción de eliminar del grupo 6.
+
+Decisiones acordadas para la siguiente feature (todavía sin implementar):
+
+- Orden y fijados persistentes solo en este dispositivo, separados por invitado/cuenta; consulta restaurable dentro de la pantalla de su propietario. Los fijados no se transfieren automáticamente al importar.
+- Fecha = última modificación numérica. Orden predeterminado reciente primero; cuatro opciones combinando fecha/respuestas y ambas direcciones, con ID como desempate.
+- Búsqueda sin mayúsculas ni tildes, espacios normalizados y todas las palabras requeridas. Prioridad: exacta, prefijo, parcial y aproximada; tolerancia de una edición por palabra de 4–7 caracteres y dos desde 8, sin tolerancia para palabras cortas.
+- Fijados primero entre coincidencias del filtro/búsqueda; después relevancia y orden elegido. Menú por tarjeta con fijar/desfijar y la eliminación confirmada existente. Estado sin resultados y limpieza de búsqueda/filtros.
+- Preferencias mediante repositorio DataStore y ViewModel; añadir fecha numérica al resumen. No requiere cambios de backend ni esquema Room.
 
 ## 6. Eliminación con confirmación y recuperación
 
@@ -255,3 +264,18 @@ Se incorporan las pruebas locales ampliadas: `RoomMigrationTest` cubre v2→v9 h
 Verificación de la rama consolidada desde la carpeta original: `compileDebugKotlin`, `testDebugUnitTest`, `lintDebug` y `assembleDebugAndroidTest` correctos; 184 unitarias sin fallos ni omisiones y Lint con cero errores, 72 advertencias y una sugerencia. Las pruebas instrumentadas modificadas se compilaron pero no se volvieron a ejecutar localmente: las 20 instrumentadas documentadas arriba corresponden a la revisión anterior. El workflow de la PR está configurado para ejecutar instrumentadas en Android 17 con Firebase local; su resultado debe comprobarse en GitHub.
 
 Los archivos npm de la raíz y la copia antigua de Pendientes permanecen fuera de la entrega. Las futuras tareas pequeñas se guardan con commits en el proyecto; las features y fixes usan ramas, sin nuevos worktrees temporales. La PR reúne Cuenta, sincronización, importación y las pruebas de compatibilidad, y se deja al usuario la evaluación humana y el merge.
+
+
+## Limpieza con cobertura (2026-11-16)
+
+Rama `refactor/remove-unused-paths`, basada en `main` después de integrar Cuenta (PR #33). La feature de búsqueda/organización espera a la integración de esta limpieza, según la secuencia acordada.
+
+- Se retira el repositorio Room antiguo y sus accesos DAO redundantes. Los ocho escenarios de almacenamiento se conservan en `OfflineFirstFormRepositoryStorageTest`, usando `OfflineFirstFormRepository` y `RoomFormStore`. También se adaptan editor, solicitudes, portadas y migraciones al mismo camino de producción mediante una sesión invitada aislada de pruebas.
+- Se retiran la importación manual y el contador obsoleto. Sus casos de propietarios, borradores eliminados y reservas se verifican mediante `RoomGuestImportStore`. Se elimina el estado paralelo sin consumidores de `FormSyncEngine`; se mantienen resultados, exclusión mutua y pruebas de cancelación/reintento/revisiones.
+- Se retiran ruta/ViewModel de la bandeja antigua. Sus cinco escenarios pasan a `ResponseDashboardInboxTest`: orden y deduplicación, fuente no configurada, recuperación, pérdida de acceso y resultados tardíos. Al trasladarlos se corrige el dashboard para vaciar datos, formularios e indicadores al perder autorización; un fallo de conexión sigue conservando caché.
+- Se eliminan `PrivateCoverImage`, las dos pruebas de plantilla (aritmética y paquete), siete colores y 29 cadenas sin referencias, incluidas sus traducciones. No se retiran fixtures útiles, migraciones ni pruebas de cifrado/publicación.
+- Los JSON y Markdown no tienen una exclusión general. Se conservan los nueve esquemas Room, las configuraciones y los manifiestos/locks npm de `web/` y `backend-tests/`. Firebase local y secretos siguen ignorados. Los archivos npm de la raíz solo declaraban un SDK Node sin consumidores y la copia `#PENDIENTES.md#` era un respaldo antiguo: eran archivos sin añadir, no archivos ignorados, y se eliminaron localmente. La documentación histórica con valor permanece identificada como tal.
+
+Verificación local: `compileDebugKotlin`, `testDebugUnitTest`, `compileDebugAndroidTestKotlin` y `lintDebug` correctos. **185 unitarias, cero fallos, errores u omisiones**; la reducción de una corresponde únicamente a la prueba aritmética. Lint: cero errores, 36 advertencias y una sugerencia, sin `UnusedResources` (antes: 72 advertencias). Los APK de aplicación y pruebas también se generaron correctamente con `assembleDebug assembleDebugAndroidTest`. El control `scripts/check-repository.mjs` pasa.
+
+Límites: las instrumentadas modificadas compilaron, pero no se ejecutaron localmente ni se utilizó el dispositivo del usuario. La nueva PR deberá ejecutar el workflow completo antes de integrar; el CI aprobado de Cuenta no verifica esta rama. Búsqueda, orden y fijados continúan pendientes.
