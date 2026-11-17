@@ -20,12 +20,12 @@ import org.junit.rules.RuleChain
 
 class LocalRequestFlowTest {
     private lateinit var db: FormLinkDatabase
-    private lateinit var forms: RoomFormRepository
+    private lateinit var forms: OfflineFirstFormRepository
     private lateinit var requests: RoomRequestRepository
     private val databaseRule = object : ExternalResource() {
         override fun before() {
             db = Room.inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, FormLinkDatabase::class.java).build()
-            forms = RoomFormRepository(db.drafts(), db.requests())
+            forms = db.guestFormRepository()
             requests = RoomRequestRepository(db)
             runBlocking { forms.saveDraft(FormDraft("local", "Pedido local", listOf(
                 FormFieldDraft("name", FormFieldType.TEXT, "Nombre", required = true)), 1, 1)) }

@@ -61,7 +61,10 @@ class RoomFormStoreTest {
             local.delete(null, snapshot.id)
             assertTrue(runCatching { local.save(null, snapshot) }.isFailure)
             assertTrue(runCatching { local.save("b", snapshot) }.isFailure)
-            assertTrue(runCatching { local.importGuests("b", setOf(snapshot.id)) }.isFailure)
+            val imports = RoomGuestImportStore(db)
+            imports.prepare("b", setOf(snapshot.id))
+            assertEquals(0, imports.transfer("b"))
+            assertTrue(imports.snapshotGuestIds().isEmpty())
             assertNull(local.get(null, snapshot.id))
             assertTrue(local.observe(null).first().isEmpty())
             assertTrue(local.observe("b").first().isEmpty())
@@ -175,7 +178,7 @@ class RoomFormStoreTest {
             } finally { cards.cancelAndJoin(); cover.cancelAndJoin(); summaries.close(); urls.close() }
         } finally { db.close() }
     }
-    @Test fun importingIsExplicitAndOwnerChecksProtectDirectIds() = runBlocking {
+    @Test fun importingUsesReservationsAndOwnerChecksProtectDirectIds() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
         try {
             val local = RoomFormStore(db)
@@ -183,14 +186,18 @@ class RoomFormStoreTest {
             local.save(null, guest)
             assertNull(local.get("a", "guest"))
             assertTrue(local.pending("a").isEmpty())
-            local.importGuests("a", setOf("guest"))
+            val imports = RoomGuestImportStore(db)
+            imports.prepare("a", setOf("guest"))
+            assertEquals(1, imports.transfer("a"))
             assertNull(local.get(null, "guest"))
             assertNull(local.get("b", "guest"))
             assertEquals("covers/local.jpg", local.get("a", "guest")!!.coverPath)
             assertEquals("a", local.pending("a").single().draft.ownerId)
             assertTrue(runCatching { local.save("b", guest) }.isFailure)
             assertTrue(runCatching { local.delete("b", "guest") }.isFailure)
-            assertTrue(runCatching { local.importGuests("b", setOf("guest")) }.isFailure)
+            imports.prepare("b", setOf("guest"))
+            assertEquals(0, imports.transfer("b"))
+            assertEquals("a", local.get("a", "guest")!!.ownerId)
         } finally { db.close() }
     }
     @Test fun acknowledgementsCannotClearNewerEditsAndRemoteDownloadsPreserveCovers() = runBlocking {

@@ -4,7 +4,6 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.local.FormLinkDatabase
-import com.uvg.cc3087.myapp.data.repository.RoomFormRepository
 import com.uvg.cc3087.myapp.data.repository.RoomRequestRepository
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
@@ -51,7 +50,7 @@ class RoomMigrationTest {
                 val db = Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
                     .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9).build()
                 try {
-                    val draft = RoomFormRepository(db.drafts()).getDraft("old")!!
+                    val draft = db.guestFormRepository().getDraft("old")!!
                     assertEquals("Conservar", draft.title)
                     assertEquals("KEEP", draft.coverAction)
                     assertEquals(if (version >= 8) 1 else 0, db.requestReads().get("guest").size)

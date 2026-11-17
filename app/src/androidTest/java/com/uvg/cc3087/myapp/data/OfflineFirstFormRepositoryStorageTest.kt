@@ -1,5 +1,7 @@
 package com.uvg.cc3087.myapp.data
 
+import com.uvg.cc3087.myapp.guestFormRepository
+import kotlinx.coroutines.flow.distinctUntilChanged
 import android.content.Context
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
@@ -11,7 +13,7 @@ import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.data.model.FormStatus
-import com.uvg.cc3087.myapp.data.repository.RoomFormRepository
+import com.uvg.cc3087.myapp.data.repository.OfflineFirstFormRepository
 import java.util.UUID
 import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.runBlocking
@@ -21,16 +23,16 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-class RoomFormRepositoryTest {
+class OfflineFirstFormRepositoryStorageTest {
     private lateinit var context: Context
     private lateinit var database: FormLinkDatabase
-    private lateinit var repository: RoomFormRepository
+    private lateinit var repository: OfflineFirstFormRepository
 
     @Before
     fun setUp() {
         context = InstrumentationRegistry.getInstrumentation().targetContext
         database = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
-        repository = RoomFormRepository(database.drafts())
+        repository = database.guestFormRepository()
     }
 
     @After
@@ -85,7 +87,7 @@ class RoomFormRepositoryTest {
     @Test
     fun observersReceiveInsertUpdateAndDeleteWithoutResubscribing() = runBlocking {
         withTimeout(10_000) {
-            val emissions = repository.observeForms().produceIn(this)
+            val emissions = repository.observeForms().distinctUntilChanged().produceIn(this)
             try {
                 assertTrue(emissions.receive().isEmpty())
                 val original = draft("observed")
@@ -112,7 +114,7 @@ class RoomFormRepositoryTest {
         repository.saveDraft(draft("b").copy(updatedAt = 300))
         repository.saveDraft(draft("a").copy(updatedAt = 300))
         withTimeout(10_000) {
-            val emissions = repository.observeForms().produceIn(this)
+            val emissions = repository.observeForms().distinctUntilChanged().produceIn(this)
             try {
                 assertEquals(listOf("a", "b", "z"), emissions.receive().map { it.id })
             } finally {
@@ -157,11 +159,11 @@ class RoomFormRepositoryTest {
         var diskDatabase: FormLinkDatabase? = null
         try {
             diskDatabase = Room.databaseBuilder(context, FormLinkDatabase::class.java, testDatabaseName).build()
-            RoomFormRepository(diskDatabase.drafts()).saveDraft(original)
+            diskDatabase.guestFormRepository().saveDraft(original)
             diskDatabase.close()
             diskDatabase = Room.databaseBuilder(context, FormLinkDatabase::class.java, testDatabaseName).build()
 
-            assertEquals(original, RoomFormRepository(diskDatabase.drafts()).getDraft(original.id))
+            assertEquals(original, diskDatabase.guestFormRepository().getDraft(original.id))
         } finally {
             diskDatabase?.close()
             context.deleteDatabase(testDatabaseName)

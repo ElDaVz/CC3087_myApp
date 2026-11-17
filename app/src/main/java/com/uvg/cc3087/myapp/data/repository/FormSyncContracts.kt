@@ -13,12 +13,10 @@ interface RemoteFormSource {
 interface LocalFormStore {
     fun observe(owner: String?): Flow<List<FormSummary>>
     fun observePublishedCoverUrl(owner: String?, id: String): Flow<String?> = kotlinx.coroutines.flow.flowOf(null)
-    fun pendingCount(owner: String): Flow<Int>
     suspend fun get(owner: String?, id: String): FormDraft?
     suspend fun save(owner: String?, draft: FormDraft)
     suspend fun delete(owner: String?, id: String)
     suspend fun pending(owner: String): List<PendingForm>
     suspend fun acknowledge(owner: String, pending: PendingForm)
     suspend fun mergeRemote(owner: String, forms: List<FormDraft>)
-    suspend fun importGuests(owner: String, ids: Set<String>)
 }

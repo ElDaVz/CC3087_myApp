@@ -10,10 +10,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 abstract class FormDraftDao {
     @Transaction
-    @Query("SELECT * FROM form_drafts WHERE ownerId IS NULL AND deleted = 0 ORDER BY updatedAt DESC, id ASC")
-    abstract fun observeDrafts(): Flow<List<FormDraftWithFields>>
-
-    @Transaction
     @Query("SELECT * FROM form_drafts WHERE id = :id")
     abstract suspend fun getDraft(id: String): FormDraftWithFields?
 
@@ -35,9 +31,6 @@ abstract class FormDraftDao {
         (SELECT COUNT(*) FROM remote_requests WHERE ownerId = :owner AND statusRevision != syncedStatusRevision) AS responseStatuses""")
     abstract fun observeAccountPending(owner: String): Flow<com.uvg.cc3087.myapp.data.repository.AccountPendingChanges>
 
-    @Query("SELECT COUNT(*) FROM form_drafts WHERE ownerId = :owner AND revision != syncedRevision")
-    abstract fun observePendingCount(owner: String): Flow<Int>
-
     @Query("UPDATE form_drafts SET syncedRevision = :revision WHERE id = :id AND ownerId = :owner AND revision = :revision")
     abstract suspend fun acknowledge(owner: String, id: String, revision: Long): Int
 
@@ -56,9 +49,6 @@ abstract class FormDraftDao {
 
     @Query("DELETE FROM form_draft_fields WHERE formId = :id")
     protected abstract suspend fun deleteFields(id: String)
-
-    @Query("DELETE FROM form_drafts WHERE id = :id")
-    abstract suspend fun deleteDraft(id: String)
 
     @Transaction
     open suspend fun saveDraft(form: FormDraftEntity, fields: List<FormFieldEntity>) {

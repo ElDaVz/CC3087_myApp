@@ -54,10 +54,4 @@ class OfflineFirstFormRepository(
         local.delete(owner, id)
         owner?.let { schedule(it) }
     }
-    suspend fun importGuests(ids: Set<String>) {
-        checkSession()
-        val user = checkNotNull(owner)
-        local.importGuests(user, ids)
-        schedule(user)
-    }
 }

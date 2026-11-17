@@ -47,7 +47,10 @@ class GuestImportStoreTest {
                 assertTrue(imports.snapshotGuestIds().isEmpty())
                 assertEquals(GuestImportCounts(2, 0), imports.observe("a").first())
                 assertEquals(GuestImportCounts(), imports.observe("b").first())
-                assertTrue(runCatching { local.importGuests("b", setOf("one")) }.isFailure)
+                imports.prepare("b", setOf("one"))
+                assertEquals(0, imports.transfer("b"))
+                assertEquals(GuestImportCounts(2, 0), imports.observe("a").first())
+                assertNotNull(local.get(null, "one"))
             }
             withOpen { db ->
                 val local = RoomFormStore(db, covers)
