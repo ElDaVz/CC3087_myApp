@@ -34,12 +34,12 @@ class GuestImportUiTest {
         var signOuts = 0
         compose.setContent { SpanishTestTheme {
             AccountScreen(UserSession("a", "example@example.com"), AccountUiState(),
-                GuestImportState(GuestImportPhase.IMPORTING, 2), null,
+                GuestImportState(GuestImportPhase.IMPORTING, 2), AccountSyncState(),
                 onBack = { backs++ }, onRetryImport = {}, onSignOut = { signOuts++ }, onSync = {})
         } }
         compose.onNodeWithText("Importar borradores seleccionados").assertDoesNotExist()
         compose.onAllNodes(isToggleable()).assertCountEquals(0)
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Cerrar sesión").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, backs); assertEquals(1, signOuts) }
     }

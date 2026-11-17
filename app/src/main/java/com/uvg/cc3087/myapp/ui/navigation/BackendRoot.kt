@@ -7,7 +7,6 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.isActive
 import androidx.lifecycle.Lifecycle
@@ -16,7 +15,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.repository.*
 import com.uvg.cc3087.myapp.di.BackendServices
@@ -24,6 +22,7 @@ import com.uvg.cc3087.myapp.ui.screens.AccountScreen
 import com.uvg.cc3087.myapp.ui.screens.AuthScreen
 import com.uvg.cc3087.myapp.ui.viewmodel.*
 import com.uvg.cc3087.myapp.ui.components.GuestImportNotice
+import com.uvg.cc3087.myapp.ui.components.accountSyncMessage
 
 @Composable
 internal fun BackendRoot(services: BackendServices, templates: TemplateRepository,
@@ -67,19 +66,11 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
             }
         }
         CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-            val accountModel: AccountViewModel = viewModel(factory = AccountViewModel.factory(services.auth, services.local, forms, services.guestImports, services::cancel))
+            val accountModel: AccountViewModel = viewModel(factory = AccountViewModel.factory(services.auth, uid, services.accountSync, services.guestImports, services::cancel))
             val accountUi by accountModel.uiState.collectAsStateWithLifecycle()
             val importState by accountModel.importState.collectAsStateWithLifecycle()
-            val pending = accountModel.pending?.collectAsStateWithLifecycle()?.value ?: 0
-            val sync = services.sync?.state?.collectAsStateWithLifecycle()?.value
-            val phase = sync?.takeIf { it.owner == uid }?.phase
-            val message = if (uid == null) null else stringResource(when {
-                phase == SyncPhase.ERROR -> R.string.sync_error
-                phase == SyncPhase.SYNCING -> R.string.sync_running
-                pending > 0 -> R.string.sync_pending
-                phase == SyncPhase.SYNCED -> R.string.sync_complete
-                else -> R.string.sync_pending
-            })
+            val syncState by accountModel.syncState.collectAsStateWithLifecycle()
+            val message = if (uid == null) null else accountSyncMessage(syncState)
             if (showAccount && uid == null) AuthScreen(authUi, services.auth.configured,
                 authModel::email, authModel::password, authModel::confirmation, authModel::mode, authModel::submit,
                 onBack = {
@@ -87,10 +78,11 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                     else { showAccount = false; authModel.clearCredentials() }
                 })
             else if (showAccount) AccountScreen((authState as AuthState.SignedIn).session,
-                accountUi, importState, message,
+                accountUi, importState, syncState,
                 onBack = { showAccount = false },
                 onRetryImport = accountModel::retryImport,
-                onSignOut = accountModel::signOut, onSync = { uid?.let(services::schedule) })
+                onSignOut = accountModel::signOut, onSync = accountModel::requestSync,
+                onConfirmSignOut = accountModel::confirmSignOut, onDismissSignOut = accountModel::dismissSignOut)
             else {
                 val responseRepository = remember(uid) { if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests }
                 FormLinkRoute(forms, templates, responseRepository,

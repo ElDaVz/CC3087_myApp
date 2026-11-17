@@ -9,31 +9,41 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-data class AccountUiState(val busy: Boolean = false, val failed: Boolean = false)
-class AccountViewModel(private val auth: AuthRepository, local: LocalFormStore,
-    private val forms: OfflineFirstFormRepository, private val imports: GuestImportRepository,
+data class AccountUiState(val busy: Boolean = false, val failed: Boolean = false, val confirmSignOut: Boolean = false)
+class AccountViewModel(private val auth: AuthRepository, private val owner: String?,
+    private val sync: AccountSyncRepository, private val imports: GuestImportRepository,
     private val cancel: (String) -> Unit) : ViewModel() {
-    val importState = (forms.owner?.let(imports::observe) ?: flowOf(GuestImportState()))
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GuestImportState())
-    val pending = forms.owner?.let { local.pendingCount(it) }?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val importState = (owner?.let(imports::observe) ?: flowOf(GuestImportState()))
+        .stateIn(viewModelScope, SharingStarted.Eagerly, GuestImportState())
+    val syncState = (owner?.let(sync::observe) ?: flowOf(AccountSyncState()))
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AccountSyncState())
     private val mutableState = MutableStateFlow(AccountUiState())
     val uiState = mutableState.asStateFlow()
+    fun requestSync() { if (!uiState.value.busy) owner?.let(sync::requestSync) }
     fun retryImport() {
-        if (mutableState.value.busy) return
-        forms.owner?.let { owner -> viewModelScope.launch { imports.resume(owner) } }
+        if (uiState.value.busy) return
+        owner?.let { id -> viewModelScope.launch { imports.resume(id) } }
     }
     fun signOut() {
-        if (mutableState.value.busy) return
-        mutableState.value = mutableState.value.copy(busy = true, failed = false)
+        if (uiState.value.busy) return
+        val pendingImport = importState.value.phase in setOf(GuestImportPhase.PENDING, GuestImportPhase.IMPORTING, GuestImportPhase.ERROR)
+        if (syncState.value.pending.total > 0 || syncState.value.phase in setOf(AccountSyncPhase.SYNCING, AccountSyncPhase.QUEUED) || pendingImport) {
+            mutableState.value = uiState.value.copy(confirmSignOut = true)
+        } else confirmSignOut()
+    }
+    fun dismissSignOut() { mutableState.value = uiState.value.copy(confirmSignOut = false) }
+    fun confirmSignOut() {
+        if (uiState.value.busy) return
+        mutableState.value = AccountUiState(busy = true)
         viewModelScope.launch {
-            try { forms.owner?.let(cancel); auth.signOut() }
+            try { owner?.let(cancel); auth.signOut() }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { mutableState.value = mutableState.value.copy(busy = false, failed = true) }
+            catch (_: Exception) { mutableState.value = AccountUiState(failed = true) }
         }
     }
     companion object {
-        fun factory(auth: AuthRepository, local: LocalFormStore, forms: OfflineFirstFormRepository,
+        fun factory(auth: AuthRepository, owner: String?, sync: AccountSyncRepository,
             imports: GuestImportRepository, cancel: (String) -> Unit) =
-            viewModelFactory { initializer { AccountViewModel(auth, local, forms, imports, cancel) } }
+            viewModelFactory { initializer { AccountViewModel(auth, owner, sync, imports, cancel) } }
     }
 }

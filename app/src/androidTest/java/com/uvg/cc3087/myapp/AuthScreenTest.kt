@@ -26,7 +26,7 @@ class AuthScreenTest {
         compose.onNodeWithText("Revisa tu email").assertIsDisplayed()
         compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
         compose.onNodeWithText("Enviar enlace").assertDoesNotExist()
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         assertEquals(1, backs)
     }
 
@@ -41,7 +41,7 @@ class AuthScreenTest {
         compose.onNode(hasText("Iniciar sesión") and hasClickAction()).assertIsNotEnabled()
         compose.onNodeWithText("¿Olvidaste tu contraseña?").assertIsNotEnabled()
         compose.onNodeWithText("Crear una cuenta nueva").assertIsNotEnabled()
-        compose.onNodeWithText("Volver").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Volver").assertIsNotEnabled()
         compose.onNodeWithText("Continuar como invitado").assertIsNotEnabled()
         assertEquals(0, calls)
     }
