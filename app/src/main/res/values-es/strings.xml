@@ -13,7 +13,6 @@
     <string name="draft">Borrador</string>
     <string name="share">Compartir</string>
     <string name="edit">Editar</string>
-    <string name="view">Ver</string>
     <string name="search_forms">Buscar formularios</string>
     <string name="more_options">Más opciones</string>
     <string name="go_back">Volver</string>
@@ -21,13 +20,7 @@
     <string name="form_response_summary">%1$s • Actualizado el %2$s</string>
     <string name="search_selected">Búsqueda seleccionada</string>
     <string name="more_options_selected">Más opciones seleccionadas</string>
-    <string name="new_form_selected">Nuevo formulario seleccionado</string>
-    <string name="form_selected">%1$s seleccionado</string>
-    <string name="share_form">Compartir %1$s</string>
-    <string name="edit_form">Editar %1$s</string>
-    <string name="view_form">Ver %1$s</string>
     <string name="forms_selected">Formularios seleccionados</string>
-    <string name="responses_selected">Respuestas seleccionadas</string>
     <string name="settings_selected">Configuración seleccionada</string>
     <string name="start_from_scratch">Empezar desde cero</string>
     <string name="blank_form">Formulario en blanco</string>
@@ -41,23 +34,6 @@
     <string name="template_feedback">Comentarios</string>
     <string name="template_feedback_subtitle">Encuestas a clientes</string>
     <string name="untitled_form">Formulario sin título</string>
-    <string name="editor_heading">Editar formulario</string>
-    <string name="editor_back_to_templates">Volver a plantillas</string>
-    <string name="editor_validate">Validar</string>
-    <string name="editor_form_information">Información del formulario</string>
-    <string name="editor_form_title">Título</string>
-    <string name="editor_add_field">Agregar campo</string>
-    <string name="editor_empty_fields">Todavía no hay campos. Agrega uno para comenzar</string>
-    <string name="editor_field_position">Campo %1$d</string>
-    <string name="editor_delete_field">Eliminar campo</string>
-    <string name="editor_field_name">Nombre del campo</string>
-    <string name="editor_empty_field_title">El nombre no puede quedar vacío</string>
-    <string name="editor_required">Obligatorio</string>
-    <string name="editor_move_field_up">Mover campo hacia arriba</string>
-    <string name="editor_move_field_down">Mover campo hacia abajo</string>
-    <string name="editor_type_text">Texto</string>
-    <string name="editor_type_multiple_choice">Opción múltiple</string>
-    <string name="editor_type_date">Fecha</string>
     <string name="editor_default_text_title">Pregunta de texto</string>
     <string name="editor_default_choice_title">Selecciona una opción</string>
     <string name="editor_default_date_title">Selecciona una fecha</string>
@@ -73,7 +49,6 @@
         <item quantity="other">%d respuestas</item>
     </plurals>
     <string name="edit_form_title">Editar formulario</string>
-    <string name="back_to_templates">Volver a plantillas</string>
     <string name="preview">Vista previa</string>
     <string name="add_field">Agregar campo</string>
     <string name="form_details">Información del formulario</string>
@@ -266,8 +241,6 @@
     <string name="auth_sign_in">Iniciar sesión</string>
     <string name="auth_email">Correo electrónico</string>
     <string name="auth_password">Contraseña</string>
-    <string name="auth_invalid">Ingresa un correo y contraseña válidos. Las contraseñas nuevas necesitan al menos 6 caracteres.</string>
-    <string name="auth_failed">No se pudo autenticar. Revisa tus credenciales y conexión y vuelve a intentar.</string>
     <string name="backend_not_configured">Firebase no está configurado. Puedes utilizar borradores locales como invitado.</string>
     <string name="auth_have_account">Ya tengo una cuenta</string>
     <string name="auth_need_account">Crear una cuenta nueva</string>
@@ -281,8 +254,6 @@
     <string name="sync_retry">Sincronizar / reintentar</string>
     <string name="sync_error">Guardado localmente. Falló la sincronización; reintenta desde Cuenta.</string>
     <string name="sync_running">Sincronizando…</string>
-    <string name="sync_pending">Guardado en este dispositivo; pendiente de sincronizar</string>
-    <string name="sync_complete">Sincronizado con tu cuenta</string>
     <string name="publication_sign_in_required">Inicia sesión para publicar</string>
     <string name="publication_form_not_found">No se encontró el formulario</string>
     <string name="publication_backend_not_configured">Firebase no está configurado</string>
