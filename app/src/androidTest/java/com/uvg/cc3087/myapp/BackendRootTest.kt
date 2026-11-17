@@ -2,6 +2,8 @@ package com.uvg.cc3087.myapp
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.uvg.cc3087.myapp.data.model.AuthState
+import com.uvg.cc3087.myapp.data.repository.AuthRepository
 import com.uvg.cc3087.myapp.ui.navigation.FormLinkApp
 import org.junit.Rule
 import org.junit.Test
@@ -63,8 +65,7 @@ class BackendRootTest {
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
         compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
-        compose.onNodeWithText("Cerrar sesión").performScrollTo().performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty() }
+        signOutFromAccount(services.auth)
         compose.onNodeWithText(title).assertDoesNotExist()
         compose.onNodeWithText(guestTitle).assertDoesNotExist()
         compose.onNodeWithContentDescription("Cuenta").performClick()
@@ -75,8 +76,26 @@ class BackendRootTest {
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
         compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
+        signOutFromAccount(services.auth)
+        compose.onNodeWithText(title).assertDoesNotExist()
+        compose.onNodeWithText(guestTitle).assertDoesNotExist()
+    }
+
+    private fun signOutFromAccount(auth: AuthRepository) {
         compose.onNodeWithText("Cerrar sesión").performScrollTo().performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty() }
+        val confirm = hasText("Cerrar sesión") and hasAnyAncestor(isDialog())
+        // Login can enqueue a sync even when all locally cached forms are already visible.
+        compose.waitUntil(10_000) {
+            auth.state.value is AuthState.Guest ||
+                compose.onAllNodes(confirm).fetchSemanticsNodes().isNotEmpty()
+        }
+        if (compose.onAllNodes(confirm).fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNode(confirm).performClick()
+        }
+        compose.waitUntil(10_000) {
+            auth.state.value is AuthState.Guest &&
+                compose.onAllNodesWithText("Mis formularios").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @Test fun guestEditorSurvivesSavedStateRestorationWithItsSessionOwner() {
