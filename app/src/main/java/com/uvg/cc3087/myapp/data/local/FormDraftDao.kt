@@ -29,6 +29,12 @@ abstract class FormDraftDao {
     @Query("SELECT * FROM form_drafts WHERE ownerId IS :owner")
     abstract suspend fun owned(owner: String?): List<FormDraftWithFields>
 
+    @Query("""SELECT
+        (SELECT COUNT(*) FROM form_drafts WHERE ownerId = :owner AND deleted = 0 AND revision != syncedRevision) AS drafts,
+        (SELECT COUNT(*) FROM form_drafts WHERE ownerId = :owner AND deleted = 1 AND revision != syncedRevision) AS deletions,
+        (SELECT COUNT(*) FROM remote_requests WHERE ownerId = :owner AND statusRevision != syncedStatusRevision) AS responseStatuses""")
+    abstract fun observeAccountPending(owner: String): Flow<com.uvg.cc3087.myapp.data.repository.AccountPendingChanges>
+
     @Query("SELECT COUNT(*) FROM form_drafts WHERE ownerId = :owner AND revision != syncedRevision")
     abstract fun observePendingCount(owner: String): Flow<Int>
 
