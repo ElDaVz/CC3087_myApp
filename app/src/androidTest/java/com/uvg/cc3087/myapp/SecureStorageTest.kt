@@ -25,13 +25,24 @@ class SecureStorageTest {
         val name = "secure-${UUID.randomUUID()}.db"
         try {
             Room.databaseBuilder(context, FormLinkDatabase::class.java, name).build().let { db ->
-                try { RoomFormStore(db).save(null, FormDraft("f", "SECRET DOMAIN DATA", emptyList(), 1, 2)) }
+                try {
+                    RoomFormStore(db).save(null, FormDraft("f", "SECRET DOMAIN DATA", emptyList(), 1, 2))
+                    db.guestImports().reserve(GuestImportEntity("f", "owner"))
+                    db.guestImports().reserve(GuestImportEntity("completed", "owner", completed = true))
+                    db.guestImports().reserve(GuestImportEntity("other", "other-owner"))
+                }
                 finally { db.close() }
             }
             repeat(2) {
                 val db = Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
                     .openHelperFactory(EncryptedDatabase.factory(context, name)).build()
-                try { assertEquals("SECRET DOMAIN DATA", RoomFormStore(db).get(null, "f")!!.title) }
+                try {
+                    assertEquals("SECRET DOMAIN DATA", RoomFormStore(db).get(null, "f")!!.title)
+                    assertEquals(9, db.openHelper.readableDatabase.version)
+                    assertEquals(listOf("f"), db.guestImports().pending("owner").map { it.formId })
+                    assertTrue(db.guestImports().get("completed")!!.completed)
+                    assertEquals("other-owner", db.guestImports().get("other")!!.ownerId)
+                }
                 finally { db.close() }
                 assertFalse(String(context.getDatabasePath(name).readBytes(), Charsets.ISO_8859_1).contains("SECRET DOMAIN DATA"))
                 // Android's default corruption handler deletes an unreadable database: probe a copy.
