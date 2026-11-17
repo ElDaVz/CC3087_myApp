@@ -348,4 +348,25 @@
     <string name="delete_form_policy">“%1$s” will be removed from your forms. Existing requests and their reading history will be kept. The public link will stop accepting responses once deletion syncs; it may stay active while offline. Unreferenced private cover files will be removed. Previously published images will be kept. This action cannot be undone.</string>
     <string name="delete_form_error">Could not save the deletion. Please try again.</string>
     <string name="form_deleted">Form removed. Public access will close when synchronization completes.</string>
+
+    <string name="account_identity">Signed in to FormLink</string>
+    <string name="account_sync_title">Synchronization</string>
+    <string name="account_sync_unchecked">Not checked yet</string>
+    <string name="account_sync_queued">Changes queued</string>
+    <string name="account_sync_offline">Waiting for connection</string>
+    <string name="account_sync_checked">Up to date at the last check</string>
+    <string name="account_pending_drafts">Modified drafts: %1$d</string>
+    <string name="account_pending_deletions">Pending deletions: %1$d</string>
+    <string name="account_pending_responses">Response status changes: %1$d</string>
+    <string name="account_last_check">Last successful check: %1$s</string>
+    <string name="account_private_images">Private images are uploaded only when you explicitly publish.</string>
+    <string name="account_sync_check">Check now</string>
+    <string name="account_sync_now">Sync now</string>
+    <string name="account_import_title">Guest drafts</string>
+    <string name="account_import_local">Incorporation happens on this device. It does not publish forms or upload images.</string>
+    <string name="account_import_empty">No guest drafts to incorporate.</string>
+    <string name="account_local_retained">Signing out keeps local data on this device, separate for each account.</string>
+    <string name="account_sign_out_title">Sign out with operations pending?</string>
+    <string name="account_sign_out_pending">Local data and pending operations will be kept for this account. Work stops when you sign out and resumes when you sign in again.</string>
+    <string name="account_keep_session">Cancel</string>
 </resources>

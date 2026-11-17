@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -40,7 +41,7 @@ fun AuthScreen(state: AuthUiState, configured: Boolean,
             AuthMode.RECOVERY -> R.string.auth_recovery
         })
         Scaffold(topBar = { TopAppBar(title = { Text(if (state.recoverySent) "" else title) },
-            navigationIcon = { TextButton(onClick = onBack, enabled = !state.busy) { Text(stringResource(R.string.go_back)) } }) }) { padding ->
+            navigationIcon = { IconButton(onClick = onBack, enabled = !state.busy) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.go_back)) } }) }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Column(Modifier.widthIn(max = 420.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
