@@ -61,4 +61,21 @@ class AccountViewModelTest {
         model.signOut(); runCurrent()
         assertEquals(listOf("cancel:a", "out"), events)
     }
+    @Test fun queuedSyncRequiresConfirmationEvenWithoutPendingChanges() = runTest {
+        assertSyncRequiresSignOutConfirmation(AccountSyncPhase.QUEUED)
+    }
+    @Test fun activeSyncRequiresConfirmationEvenWithoutPendingChanges() = runTest {
+        assertSyncRequiresSignOutConfirmation(AccountSyncPhase.SYNCING)
+    }
+    private suspend fun TestScope.assertSyncRequiresSignOutConfirmation(phase: AccountSyncPhase) {
+        state.value = AccountSyncState(phase = phase)
+        val model = model(); runCurrent()
+        model.signOut(); runCurrent()
+        assertTrue(model.uiState.value.confirmSignOut)
+        assertTrue(auth.state.value is AuthState.SignedIn)
+        assertTrue(events.isEmpty())
+        model.confirmSignOut(); runCurrent()
+        assertEquals(listOf("cancel:a", "out"), events)
+        assertEquals(AuthState.Guest, auth.state.value)
+    }
 }
