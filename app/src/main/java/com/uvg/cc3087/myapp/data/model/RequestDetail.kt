@@ -16,7 +16,18 @@ data class RequestDetail(
 data class RequestDetailAnswer(
     val fieldId: String,
     val label: String,
-    val value: RequestAnswerValue
+    val value: RequestAnswerValue,
+    val field: RequestFieldSnapshot? = null,
+    val numericValue: java.math.BigDecimal? = null
+)
+
+// estos datos pertenecen a la pregunta recibida, no al borrador que se edita después
+data class RequestFieldSnapshot(
+    val type: FormFieldType,
+    val optionLabels: List<String> = emptyList(),
+    val unit: String = "",
+    val includeTime: Boolean = false,
+    val multipleAnswers: Boolean = type == FormFieldType.CHECKBOX_GROUP
 )
 
 sealed interface RequestAnswerValue {

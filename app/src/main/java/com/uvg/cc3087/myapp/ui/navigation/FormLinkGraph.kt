@@ -34,6 +34,13 @@ import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.ResponseDashboardViewModel
+import com.uvg.cc3087.myapp.ui.viewmodel.FieldAnalyticsViewModel
+import com.uvg.cc3087.myapp.ui.state.RequestListLoadStatus
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import com.uvg.cc3087.myapp.ui.viewmodel.SaveShareViewModel
 
 @Composable
@@ -150,6 +157,19 @@ internal fun FormLinkGraph(
             }
             entry<AppRoute.Dashboard> { route ->
                 val state by dashboard.uiState.collectAsStateWithLifecycle()
+                val fieldAnalytics: FieldAnalyticsViewModel = viewModel(factory = FieldAnalyticsViewModel.factory(requestRepository))
+                val fieldState by fieldAnalytics.uiState.collectAsStateWithLifecycle()
+                val lifecycle = LocalLifecycleOwner.current
+                LaunchedEffect(state.filter, state.hasData, state.status) {
+                    fieldAnalytics.select(state.filter.formId.takeIf {
+                        state.hasData && state.status != RequestListLoadStatus.FORBIDDEN
+                    }, state.filter.period)
+                }
+                LaunchedEffect(fieldAnalytics, lifecycle) {
+                    lifecycle.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        while (isActive) { fieldAnalytics.checkCalendar(); delay(30_000) }
+                    }
+                }
                 MyappTheme(dynamicColor = false) {
                     ResponseDashboardScreen(
                         state = state,
@@ -166,9 +186,11 @@ internal fun FormLinkGraph(
                         },
                         onOpen = { navigator.navigate(AppRoute.RequestDetail(it.formId, it.responseId)) },
                         onBack = { navigator.backFrom(route) },
-                        onRefresh = dashboard::refresh,
+                        onRefresh = { dashboard.refresh(); fieldAnalytics.retry() },
                         syncMessage = syncMessage,
-                        isDemo = requestsAreDemo
+                        isDemo = requestsAreDemo,
+                        analyticsState = fieldState,
+                        onAnalyticsRetry = fieldAnalytics::retry
                     )
                 }
             }

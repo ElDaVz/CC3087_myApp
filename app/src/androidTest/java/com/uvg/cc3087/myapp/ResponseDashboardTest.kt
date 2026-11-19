@@ -106,8 +106,10 @@ class ResponseDashboardTest {
         compose.onNodeWithText("Respuestas").performClick()
         compose.onNodeWithTag("dashboard-form-filter").performClick()
         compose.onNodeWithText("Histórico").performClick()
-        compose.onNodeWithText("No hay respuestas para estos filtros.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("response-dashboard").performScrollToNode(hasText("No hay respuestas para estos filtros."))
+        compose.onNodeWithText("No hay respuestas para estos filtros.").assertIsDisplayed()
         compose.onNodeWithText("Todavía no has recibido solicitudes.").assertDoesNotExist()
+        compose.onNodeWithTag("response-dashboard").performScrollToIndex(0)
         compose.onNodeWithTag("period-ALL").performScrollTo().performClick()
         compose.onNodeWithTag("metric-total").assertTextContains("1")
     }

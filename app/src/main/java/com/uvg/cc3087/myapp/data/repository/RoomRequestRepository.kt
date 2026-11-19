@@ -16,6 +16,9 @@ import java.util.Locale
 class RoomRequestRepository(private val database: FormLinkDatabase) : RequestRepository {
     private val dao get() = database.requests()
     override suspend fun getDetail(formId: String, responseId: String) = dao.getDetail(formId, responseId)?.toDetail()
+    override fun observeDetails(formId: String) = dao.observeRequests().map { rows ->
+        rows.filter { it.formId == formId }.map { it.toDetail() }
+    }
     override suspend fun getRequests() = database.withTransaction {
         val read = database.requestReads().get("guest").map { it.formId to it.responseId }.toSet()
         dao.getRequests().map { it.toSummary().copy(isRead = (it.formId to it.responseId) in read) }
@@ -41,7 +44,10 @@ class RoomRequestRepository(private val database: FormLinkDatabase) : RequestRep
             val snapshot = JSONArray()
             form.fields.forEach { field ->
                 val answer = answers[field.id] ?: FormAnswer()
-                val row = JSONObject().put("fieldId", field.id).put("label", field.title)
+                val row = JSONObject().put("fieldId", field.id).put("label", field.title).withFieldSnapshot(field)
+                if (field.type == FormFieldType.NUMBER) {
+                    parseNumber(answer.text, locale)?.let { row.put("number", it.toPlainString()) }
+                }
                 when {
                     field.type.hasOptions -> row.put("kind", "choices").put("value",
                         JSONArray(field.options.filter { it.id in answer.selectedIds }.map { it.label }))
@@ -82,7 +88,8 @@ private fun RequestEntity.toDetail(): RequestDetail {
             "text" -> RequestAnswerValue.Text(row.getString("value"))
             else -> error("Unknown stored answer type")
         }
-        RequestDetailAnswer(row.getString("fieldId"), row.getString("label"), value)
+        RequestDetailAnswer(row.getString("fieldId"), row.getString("label"), value,
+            row.readFieldSnapshot(), row.optString("number").toBigDecimalOrNull())
     }
     return RequestDetail(formId, responseId, formTitle, Instant.ofEpochMilli(submittedAt), answers,
         requestStatus = RequestStatus.valueOf(status))
