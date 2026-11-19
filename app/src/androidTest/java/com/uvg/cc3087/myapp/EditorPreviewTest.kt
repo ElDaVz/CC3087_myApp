@@ -17,6 +17,8 @@ import com.uvg.cc3087.myapp.data.repository.SampleFormRepository
 import com.uvg.cc3087.myapp.domain.validation.FormDraftValidator
 import com.uvg.cc3087.myapp.domain.validation.FormValidationResult
 import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
+import com.uvg.cc3087.myapp.ui.state.EditFormAction
+import com.uvg.cc3087.myapp.ui.state.EditFormUiState
 import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -33,6 +35,34 @@ import org.junit.Assert.assertEquals
 
 class EditorPreviewTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test fun publishedCoverWarningDoesNotBlockEditingTheTitle() {
+        val state = mutableStateOf(EditFormUiState(
+            title = "Pedido", draftId = "f", publishedCoverLoadFailed = true, saveStatus = DraftSaveStatus.SAVED
+        ))
+        compose.setContent {
+            SpanishTestTheme {
+                EditForm(
+                    uiState = state.value,
+                    onAction = { action ->
+                        if (action is EditFormAction.ChangeTitle) state.value = state.value.copy(title = action.title)
+                    },
+                    onValidate = { FormValidationResult.READY },
+                    onBackClick = {},
+                    configurationErrors = { emptyMap() },
+                    validatePreviewAnswers = { _, _, _ -> emptyMap() },
+                    canAdvanceToSaveShare = { true }
+                )
+            }
+        }
+        compose.onNodeWithText("No se pudo actualizar la portada publicada. Puedes seguir editando tu formulario.")
+            .performScrollTo().assertIsDisplayed()
+        compose.onNode(hasSetTextAction() and hasText("Pedido"))
+            .performScrollTo().performTextReplacement("Pedido actualizado")
+        compose.runOnIdle { assertEquals("Pedido actualizado", state.value.title) }
+        compose.onNodeWithContentDescription("Vista previa").performClick()
+        compose.onNodeWithText("Pedido actualizado").assertExists()
+    }
 
     @Test fun previewValidatesAnswersAndReturnsToUnchangedEditor() {
         compose.setContent {

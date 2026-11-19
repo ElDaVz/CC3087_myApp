@@ -238,6 +238,7 @@
     <string name="cover_remove">Quitar portada</string>
     <string name="cover_importing">Importando imagen…</string>
     <string name="cover_error">No se pudo importar la imagen. Elige una imagen válida de hasta 10 MiB.</string>
+    <string name="published_cover_load_error">No se pudo actualizar la portada publicada. Puedes seguir editando tu formulario.</string>
     <string name="account_title">Cuenta</string>
     <string name="auth_register">Crear cuenta</string>
     <string name="auth_sign_in">Iniciar sesión</string>

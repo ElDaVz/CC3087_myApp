@@ -15,6 +15,7 @@ data class EditFormUiState(
     val coverPath: String? = null,
     val coverAction: String = "KEEP",
     val publishedCoverUrl: String? = null,
+    val publishedCoverLoadFailed: Boolean = false,
     val importingCover: Boolean = false,
     val coverError: Boolean = false,
     val continueRequested: Boolean = false,

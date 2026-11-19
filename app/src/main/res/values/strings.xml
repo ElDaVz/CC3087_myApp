@@ -236,6 +236,7 @@
     <string name="cover_remove">Remove cover</string>
     <string name="cover_importing">Importing image…</string>
     <string name="cover_error">Could not import the image. Choose a valid image up to 10 MiB.</string>
+    <string name="published_cover_load_error">Could not update the published cover. You can keep editing your form.</string>
     <string name="account_title">Account</string>
     <string name="auth_register">Create account</string>
     <string name="auth_sign_in">Sign in</string>

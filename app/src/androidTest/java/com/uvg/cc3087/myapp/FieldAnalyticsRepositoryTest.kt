@@ -8,6 +8,9 @@ import com.uvg.cc3087.myapp.data.remote.FormFieldWire
 import com.uvg.cc3087.myapp.data.remote.http.*
 import com.uvg.cc3087.myapp.data.repository.*
 import com.uvg.cc3087.myapp.data.security.DeviceCipher
+import com.uvg.cc3087.myapp.domain.requests.AnswerStatistics
+import com.uvg.cc3087.myapp.domain.requests.ResponsePeriod
+import com.uvg.cc3087.myapp.domain.requests.formAnalytics
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -15,11 +18,48 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.math.BigDecimal
+import java.time.Instant
+import java.time.ZoneOffset
 import java.util.Locale
 import java.util.UUID
 
 class FieldAnalyticsRepositoryTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test fun unknownAccountStatusKeepsDetailAndAnalyticsReadableWithoutChangingStoredData() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
+        val http = FirebaseHttp(true)
+        val client = FirestoreRest("demo-formlink", RestAuthRepository(null, DeviceCipher(context), http, true), http, true)
+        val repository = CloudRequestRepository(db, client, "owner", { "owner" }, {})
+        try {
+            val field = FormFieldDraft("q", FormFieldType.NUMBER, "Cantidad", unit = "kg")
+            val answer = JSONObject().put("fieldId", "q").put("label", "Cantidad").put("kind", "text").put("value", "1.5")
+                .withRemoteFieldSnapshot(FormFieldWire.encode(field, 0)).put("number", "1.5")
+            val statuses = RequestStatus.entries.map { it.name } + "FUTURE_STATUS"
+            statuses.forEach { status ->
+                db.cloud().saveRequest(RemoteRequestEntity("owner", "f", status, "Pedido", 1, status, "[$answer]"))
+            }
+
+            val summaries = repository.observeRequests().first().associateBy { it.responseId }
+            val snapshots = repository.observeDetails("f").first()
+            RequestStatus.entries.forEach { status ->
+                assertEquals(status, summaries.getValue(status.name).requestStatus)
+                assertEquals(status, snapshots.single { it.responseId == status.name }.requestStatus)
+            }
+            assertNull(summaries.getValue("FUTURE_STATUS").requestStatus)
+            val detail = repository.getDetail("f", "FUTURE_STATUS")!!
+            assertNull(detail.requestStatus)
+            assertEquals(RequestAnswerValue.Text("1.5"), detail.answers.single().value)
+            assertEquals(detail, snapshots.single { it.responseId == "FUTURE_STATUS" })
+
+            val analytics = formAnalytics("f", snapshots, ResponsePeriod.ALL, Instant.now(), ZoneOffset.UTC)
+            assertEquals(4, analytics.responseCount)
+            assertEquals(4, analytics.fields.single().answered)
+            assertEquals(BigDecimal("1.5"), (analytics.fields.single().statistics as AnswerStatistics.Numeric).average)
+            assertEquals("FUTURE_STATUS", db.cloud().detail("owner", "f", "FUTURE_STATUS")!!.status)
+            assertTrue(db.requestReads().get("account:owner").isEmpty())
+        } finally { db.close() }
+    }
 
     @Test fun localTypedSnapshotsSurviveReopenDraftEditsAndDeletionWithoutMarkingRead() = runBlocking {
         val name = "field-analytics-${UUID.randomUUID()}.db"
