@@ -325,6 +325,17 @@
     <string name="dashboard_show_history">View all history</string>
     <string name="dashboard_no_dated_activity">No dated responses to chart for these filters.</string>
     <string name="dashboard_missing_form">Selected form unavailable</string>
+    <string name="requests_only_unread">Unread only</string>
+    <string name="requests_filter_empty">No responses match this view.</string>
+    <string name="requests_clear_filters">Clear filters</string>
+    <string name="requests_visible_summary">In this view</string>
+    <string name="requests_filter_empty_hint">Try another status, period or form, or include reviewed responses.</string>
+    <string name="request_answers_read_only">Submitted answers are read-only. You can update the request status below.</string>
+    <string name="request_answers_read_only_no_status">Submitted answers are read-only.</string>
+    <string name="request_question_number">Question %1$d</string>
+    <string name="request_status_saving">Saving status…</string>
+    <string name="request_status_retry">Retry status change</string>
+    <string name="request_status_failed_target">Could not change the status to %1$s. The last confirmed status is still shown.</string>
     <string name="delete_form_named">Delete form %1$s</string>
     <string name="delete_form_title">Delete form?</string>
     <string name="delete_form_confirm">Delete</string>

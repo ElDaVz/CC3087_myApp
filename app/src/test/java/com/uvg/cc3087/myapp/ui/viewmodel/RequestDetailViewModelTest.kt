@@ -44,10 +44,12 @@ class RequestDetailViewModelTest {
         runCurrent()
         assertEquals(pending, model.uiState.value.detail)
         assertTrue(model.uiState.value.statusSaveFailed)
+        assertEquals(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED, model.uiState.value.failedStatus)
         fail = false
-        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED)
+        model.retryStatusChange()
         runCurrent()
         assertFalse(model.uiState.value.statusSaveFailed)
+        assertNull(model.uiState.value.failedStatus)
         assertEquals(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED, model.uiState.value.detail?.requestStatus)
     }
 
@@ -203,6 +205,117 @@ class RequestDetailViewModelTest {
         model.openRequest("form", "new"); runCurrent(); gate.complete(Unit); runCurrent()
         assertFalse(model.uiState.value.readSaved)
         assertEquals("new", model.uiState.value.detail?.responseId)
+    }
+
+    @Test fun anotherSelectionDoesNotInheritTheFailedStatusChange() = runTest {
+        var writes = 0
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) =
+                detail.copy(responseId = responseId, requestStatus = com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING)
+            override suspend fun updateStatus(formId: String, responseId: String, status: com.uvg.cc3087.myapp.data.model.RequestStatus): RequestDetail {
+                writes++
+                throw IOException()
+            }
+        })
+        model.openRequest("form", "response"); runCurrent()
+        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED); runCurrent()
+        assertTrue(model.uiState.value.statusSaveFailed)
+        model.openRequest("form", "new"); runCurrent()
+        model.retryStatusChange(); runCurrent()
+        assertEquals(1, writes)
+        assertNull(model.uiState.value.failedStatus)
+        assertEquals("new", model.uiState.value.detail?.responseId)
+    }
+
+    @Test fun deniedStatusWriteClearsAnswersAndInvalidatesAnOutstandingRead() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) =
+                detail.copy(requestStatus = com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING)
+            override suspend fun markRead(formId: String, responseId: String) { withContext(NonCancellable) { gate.await() } }
+            override suspend fun updateStatus(formId: String, responseId: String, status: com.uvg.cc3087.myapp.data.model.RequestStatus): RequestDetail =
+                throw RequestAccessDeniedException()
+        })
+        model.openRequest("form", "response"); runCurrent()
+        model.markRead(); runCurrent()
+        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED); runCurrent()
+        assertEquals(RequestDetailLoadStatus.FORBIDDEN, model.uiState.value.status)
+        assertNull(model.uiState.value.detail)
+        gate.complete(Unit); runCurrent()
+        assertEquals(RequestDetailLoadStatus.FORBIDDEN, model.uiState.value.status)
+        assertFalse(model.uiState.value.readSaved)
+        assertNull(model.uiState.value.failedStatus)
+    }
+
+    @Test fun deniedReadingCannotBeUndoneByALateStatusResult() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) =
+                detail.copy(requestStatus = com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING)
+            override suspend fun markRead(formId: String, responseId: String) { throw RequestAccessDeniedException() }
+            override suspend fun updateStatus(formId: String, responseId: String, status: com.uvg.cc3087.myapp.data.model.RequestStatus) =
+                withContext(NonCancellable) { gate.await(); detail.copy(requestStatus = status) }
+        })
+        model.openRequest("form", "response"); runCurrent()
+        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED); runCurrent()
+        model.markRead(); runCurrent()
+        gate.complete(Unit); runCurrent()
+        assertEquals(RequestDetailLoadStatus.FORBIDDEN, model.uiState.value.status)
+        assertNull(model.uiState.value.detail)
+    }
+
+    @Test fun lateDeniedWriteDoesNotClearANewerSelection() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) =
+                detail.copy(responseId = responseId, requestStatus = com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING)
+            override suspend fun updateStatus(formId: String, responseId: String, status: com.uvg.cc3087.myapp.data.model.RequestStatus): RequestDetail =
+                withContext(NonCancellable) { gate.await(); throw RequestAccessDeniedException() }
+        })
+        model.openRequest("form", "response"); runCurrent()
+        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED); runCurrent()
+        model.openRequest("form", "new"); runCurrent()
+        gate.complete(Unit); runCurrent()
+        assertEquals(RequestDetailLoadStatus.CONTENT, model.uiState.value.status)
+        assertEquals("new", model.uiState.value.detail?.responseId)
+    }
+
+    @Test fun unknownStatusesAndMissingRetryTargetsNeverWrite() = runTest {
+        var writes = 0
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) = detail
+            override suspend fun updateStatus(formId: String, responseId: String, status: com.uvg.cc3087.myapp.data.model.RequestStatus): RequestDetail {
+                writes++
+                return detail
+            }
+        })
+        model.retryStatusChange()
+        model.openRequest("form", "response"); runCurrent()
+        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING)
+        model.retryStatusChange(); runCurrent()
+        assertEquals(0, writes)
+    }
+
+    @Test fun anotherStatusCannotBeQueuedWhileTheCurrentWriteIsPending() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        var writes = 0
+        val model = model(object : RequestRepository {
+            override suspend fun getDetail(formId: String, responseId: String) =
+                detail.copy(requestStatus = com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING)
+            override suspend fun updateStatus(formId: String, responseId: String, status: com.uvg.cc3087.myapp.data.model.RequestStatus): RequestDetail {
+                writes++
+                gate.await()
+                return detail.copy(requestStatus = status)
+            }
+        })
+        model.openRequest("form", "response"); runCurrent()
+        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED); runCurrent()
+        model.changeStatus(com.uvg.cc3087.myapp.data.model.RequestStatus.IN_PROGRESS)
+        model.retryStatusChange(); runCurrent()
+        assertEquals(1, writes)
+        assertTrue(model.uiState.value.savingStatus)
+        gate.complete(Unit); runCurrent()
+        assertEquals(com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED, model.uiState.value.detail?.requestStatus)
     }
 
     private fun model(repository: RequestRepository, saved: SavedStateHandle = SavedStateHandle()) =

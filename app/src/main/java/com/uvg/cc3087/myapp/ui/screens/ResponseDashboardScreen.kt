@@ -21,10 +21,10 @@ import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.model.RequestStatus
 import com.uvg.cc3087.myapp.data.model.RequestSummary
 import com.uvg.cc3087.myapp.domain.requests.ResponsePeriod
-import com.uvg.cc3087.myapp.ui.components.DashboardCachedNotice
+import com.uvg.cc3087.myapp.ui.components.ResponseCachedNotice
 import com.uvg.cc3087.myapp.ui.components.DashboardEmptyPanel
 import com.uvg.cc3087.myapp.ui.components.DashboardFilterPanel
-import com.uvg.cc3087.myapp.ui.components.DashboardLoadPanel
+import com.uvg.cc3087.myapp.ui.components.ResponseLoadPanel
 import com.uvg.cc3087.myapp.ui.components.DashboardOverview
 import com.uvg.cc3087.myapp.ui.components.RequestSummaryCard
 import com.uvg.cc3087.myapp.ui.components.ResponseActivityChart
@@ -105,7 +105,7 @@ fun ResponseDashboardScreen(
                 }
                 if (showData) {
                     if (state.status != RequestListLoadStatus.CONTENT) {
-                        item("cached-warning") { DashboardCachedNotice(onRefresh) }
+                        item("cached-warning") { ResponseCachedNotice(onRefresh) }
                     }
                     item("filters") { DashboardFilterPanel(state.filter, data.forms, onForm, onPeriod) }
                     item("overview") { DashboardOverview(data, onInbox, onUnknown) }
@@ -138,7 +138,7 @@ fun ResponseDashboardScreen(
                         ) { Text(stringResource(R.string.dashboard_view_all)) }
                     }
                 } else {
-                    item("load-state") { DashboardLoadPanel(state.status, onRefresh) }
+                    item("load-state") { ResponseLoadPanel(state.status, onRefresh) }
                 }
             }
         }

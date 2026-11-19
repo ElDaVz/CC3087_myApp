@@ -1,6 +1,7 @@
 package com.uvg.cc3087.myapp.ui.state
 
 import com.uvg.cc3087.myapp.data.model.RequestDetail
+import com.uvg.cc3087.myapp.data.model.RequestStatus
 
 enum class RequestDetailLoadStatus { IDLE, LOADING, CONTENT, NOT_FOUND, FORBIDDEN, UNAVAILABLE, ERROR }
 
@@ -11,5 +12,6 @@ data class RequestDetailUiState(
     val statusSaveFailed: Boolean = false,
     val markingRead: Boolean = false,
     val readSaved: Boolean = false,
-    val readSaveFailed: Boolean = false
+    val readSaveFailed: Boolean = false,
+    val failedStatus: RequestStatus? = null
 )
