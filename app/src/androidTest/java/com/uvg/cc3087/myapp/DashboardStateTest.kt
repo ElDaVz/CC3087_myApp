@@ -100,7 +100,8 @@ class DashboardStateTest {
         compose.onNodeWithTag("metric-total").performScrollTo().assertTextContains("1")
         compose.onNodeWithText("No hay respuestas para estos filtros.").assertDoesNotExist()
         compose.onNodeWithTag("response-dashboard").performScrollToNode(hasTestTag("response-chart"))
-        compose.onNode(hasContentDescription(": 1 respuestas", substring = true)).assertExists()
+        compose.onNode(hasContentDescription(": 1 respuesta", substring = true)).assertExists()
+        compose.onNode(hasContentDescription(": 1 respuestas", substring = true)).assertDoesNotExist()
     }
 
     @Test fun undatedResponsesAreCountedWithoutDrawingAnInventedChart() {

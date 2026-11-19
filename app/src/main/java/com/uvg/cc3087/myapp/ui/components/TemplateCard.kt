@@ -15,8 +15,8 @@ import androidx.compose.ui.unit.dp
 fun TemplateCard(
     title: String,
     subtitle: String,
-    icon: ImageVector = Icons.Outlined.AccountBox,
     modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Outlined.AccountBox,
     onClick: () -> Unit = {}
 ) {
 

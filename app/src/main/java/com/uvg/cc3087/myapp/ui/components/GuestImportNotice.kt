@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -23,11 +24,11 @@ fun GuestImportNotice(state: GuestImportState, onRetry: () -> Unit) {
         color = if (state.phase == GuestImportPhase.ERROR) MaterialTheme.colorScheme.errorContainer
         else MaterialTheme.colorScheme.secondaryContainer) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(when (state.phase) {
-                GuestImportPhase.COMPLETE -> R.string.guest_import_complete
-                GuestImportPhase.ERROR -> R.string.guest_import_error
-                else -> R.string.guest_import_running
-            }, state.count))
+            Text(when (state.phase) {
+                GuestImportPhase.COMPLETE -> pluralStringResource(R.plurals.guest_import_complete, state.count, state.count)
+                GuestImportPhase.ERROR -> stringResource(R.string.guest_import_error)
+                else -> stringResource(R.string.guest_import_running)
+            })
             if (running) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (state.phase == GuestImportPhase.ERROR) OutlinedButton(onClick = onRetry) {
                 Text(stringResource(R.string.guest_import_retry))

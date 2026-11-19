@@ -46,6 +46,7 @@
     <string name="editor_ready">Formulario listo para continuar</string>
     <plurals name="response_count">
         <item quantity="one">%d respuesta</item>
+        <item quantity="many">%d respuestas</item>
         <item quantity="other">%d respuestas</item>
     </plurals>
     <string name="edit_form_title">Editar formulario</string>
@@ -158,6 +159,7 @@
     <string name="sample_satisfaction">Encuesta de satisfacción</string>
     <plurals name="selected_options_count">
         <item quantity="one">%d opción seleccionada</item>
+        <item quantity="many">%d opciones seleccionadas</item>
         <item quantity="other">%d opciones seleccionadas</item>
     </plurals>
     <string name="draft_saving">Guardando…</string>
@@ -247,7 +249,11 @@
     <string name="auth_continue_guest">Continuar como invitado</string>
     <string name="auth_sign_out">Cerrar sesión</string>
     <string name="guest_import_running">Incorporando tus borradores de invitado a esta cuenta…</string>
-    <string name="guest_import_complete">%1$d borradores de invitado incorporados a tu cuenta en este dispositivo. Las imágenes siguen siendo privadas hasta publicar. La sincronización tiene su propio estado.</string>
+    <plurals name="guest_import_complete">
+        <item quantity="one">%1$d borrador de invitado incorporado a tu cuenta en este dispositivo. Las imágenes siguen siendo privadas hasta publicar. La sincronización tiene su propio estado.</item>
+        <item quantity="many">%1$d borradores de invitado incorporados a tu cuenta en este dispositivo. Las imágenes siguen siendo privadas hasta publicar. La sincronización tiene su propio estado.</item>
+        <item quantity="other">%1$d borradores de invitado incorporados a tu cuenta en este dispositivo. Las imágenes siguen siendo privadas hasta publicar. La sincronización tiene su propio estado.</item>
+    </plurals>
     <string name="guest_import_error">No se pudieron incorporar tus borradores. Siguen guardados en este dispositivo y reservados para esta cuenta.</string>
     <string name="guest_import_retry">Reintentar importación</string>
     <string name="account_failed">No se pudo completar la operación. Tus borradores siguen guardados; vuelve a intentar.</string>
@@ -302,8 +308,16 @@
     <string name="dashboard_evolution">Evolución de respuestas</string>
     <string name="dashboard_daily">Respuestas por día · Desliza para explorar</string>
     <string name="dashboard_monthly">Respuestas por mes · Desliza para explorar</string>
-    <string name="dashboard_chart_value">%1$s: %2$d respuestas</string>
-    <string name="dashboard_undated">El total incluye %1$d respuestas sin fecha que no aparecen en la gráfica.</string>
+    <plurals name="dashboard_chart_value">
+        <item quantity="one">%1$s: %2$d respuesta</item>
+        <item quantity="many">%1$s: %2$d respuestas</item>
+        <item quantity="other">%1$s: %2$d respuestas</item>
+    </plurals>
+    <plurals name="dashboard_undated">
+        <item quantity="one">El total incluye %1$d respuesta sin fecha que no aparece en la gráfica.</item>
+        <item quantity="many">El total incluye %1$d respuestas sin fecha que no aparecen en la gráfica.</item>
+        <item quantity="other">El total incluye %1$d respuestas sin fecha que no aparecen en la gráfica.</item>
+    </plurals>
     <string name="dashboard_unknown_count">Sin estado: %1$d</string>
     <string name="dashboard_form_label">%1$s · %2$s</string>
     <string name="dashboard_unread">Sin revisar</string>
@@ -391,6 +405,11 @@
     <string name="field_analytics_by_hour">Horas elegidas</string>
     <string name="field_analytics_legacy_hint">No se registró el tipo original del componente. Solo se muestran conteos de contestadas y vacías; no se interpreta el texto como número o fecha.</string>
     <string name="field_analytics_no_values">Sin valores compatibles</string>
-    <string name="field_analytics_category_count">%1$d / %2$d respuestas · %3$s</string>
+    <plurals name="field_analytics_category_count">
+        <item quantity="one">%1$d / %2$d respuesta · %3$s</item>
+        <item quantity="many">%1$d / %2$d respuestas · %3$s</item>
+        <item quantity="other">%1$d / %2$d respuestas · %3$s</item>
+    </plurals>
+    <string name="qa_trigger_test_crash">DEMO QA: provocar fallo de prueba</string>
     <string name="field_analytics_more_categories">Otras categorías no mostradas: %1$d</string>
 </resources>
