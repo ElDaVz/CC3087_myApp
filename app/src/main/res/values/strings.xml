@@ -364,4 +364,33 @@
     <string name="account_sign_out_title">Sign out with operations pending?</string>
     <string name="account_sign_out_pending">Local data and pending operations will be kept for this account. Work stops when you sign out and resumes when you sign in again.</string>
     <string name="account_keep_session">Cancel</string>
+    <string name="field_analytics_title">Analytics by question</string>
+    <string name="field_analytics_select_form">Select a form above to see metrics for each component.</string>
+    <string name="field_analytics_responses">Responses in this period: %1$d</string>
+    <string name="field_analytics_scope">Each historical version only counts responses that included that question. Current draft edits do not change these metrics.</string>
+    <string name="field_analytics_excluded">Responses excluded from question metrics due to duplicate question IDs: %1$d</string>
+    <string name="field_analytics_empty">No question data is available for this period.</string>
+    <string name="field_analytics_legacy_type">Unrecorded component type</string>
+    <string name="field_analytics_version">Historical variant %1$d</string>
+    <string name="field_analytics_answered">Answered: %1$d / %2$d</string>
+    <string name="field_analytics_blank">Blank: %1$d</string>
+    <string name="field_analytics_invalid">Values excluded from specialized metrics due to an incompatible or missing format: %1$d</string>
+    <string name="field_analytics_length">Average length (characters)</string>
+    <string name="field_analytics_unit">Unit: %1$s</string>
+    <string name="field_analytics_number_precision">Values are displayed with up to 3 decimal places.</string>
+    <string name="field_analytics_minimum">Minimum</string>
+    <string name="field_analytics_maximum">Maximum</string>
+    <string name="field_analytics_average">Average (up to 3 decimal places)</string>
+    <string name="field_analytics_valid_email">Addresses with a valid format: %1$d</string>
+    <string name="field_analytics_email_private">Addresses and domains are not displayed or sent to telemetry.</string>
+    <string name="field_analytics_multiple_hint" formatted="false">Each bar counts responses that selected the option. Percentages may add up to more than 100%.</string>
+    <string name="field_analytics_selection_hint">Distribution among valid, non-blank selections.</string>
+    <string name="field_analytics_first_date">Earliest selected date</string>
+    <string name="field_analytics_last_date">Latest selected date</string>
+    <string name="field_analytics_by_date">Selected dates</string>
+    <string name="field_analytics_by_hour">Selected hours</string>
+    <string name="field_analytics_legacy_hint">The original component type was not recorded. Only answered and blank counts are shown; text is not interpreted as a number or date.</string>
+    <string name="field_analytics_no_values">No compatible values</string>
+    <string name="field_analytics_category_count">%1$d / %2$d responses · %3$s</string>
+    <string name="field_analytics_more_categories">Additional categories not shown: %1$d</string>
 </resources>

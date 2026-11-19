@@ -28,8 +28,10 @@ import com.uvg.cc3087.myapp.ui.components.ResponseLoadPanel
 import com.uvg.cc3087.myapp.ui.components.DashboardOverview
 import com.uvg.cc3087.myapp.ui.components.RequestSummaryCard
 import com.uvg.cc3087.myapp.ui.components.ResponseActivityChart
+import com.uvg.cc3087.myapp.ui.components.fieldAnalyticsPanels
 import com.uvg.cc3087.myapp.ui.state.RequestListLoadStatus
 import com.uvg.cc3087.myapp.ui.viewmodel.ResponseDashboardUiState
+import com.uvg.cc3087.myapp.ui.viewmodel.FieldAnalyticsUiState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +47,9 @@ fun ResponseDashboardScreen(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     syncMessage: String? = null,
-    isDemo: Boolean = false
+    isDemo: Boolean = false,
+    analyticsState: FieldAnalyticsUiState? = null,
+    onAnalyticsRetry: () -> Unit = {}
 ) {
     val data = state.dashboard
     val showData = state.hasData && state.status != RequestListLoadStatus.FORBIDDEN
@@ -109,6 +113,12 @@ fun ResponseDashboardScreen(
                     }
                     item("filters") { DashboardFilterPanel(state.filter, data.forms, onForm, onPeriod) }
                     item("overview") { DashboardOverview(data, onInbox, onUnknown) }
+                    analyticsState?.let { analytics ->
+                        // durante el cambio de filtro no mostramos ni un fotograma del formulario anterior
+                        val safeState = if (analytics.formId == state.filter.formId && analytics.period == state.filter.period) analytics
+                            else FieldAnalyticsUiState(state.filter.formId, state.filter.period, RequestListLoadStatus.LOADING)
+                        fieldAnalyticsPanels(safeState, onAnalyticsRetry)
+                    }
                     if (data.requests.isNotEmpty()) {
                         item("activity") { ResponseActivityChart(data.buckets, state.filter) }
                         if (data.undatedCount > 0) {

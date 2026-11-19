@@ -364,4 +364,33 @@
     <string name="account_sign_out_title">¿Cerrar sesión con operaciones pendientes?</string>
     <string name="account_sign_out_pending">Los datos locales y las operaciones pendientes se conservarán para esta cuenta. El trabajo se detiene al cerrar sesión y se reanuda al volver a entrar.</string>
     <string name="account_keep_session">Cancelar</string>
+    <string name="field_analytics_title">Análisis por pregunta</string>
+    <string name="field_analytics_select_form">Selecciona un formulario arriba para ver las métricas de cada componente.</string>
+    <string name="field_analytics_responses">Respuestas en este período: %1$d</string>
+    <string name="field_analytics_scope">Cada variante histórica cuenta solo las respuestas que incluían esa pregunta. Los cambios actuales del borrador no modifican estas métricas.</string>
+    <string name="field_analytics_excluded">Respuestas excluidas del análisis por preguntas por tener IDs repetidos: %1$d</string>
+    <string name="field_analytics_empty">No hay datos de preguntas disponibles en este período.</string>
+    <string name="field_analytics_legacy_type">Tipo de componente no registrado</string>
+    <string name="field_analytics_version">Variante histórica %1$d</string>
+    <string name="field_analytics_answered">Contestadas: %1$d / %2$d</string>
+    <string name="field_analytics_blank">Vacías: %1$d</string>
+    <string name="field_analytics_invalid">Valores excluidos de las métricas especializadas por formato incompatible o no registrado: %1$d</string>
+    <string name="field_analytics_length">Longitud promedio (caracteres)</string>
+    <string name="field_analytics_unit">Unidad: %1$s</string>
+    <string name="field_analytics_number_precision">Los valores se muestran con hasta 3 decimales.</string>
+    <string name="field_analytics_minimum">Mínimo</string>
+    <string name="field_analytics_maximum">Máximo</string>
+    <string name="field_analytics_average">Promedio (hasta 3 decimales)</string>
+    <string name="field_analytics_valid_email">Direcciones con formato válido: %1$d</string>
+    <string name="field_analytics_email_private">No se muestran direcciones ni dominios, ni se envían a telemetría.</string>
+    <string name="field_analytics_multiple_hint" formatted="false">Cada barra cuenta respuestas que seleccionaron la opción. Los porcentajes pueden sumar más de 100%.</string>
+    <string name="field_analytics_selection_hint">Distribución entre selecciones válidas y no vacías.</string>
+    <string name="field_analytics_first_date">Primera fecha elegida</string>
+    <string name="field_analytics_last_date">Última fecha elegida</string>
+    <string name="field_analytics_by_date">Fechas elegidas</string>
+    <string name="field_analytics_by_hour">Horas elegidas</string>
+    <string name="field_analytics_legacy_hint">No se registró el tipo original del componente. Solo se muestran conteos de contestadas y vacías; no se interpreta el texto como número o fecha.</string>
+    <string name="field_analytics_no_values">Sin valores compatibles</string>
+    <string name="field_analytics_category_count">%1$d / %2$d respuestas · %3$s</string>
+    <string name="field_analytics_more_categories">Otras categorías no mostradas: %1$d</string>
 </resources>

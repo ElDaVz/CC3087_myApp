@@ -76,7 +76,8 @@ class RequestNavigationTest {
         launchApp(TestRequests(emptyList()))
         compose.onNodeWithText("Nuevo formulario").performClick()
         compose.onNodeWithText("Respuestas").performClick()
-        compose.onNodeWithText("Todavía no has recibido solicitudes.").assertExists()
+        compose.onNodeWithTag("response-dashboard").performScrollToNode(hasText("Todavía no has recibido solicitudes."))
+        compose.onNodeWithText("Todavía no has recibido solicitudes.").assertIsDisplayed()
         compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Mis formularios").assertExists()
     }

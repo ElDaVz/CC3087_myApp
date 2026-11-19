@@ -21,6 +21,10 @@ class CloudRequestRepository(private val db: FormLinkDatabase, private val clien
         val read = reads.map { it.formId to it.responseId }.toSet()
         rows.map { it.summary((it.formId to it.responseId) in read) }
     }
+    override fun observeDetails(formId: String) = db.cloud().observeRequests(owner).map { rows ->
+        checkSession()
+        rows.filter { it.formId == formId }.map { it.detail() }.also { checkSession() }
+    }
     override suspend fun getRequests(): List<RequestSummary> = db.withTransaction {
         checkSession()
         val read = db.requestReads().get(readScope).map { it.formId to it.responseId }.toSet()
@@ -85,6 +89,11 @@ class CloudRequestRepository(private val db: FormLinkDatabase, private val clien
                         } else answer?.toString().orEmpty()
                     }
                     JSONObject().put("fieldId", field["id"]).put("label", field["label"]).put("kind", kind).put("value", displayed)
+                        .withRemoteFieldSnapshot(field).also { row ->
+                            if (field["type"] == "NUMBER") {
+                                remoteAnswerNumber(answer)?.let { row.put("number", it.toPlainString()) }
+                            }
+                        }
                 }
                 db.cloud().saveRequest(RemoteRequestEntity(owner, formId, responseId, value["title"] as String,
                     (value["submittedAt"] as Instant).toEpochMilli(), value["status"] as String, JSONArray(answers).toString(),
@@ -101,7 +110,7 @@ private fun RemoteRequestEntity.detail(): RequestDetail {
             "choices" -> row.getJSONArray("value").let { values -> RequestAnswerValue.Choices((0 until values.length()).map(values::getString)) }
             "checked" -> RequestAnswerValue.Checked(row.getBoolean("value"))
             else -> RequestAnswerValue.Text(row.getString("value"))
-        })
+        }, row.readFieldSnapshot(), row.optString("number").toBigDecimalOrNull())
     }, requestStatus = RequestStatus.valueOf(status))
 }
 

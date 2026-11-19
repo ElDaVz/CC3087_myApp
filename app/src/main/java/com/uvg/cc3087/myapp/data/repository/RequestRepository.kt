@@ -7,6 +7,7 @@ import com.uvg.cc3087.myapp.data.model.FormAnswer
 import com.uvg.cc3087.myapp.data.model.RequestStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import java.util.Locale
 
 /** Requests in the configured data source; the local implementation stays on this device. */
@@ -20,6 +21,12 @@ fun interface RequestRepository {
 
     suspend fun getRequests(): List<RequestSummary> = throw RequestBackendUnavailableException()
     fun observeRequests(): Flow<List<RequestSummary>> = flow { emit(getRequests()) }
+    // las implementaciones locales leen los snapshots juntos, sin marcar respuestas como revisadas
+    fun observeDetails(formId: String): Flow<List<RequestDetail>> = observeRequests().map { rows ->
+        rows.filter { it.formId == formId }.distinctBy { it.key }.map {
+            checkNotNull(getDetail(it.formId, it.responseId))
+        }
+    }
     suspend fun submit(form: FormDraft, responseId: String, answers: Map<String, FormAnswer>, locale: Locale): RequestDetail =
         throw RequestBackendUnavailableException()
     suspend fun updateStatus(formId: String, responseId: String, status: RequestStatus): RequestDetail =
