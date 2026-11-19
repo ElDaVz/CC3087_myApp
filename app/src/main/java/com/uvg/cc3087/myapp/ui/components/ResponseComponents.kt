@@ -1,37 +1,22 @@
 package com.uvg.cc3087.myapp.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
-import com.uvg.cc3087.myapp.data.model.*
-import com.uvg.cc3087.myapp.domain.requests.*
-import com.uvg.cc3087.myapp.ui.resources.labelRes
+import com.uvg.cc3087.myapp.domain.requests.ResponseFilter
+import com.uvg.cc3087.myapp.domain.requests.ResponseForm
+import com.uvg.cc3087.myapp.domain.requests.ResponsePeriod
 import com.uvg.cc3087.myapp.ui.state.RequestListLoadStatus
-import com.uvg.cc3087.myapp.ui.viewmodel.ResponseDashboardUiState
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 @Composable
 fun ResponseFilters(filter: ResponseFilter, forms: List<ResponseForm>, onForm: (String?) -> Unit, onPeriod: (ResponsePeriod) -> Unit) {
@@ -68,24 +53,6 @@ fun ResponseFilters(filter: ResponseFilter, forms: List<ResponseForm>, onForm: (
 private fun formLabel(form: ResponseForm, forms: List<ResponseForm>): String {
     val title = form.title.ifBlank { stringResource(R.string.untitled_form) }
     return if (forms.count { it.title == form.title } > 1) stringResource(R.string.dashboard_form_label, title, form.id) else title
-}
-
-@Composable
-fun RequestSummaryCard(request: RequestSummary, onOpen: (RequestSummary) -> Unit) {
-    val resources = LocalResources.current
-    val submitted = request.submittedAt?.let {
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(resources.configuration.locales[0]).withZone(ZoneId.systemDefault()).format(it)
-    } ?: stringResource(R.string.request_detail_no_date)
-    OutlinedCard(onClick = { onOpen(request) }, modifier = Modifier.fillMaxWidth().testTag("request-${request.key}")) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!request.isRead) Text(stringResource(R.string.dashboard_unread), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            Text(request.formTitle.ifBlank { stringResource(R.string.untitled_form) }, style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.request_detail_id, request.responseId))
-            Text(stringResource(R.string.request_detail_submitted, submitted), style = MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.request_detail_status, request.requestStatus?.let { stringResource(it.labelRes) }
-                ?: request.statusLabel?.takeIf { it.isNotBlank() } ?: stringResource(R.string.request_detail_no_status)))
-        }
-    }
 }
 
 @Composable

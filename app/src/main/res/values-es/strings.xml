@@ -325,6 +325,17 @@
     <string name="dashboard_show_history">Ver todo el historial</string>
     <string name="dashboard_no_dated_activity">No hay respuestas con fecha para graficar con estos filtros.</string>
     <string name="dashboard_missing_form">Formulario seleccionado no disponible</string>
+    <string name="requests_only_unread">Solo sin revisar</string>
+    <string name="requests_filter_empty">No hay respuestas que coincidan con esta vista.</string>
+    <string name="requests_clear_filters">Quitar filtros</string>
+    <string name="requests_visible_summary">En esta vista</string>
+    <string name="requests_filter_empty_hint">Prueba con otro estado, período o formulario, o incluye las respuestas revisadas.</string>
+    <string name="request_answers_read_only">Las respuestas enviadas son de solo lectura. Abajo puedes actualizar el estado de la solicitud.</string>
+    <string name="request_answers_read_only_no_status">Las respuestas enviadas son de solo lectura.</string>
+    <string name="request_question_number">Pregunta %1$d</string>
+    <string name="request_status_saving">Guardando estado…</string>
+    <string name="request_status_retry">Reintentar cambio de estado</string>
+    <string name="request_status_failed_target">No se pudo cambiar el estado a %1$s. Se sigue mostrando el último estado confirmado.</string>
     <string name="delete_form_named">Eliminar formulario %1$s</string>
     <string name="delete_form_title">¿Eliminar formulario?</string>
     <string name="delete_form_confirm">Eliminar</string>

@@ -94,6 +94,19 @@ class ResponseDashboardInboxTest {
         assertEquals(listOf(current), model.uiState.value.dashboard.requests)
     }
 
+    @Test fun visibleCountsKeepUnknownStatusesAndReadFlagsSeparate() {
+        val pending = summary("a", 1).copy(requestStatus = com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING)
+        val completed = summary("b", 2).copy(requestStatus = com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED, isRead = true)
+        val state = com.uvg.cc3087.myapp.ui.state.RequestListUiState(
+            RequestListLoadStatus.CONTENT, listOf(pending, completed, summary("c", 3))
+        )
+        assertEquals(2, state.unreadCount)
+        assertEquals(1, state.unknownStatusCount)
+        assertEquals(1, state.statusCounts[com.uvg.cc3087.myapp.data.model.RequestStatus.PENDING])
+        assertEquals(0, state.statusCounts[com.uvg.cc3087.myapp.data.model.RequestStatus.IN_PROGRESS])
+        assertEquals(1, state.statusCounts[com.uvg.cc3087.myapp.data.model.RequestStatus.COMPLETED])
+    }
+
     private fun summary(form: String, epoch: Long) =
         RequestSummary(form, "shared-id", "Pedido", Instant.ofEpochSecond(epoch))
 

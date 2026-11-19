@@ -43,7 +43,7 @@ internal fun DashboardFilterPanel(
 }
 
 @Composable
-internal fun DashboardCachedNotice(onRetry: () -> Unit) {
+internal fun ResponseCachedNotice(onRetry: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
         Column(Modifier.padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite },
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -73,7 +73,7 @@ internal fun DashboardEmptyPanel(sourceEmpty: Boolean, onShowHistory: () -> Unit
 }
 
 @Composable
-internal fun DashboardLoadPanel(status: RequestListLoadStatus, onRetry: () -> Unit) {
+internal fun ResponseLoadPanel(status: RequestListLoadStatus, onRetry: () -> Unit) {
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (status != RequestListLoadStatus.LOADING) {

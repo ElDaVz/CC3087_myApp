@@ -7,6 +7,7 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.uvg.cc3087.myapp.data.model.RequestStatus
 import com.uvg.cc3087.myapp.data.repository.RequestAccessDeniedException
 import com.uvg.cc3087.myapp.data.repository.RequestBackendUnavailableException
 import com.uvg.cc3087.myapp.data.repository.RequestRepository
@@ -26,6 +27,7 @@ class RequestDetailViewModel(
     val uiState = mutableUiState.asStateFlow()
     private var loadJob: Job? = null
     private var readJob: Job? = null
+    private var statusJob: Job? = null
     private var revision = 0L
     private var selection: Pair<String, String>? = null
 
@@ -59,27 +61,42 @@ class RequestDetailViewModel(
                 repository.markRead(detail.formId, detail.responseId)
                 if (stamp == revision) mutableUiState.value = mutableUiState.value.copy(markingRead = false, readSaved = true)
             } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: RequestAccessDeniedException) {
+                clearDeniedDetail(stamp)
+            }
             catch (_: Exception) {
                 if (stamp == revision) mutableUiState.value = mutableUiState.value.copy(markingRead = false, readSaveFailed = true)
             }
         }
     }
 
-    fun changeStatus(status: com.uvg.cc3087.myapp.data.model.RequestStatus) {
+    fun retryStatusChange() {
+        mutableUiState.value.failedStatus?.let(::changeStatus)
+    }
+
+    fun changeStatus(status: RequestStatus) {
         val state = mutableUiState.value
         val detail = state.detail ?: return
-        if (state.savingStatus || detail.requestStatus == null || detail.requestStatus == status) return
+        if (state.status != RequestDetailLoadStatus.CONTENT || state.savingStatus ||
+            detail.requestStatus == null || detail.requestStatus == status
+        ) return
         val currentRevision = revision
-        mutableUiState.value = state.copy(savingStatus = true, statusSaveFailed = false)
-        viewModelScope.launch {
+        mutableUiState.value = state.copy(savingStatus = true, statusSaveFailed = false, failedStatus = null)
+        statusJob = viewModelScope.launch {
             try {
                 val updated = repository.updateStatus(detail.formId, detail.responseId, status)
                 check(updated.formId == detail.formId && updated.responseId == detail.responseId)
-                if (revision == currentRevision) mutableUiState.value = mutableUiState.value.copy(detail = updated, savingStatus = false, statusSaveFailed = false)
+                if (revision == currentRevision) mutableUiState.value = mutableUiState.value.copy(
+                    detail = updated, savingStatus = false, statusSaveFailed = false, failedStatus = null
+                )
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (_: RequestAccessDeniedException) {
+                clearDeniedDetail(currentRevision)
             } catch (_: Exception) {
-                if (revision == currentRevision) mutableUiState.value = mutableUiState.value.copy(savingStatus = false, statusSaveFailed = true)
+                if (revision == currentRevision) mutableUiState.value = mutableUiState.value.copy(
+                    savingStatus = false, statusSaveFailed = true, failedStatus = status
+                )
             }
         }
     }
@@ -88,6 +105,7 @@ class RequestDetailViewModel(
         val currentRevision = ++revision
         loadJob?.cancel()
         readJob?.cancel()
+        statusJob?.cancel()
         // Clear previous answers immediately so another selection never shows stale client data.
         mutableUiState.value = RequestDetailUiState(RequestDetailLoadStatus.LOADING)
         if (formId.isBlank() || responseId.isBlank()) {
@@ -111,6 +129,16 @@ class RequestDetailViewModel(
             }
             if (revision == currentRevision) mutableUiState.value = result
         }
+    }
+
+    private fun clearDeniedDetail(stamp: Long) {
+        if (stamp != revision) return
+        // invalidamos también los resultados de otras operaciones que seguían pendientes
+        revision++
+        mutableUiState.value = RequestDetailUiState(RequestDetailLoadStatus.FORBIDDEN)
+        loadJob?.cancel()
+        readJob?.cancel()
+        statusJob?.cancel()
     }
 
     companion object {
