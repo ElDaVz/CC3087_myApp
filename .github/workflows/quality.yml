@@ -23,7 +23,10 @@ jobs:
         if: hashFiles('scripts/check-repository.mjs') != ''
         run: node scripts/check-repository.mjs
       - name: Compile, unit tests, Lint and APK
-        run: ./gradlew compileDebugKotlin testDebugUnitTest lintDebug assembleDebug --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process
+        shell: bash
+        run: |
+          mkdir -p ci-logs
+          ./gradlew compileDebugKotlin testDebugUnitTest lintDebug assembleDebug --stacktrace --console=plain --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee ci-logs/android-build.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -31,6 +34,7 @@ jobs:
           path: |
             app/build/reports/
             app/build/test-results/
+            ci-logs/
   web-and-rules:
     # Playwright 1.58.2 does not support Ubuntu 26.04, which ubuntu-latest may resolve to.
     runs-on: ubuntu-24.04
@@ -85,6 +89,11 @@ jobs:
           cache: npm
           cache-dependency-path: backend-tests/package-lock.json
       - run: npm ci --prefix backend-tests
+      - name: Build instrumentation APKs before starting emulators
+        shell: bash
+        run: |
+          mkdir -p ci-logs
+          ./gradlew assembleDebug assembleDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-daemon --stacktrace --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee ci-logs/instrumented-build.log
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -101,7 +110,7 @@ jobs:
           ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader -no-snapshot -no-audio -no-boot-anim
           disable-animations: true
-          script: backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore "./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process"
+          script: backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore "./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --stacktrace --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -109,3 +118,4 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            ci-logs/

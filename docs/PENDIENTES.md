@@ -320,3 +320,11 @@ Comandos de pruebas (con Auth/Firestore locales activos en `demo-formlink`):
 Pendientes de evidencia: nueva ejecución de GitHub Actions tras publicar los commits, revisión humana, TalkBack y teclado físico. La web no cambia. La corrección y el checklist se conservan en commits separados de esta rama; no se realiza merge.
 
 Seguimiento del job 135930418496: la API de GitHub confirma `head_sha=6509df6dc2b65d66aaaa8c00a040addea927f68c`, intento 2 de la ejecución 44610807471. La branch remota todavía apuntaba a ese commit: el reintento no incluía la corrección `17a24d9` ni el checklist `31f5144`, que seguían locales. Ese fallo corresponde al código anterior y no verifica la corrección. Se publican los commits para generar una ejecución nueva; el resultado se registra tras comprobarla.
+
+### Ajuste del pipeline tras el reporte de empaquetado
+
+- [x] Separar la generación de los APK del arranque de Android/Firebase, con un worker y daemon de compilación descartable para reducir el uso simultáneo de memoria.
+- [x] Añadir `--stacktrace --console=plain` y conservar logs de compilación como artifacts en ambos jobs Android. El paso Bash conserva el código de fallo de Gradle mediante `pipefail`.
+- [ ] Confirmar la causa interna del fallo de empaquetado y el resultado remoto. El extracto aportado muestra `packageDebug` completado y pruebas ejecutándose antes de `The operation was canceled`; no contiene la excepción interna descrita por Copilot.
+
+Por petición del usuario, este ajuste se guarda en un commit sin ejecutar pruebas, publicar commits ni esperar el pipeline.
