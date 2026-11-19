@@ -94,6 +94,11 @@ jobs:
         run: |
           mkdir -p ci-logs
           ./gradlew assembleDebug assembleDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-daemon --stacktrace --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee ci-logs/instrumented-build.log
+      - name: Cache Firebase emulator binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('backend-tests/package-lock.json') }}
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -119,3 +124,5 @@ jobs:
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
             ci-logs/
+            firebase-debug.log
+            firestore-debug.log

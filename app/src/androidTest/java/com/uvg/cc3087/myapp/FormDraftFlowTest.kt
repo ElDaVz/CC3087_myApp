@@ -1,9 +1,9 @@
 package com.uvg.cc3087.myapp
 
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.room.Room
-import androidx.test.espresso.Espresso.pressBack
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.TemplateSampleData
 import com.uvg.cc3087.myapp.data.local.FormLinkDatabase
@@ -17,6 +17,9 @@ import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.ui.navigation.FormLinkRoute
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -38,19 +41,21 @@ class FormDraftFlowTest {
 
         override fun after() { database.close() }
     }
-    private val compose = createComposeRule()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
     // cerramos la base después de que la actividad de prueba haya liberado sus viewmodels
     @get:Rule val rules = RuleChain.outerRule(databaseRule).around(compose)
 
     @Test fun deletionCanBeCancelledAndConfirmedFromTheList() {
         runBlocking { repository.saveDraft(FormDraft("stored", "Pedido guardado", emptyList(), 1, 1)) }
         launchApp(repository)
-        compose.onNodeWithContentDescription("Eliminar formulario Pedido guardado").performClick()
+        waitForNode(hasContentDescription("Eliminar formulario Pedido guardado"))
+            .performScrollTo().assertIsDisplayed().performClick()
         compose.onNodeWithText("¿Eliminar formulario?").assertExists()
         compose.onNodeWithText("Cancelar").performClick()
-        compose.onNodeWithText("Pedido guardado").assertExists()
+        waitForForm("Pedido guardado")
         runBlocking { assertEquals(1, repository.observeForms().first().size) }
-        compose.onNodeWithContentDescription("Eliminar formulario Pedido guardado").performClick()
+        waitForNode(hasContentDescription("Eliminar formulario Pedido guardado"))
+            .performScrollTo().assertIsDisplayed().performClick()
         compose.onNodeWithText("Eliminar", useUnmergedTree = true).performClick()
         compose.waitUntil(10_000) {
             compose.onAllNodesWithText("Pedido guardado").fetchSemanticsNodes().isEmpty()
@@ -77,25 +82,25 @@ class FormDraftFlowTest {
         launchApp(repository)
         compose.onNodeWithText("Nuevo formulario").performClick()
         compose.onNodeWithText("Formulario de pedido").performClick()
-        compose.onNode(hasSetTextAction() and hasText("Formulario de pedido"))
+        waitForNode(hasSetTextAction() and hasText("Formulario de pedido"))
             .performTextReplacement("Pedido persistente")
-        compose.onNode(hasSetTextAction() and hasText("Nombre"))
+        waitForNode(hasSetTextAction() and hasText("Nombre"))
             .performTextReplacement("Nombre del cliente")
         waitForSaved()
         compose.onNodeWithContentDescription("Volver").performClick()
-        pressBack()
-        compose.onNodeWithText("Pedido persistente").assertExists()
+        dispatchBack()
+        waitForForm("Pedido persistente")
         openEditor()
         compose.waitUntil(10_000) {
             compose.onAllNodes(hasSetTextAction() and hasText("Nombre del cliente"))
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNode(hasSetTextAction() and hasText("Pedido persistente"))
+        waitForNode(hasSetTextAction() and hasText("Pedido persistente"))
             .performTextReplacement("Pedido actualizado")
         waitForSaved()
         compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Mis formularios").assertExists()
-        compose.onNodeWithText("Pedido actualizado").assertExists()
+        waitForForm("Pedido actualizado")
 
         runBlocking {
             val forms = repository.observeForms().first()
@@ -117,7 +122,7 @@ class FormDraftFlowTest {
         launchApp(failingRepository)
         compose.onNodeWithText("Nuevo formulario").performClick()
         compose.onNodeWithText("Formulario en blanco").performClick()
-        compose.onNode(hasSetTextAction() and hasText("Formulario sin título"))
+        waitForNode(hasSetTextAction() and hasText("Formulario sin título"))
             .performTextReplacement("No perder este título")
         compose.waitUntil(10_000) {
             compose.onAllNodesWithText("No se pudieron guardar los cambios en este dispositivo")
@@ -126,7 +131,7 @@ class FormDraftFlowTest {
         failSaves.set(false)
         compose.onNodeWithText("Reintentar").performClick()
         waitForSaved()
-        compose.onNode(hasSetTextAction() and hasText("No perder este título")).assertExists()
+        waitForNode(hasSetTextAction() and hasText("No perder este título")).assertExists()
         runBlocking {
             assertEquals("No perder este título", repository.observeForms().first().single().title)
         }
@@ -146,11 +151,12 @@ class FormDraftFlowTest {
         compose.onNodeWithText("Compartir por WhatsApp").assertIsNotEnabled()
         compose.onNodeWithText("Volver a mis formularios").performScrollTo().performClick()
         compose.onNodeWithText("Mis formularios").assertExists()
-        compose.onNodeWithText("Compartir").performClick()
+        waitForNode(hasText("Compartir"))
+            .performScrollTo().assertIsDisplayed().performClick()
         compose.waitUntil(10_000) {
             compose.onAllNodesWithText("¡Formulario guardado!").fetchSemanticsNodes().isNotEmpty()
         }
-        pressBack()
+        dispatchBack()
         compose.onNodeWithText("Mis formularios").assertExists()
         runBlocking { assertEquals(1, repository.observeForms().first().size) }
     }
@@ -159,14 +165,28 @@ class FormDraftFlowTest {
         runBlocking {
             repository.saveDraft(FormDraft("stored", "Pedido guardado", emptyList(), 1, 1))
         }
-        launchApp(repository)
-        compose.onNodeWithText("Pedido guardado").assertExists()
-        compose.onNodeWithText("Activos").performClick()
-        compose.onNodeWithText("No hay formularios que coincidan con este filtro").assertExists()
+        val releaseForms = CompletableDeferred<Unit>()
+        val delayedRepository = object : FormRepository by repository {
+            override fun observeForms() = flow {
+                releaseForms.await()
+                emitAll(repository.observeForms())
+            }
+        }
+        launchApp(delayedRepository)
+        waitForNode(hasText("Cargando tus formularios…")).assertIsDisplayed()
         compose.onNodeWithText("Pedido guardado").assertDoesNotExist()
-        compose.onNodeWithText("Todos").performClick()
-        compose.onNodeWithText("Pedido guardado").assertExists()
-        compose.onNodeWithText("No hay formularios que coincidan con este filtro").assertDoesNotExist()
+        releaseForms.complete(Unit)
+        waitForForm("Pedido guardado")
+        repeat(3) {
+            compose.onNodeWithText("Activos").performClick()
+            waitForNode(hasText("No hay formularios que coincidan con este filtro")).assertIsDisplayed()
+            compose.onNodeWithText("Activos").assertIsSelected()
+            compose.onNodeWithText("Pedido guardado").assertDoesNotExist()
+            compose.onNodeWithText("Todos").performClick()
+            waitForForm("Pedido guardado")
+            compose.onNodeWithText("Todos").assertIsSelected()
+            compose.onNodeWithText("No hay formularios que coincidan con este filtro").assertDoesNotExist()
+        }
     }
 
     @Test fun aFailedEditSurvivesReturningToFormsAndReopening() {
@@ -182,13 +202,13 @@ class FormDraftFlowTest {
         }
         launchApp(failingRepository)
         openEditor()
-        compose.onNode(hasSetTextAction() and hasText("Pedido guardado"))
+        waitForNode(hasSetTextAction() and hasText("Pedido guardado"))
             .performTextReplacement("Edición pendiente")
-        compose.onNodeWithText("No se pudieron guardar los cambios en este dispositivo").assertExists()
+        waitForNode(hasText("No se pudieron guardar los cambios en este dispositivo")).assertIsDisplayed()
         compose.onNodeWithContentDescription("Volver").performClick()
-        compose.onNodeWithText("Pedido guardado").assertExists()
+        waitForForm("Pedido guardado")
         openEditor()
-        compose.onNode(hasSetTextAction() and hasText("Edición pendiente")).assertExists()
+        waitForNode(hasSetTextAction() and hasText("Edición pendiente")).assertExists()
         failSaves.set(false)
         compose.onNodeWithText("Reintentar").performClick()
         waitForSaved()
@@ -205,13 +225,26 @@ class FormDraftFlowTest {
     }
 
     private fun openEditor() {
-        // Room loads asynchronously; the action label can be hidden by merged card semantics.
+        waitForNode(hasText("Editar")).performScrollTo().assertIsDisplayed().performClick()
+    }
+
+    private fun waitForForm(title: String) {
+        waitForNode(hasText("Mis formularios")).assertIsDisplayed()
+        waitForNode(hasText(title)).performScrollTo().assertIsDisplayed()
+    }
+
+    private fun waitForNode(matcher: SemanticsMatcher): SemanticsNodeInteraction {
+        // Compose idleness does not wait for Room queries or lifecycle Flow emissions.
+        // Use the unmerged tree for labels inside clickable cards and buttons.
         compose.waitUntil(10_000) {
-            compose.onAllNodesWithText("Editar", useUnmergedTree = true)
-                .fetchSemanticsNodes().size == 1
+            compose.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().size == 1
         }
-        compose.onNodeWithText("Editar", useUnmergedTree = true)
-            .performScrollTo().assertIsDisplayed().performClick()
+        return compose.onNode(matcher, useUnmergedTree = true)
+    }
+
+    private fun dispatchBack() {
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
     }
 
     private fun waitForSaved() {
