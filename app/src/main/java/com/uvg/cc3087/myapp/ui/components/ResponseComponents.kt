@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -38,7 +39,15 @@ fun ResponseFilters(filter: ResponseFilter, forms: List<ResponseForm>, onForm: (
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
             OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().testTag("dashboard-form-filter")) {
-                Text(forms.find { it.id == filter.formId }?.let { formLabel(it, forms) } ?: stringResource(R.string.dashboard_all_forms))
+                val selected = forms.find { it.id == filter.formId }
+                val label = when {
+                    filter.formId == null -> stringResource(R.string.dashboard_all_forms)
+                    selected != null -> formLabel(selected, forms)
+                    else -> stringResource(R.string.dashboard_missing_form)
+                }
+                Text(label, Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Outlined.ArrowDropDown, contentDescription = null)
             }
             DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
                 DropdownMenuItem(text = { Text(stringResource(R.string.dashboard_all_forms)) }, onClick = { onForm(null); expanded = false })

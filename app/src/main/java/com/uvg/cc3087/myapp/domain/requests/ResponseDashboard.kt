@@ -18,7 +18,8 @@ data class ResponseDashboard(
     val forms: List<ResponseForm> = emptyList(),
     val hasUnread: Boolean = false,
     val sourceEmpty: Boolean = true,
-    val undatedCount: Int = 0
+    val undatedCount: Int = 0,
+    val unreadCount: Int = 0
 )
 
 /** One projection for dashboard and inbox; no customer answers or Analytics are read. */
@@ -49,5 +50,6 @@ fun responseDashboard(source: List<RequestSummary>, filter: ResponseFilter, now:
     return ResponseDashboard(selected, RequestStatus.entries.associateWith { status -> selected.count { it.requestStatus == status } },
         selected.count { it.requestStatus == null }, buckets,
         requests.distinctBy { it.formId }.map { ResponseForm(it.formId, it.formTitle) },
-        requests.any { !it.isRead }, requests.isEmpty(), selected.count { it.submittedAt == null })
+        requests.any { !it.isRead }, requests.isEmpty(), selected.count { it.submittedAt == null },
+        selected.count { !it.isRead })
 }

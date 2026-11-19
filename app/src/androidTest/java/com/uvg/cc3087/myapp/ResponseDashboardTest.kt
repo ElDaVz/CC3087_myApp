@@ -95,12 +95,9 @@ class ResponseDashboardTest {
             compose.onNodeWithTag("response-dashboard").performScrollToNode(hasTestTag("open-inbox"))
             compose.onNodeWithTag("open-inbox").assertIsDisplayed()
             compose.onNodeWithTag("response-dashboard").performScrollToIndex(0)
-            // Capture synthetic UI only; the shell copies artifacts outside app storage before test cleanup.
-            val file = java.io.File(instrumentation.targetContext.getExternalFilesDir(null), "dashboard-$name.png")
-            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
-            file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
-            val command = "cp " + file.absolutePath + " /sdcard/Download/formlink-dashboard-" + name + ".png"
-            android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use { it.readBytes() }
+            captureDashboard(instrumentation, name)
+            compose.onNodeWithTag("response-dashboard").performScrollToNode(hasTestTag("response-chart"))
+            captureDashboard(instrumentation, "$name-activity")
         }
     }
 
@@ -113,5 +110,14 @@ class ResponseDashboardTest {
         compose.onNodeWithText("Todavía no has recibido solicitudes.").assertDoesNotExist()
         compose.onNodeWithTag("period-ALL").performScrollTo().performClick()
         compose.onNodeWithTag("metric-total").assertTextContains("1")
+    }
+
+    private fun captureDashboard(instrumentation: android.app.Instrumentation, name: String) {
+        // estas capturas solo incluyen los datos sintéticos de esta prueba
+        val file = java.io.File(instrumentation.targetContext.getExternalFilesDir(null), "dashboard-$name.png")
+        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        val command = "cp " + file.absolutePath + " /sdcard/Download/formlink-dashboard-" + name + ".png"
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use { it.readBytes() }
     }
 }
