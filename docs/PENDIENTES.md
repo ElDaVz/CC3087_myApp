@@ -1,21 +1,25 @@
 # Pendientes de FormLink
 
-Entregas propuestas de alcance moderado, ordenadas para poder completarlas por grupo. Cada grupo tendrá una rama propia y commits por tarea pequeña; los grupos dependientes se iniciarán desde `main` cuando su base esté integrada. Este checklist define trabajo futuro: no implica que las funciones estén implementadas o verificadas.
+Entregas propuestas de alcance moderado, ordenadas para poder completarlas por grupo. Cada grupo tendrá una rama propia y commits por tarea pequeña; los grupos dependientes se iniciarán desde `main` cuando su base esté integrada. Las tareas con [x] están implementadas en la rama indicada; las tareas con [ ] siguen pendientes. Implementación, integración y verificación se registran por separado. Cada actualización debe marcar lo completado y dividir las tareas parciales, conservando sus pendientes.
 
-## Estado de integración (2026-11-16)
+## Estado de integración (2026-11-19)
 
 - **Implementado en main:** dashboard, lectura local de respuestas, autenticación y recuperación por correo, eliminación con confirmación, Cuenta, sincronización e incorporación automática con reservas de Room v9. La PR #33 se integró; su fix de cierre de sesión pasó los tres jobs de GitHub Actions.
-- **Disponible en otra rama:** `refactor/remove-unused-paths` retira rutas antiguas y traslada sus pruebas útiles al código de producción. Su verificación se documenta al final; todavía requiere revisión e integración.
+- **Limpieza integrada en main:** la PR #34 integró `refactor/remove-unused-paths`, retirando rutas antiguas y trasladando sus pruebas útiles al código de producción.
+- **Implementado en esta rama:** `mejoras-navegacion-respuestas` incluye navegación tipada con Navigation 3, mejoras de dashboard/bandeja/detalle, estadísticas por componente y fixes de portadas, estados desconocidos, plurales y Lint. Su integración y el CI posterior a la corrección instrumentada siguen pendientes.
 - **Archivos locales retirados:** los archivos npm sin consumidores de la raíz y la copia antigua de Pendientes se eliminaron durante la limpieza; nunca estuvieron versionados. Los esquemas Room y las configuraciones necesarias se conservan.
-- **Pendiente:** integrar la limpieza, búsqueda/orden/fijados, navegación tipada, Google y las mejoras restantes.
+- **Pendiente:** búsqueda/orden/fijados de formularios, búsqueda textual de respuestas, exportación, Google y las mejoras restantes sin marcar.
 
-Secuencia acordada: integrar Cuenta → limpiar con cobertura en una rama → integrar la limpieza → implementar búsqueda y organización en `feature/forms-search-organization`. Navegación y Google quedan para entregas posteriores. No crear checkouts temporales ni fusionar PRs sin petición del usuario.
+Cuenta y limpieza ya están integradas. Búsqueda y organización en `feature/forms-search-organization` sigue siendo la siguiente feature acordada. Navegación está implementada en esta rama; Google permanece pendiente. No crear checkouts temporales ni fusionar PRs sin petición del usuario.
 
 ## Experiencia de respuestas y estadísticas por componentes
 
-- [ ] Mejorar bandeja y detalle de respuestas: jerarquía, búsqueda, filtros, estados vacíos, accesibilidad y navegación conservando lectura e instantáneas.
-- [ ] Añadir estadísticas por pregunta/componente con agregación adecuada a cada tipo, valores ausentes y filtros consistentes; no registrar respuestas en Analytics.
-- [ ] Definir exportación y comprobar conjuntos vacíos, formularios editados/eliminados y separación de propietarios.
+- [x] Mejorar bandeja y detalle: jerarquía, filtros por formulario/período/estado y sin revisar, estados vacíos, controles accesibles y navegación conservando lectura e instantáneas. Implementado en `mejoras-navegacion-respuestas`; TalkBack y revisión humana siguen sin acreditarse.
+- [ ] Añadir búsqueda textual a la bandeja de respuestas.
+- [x] Añadir estadísticas por pregunta/componente con agregación adecuada a cada tipo, valores ausentes y filtros consistentes; no registrar respuestas en Analytics.
+- [x] Cubrir con pruebas conjuntos vacíos, versiones de snapshots independientes de la edición/eliminación del formulario y separación de propietarios. Las estadísticas usan respuestas históricas, sin registrar su contenido en Analytics; ejecución de esta revisión documentada al final.
+- [ ] Definir e implementar exportación de formularios/respuestas; seguimiento compartido con el grupo 8.
+- [x] Migrar a rutas tipadas y Navigation 3, con restauración del destino y regreso al origen. Implementado en esta rama; no completa el regreso a Mis formularios después de publicar del grupo 4.
 
 ## Entrega de Cuenta integrada
 
@@ -28,18 +32,18 @@ Las prioridades del usuario son dashboard, Google, botones de Mis formularios y 
 | Orden | Entrega | Motivo y límite |
 |---|---|---|
 | 1 | Dashboard y respuestas nuevas (grupo 7) | Integrado en main; evidencia histórica al final. |
-| 2 | Importación automática con imágenes (grupo 1) | Resuelve el paso de invitado a cuenta antes de añadir otra forma de acceso. |
-| 3 | Cuenta y sincronización (grupo 2) | Presenta importación, progreso y reintentos en una cuenta clara y utilizable. |
-| 4 | Limpieza con cobertura | Retirar caminos sin consumidores, trasladando primero sus escenarios útiles. |
-| 5 | Búsqueda, orden y fijados (grupo 5) | Siguiente feature acordada, después de integrar la limpieza. |
-| 6 | Navegación tipada y Navigation 3 | Conservar restauración y separación por cuenta. |
+| 2 | Importación automática con imágenes (grupo 1) | Integrada en main mediante PR #33. |
+| 3 | Cuenta y sincronización (grupo 2) | Integradas en main mediante PR #33. |
+| 4 | Limpieza con cobertura | Integrada en main mediante PR #34. |
+| 5 | Búsqueda, orden y fijados (grupo 5) | Siguiente feature acordada; limpieza ya integrada. |
+| 6 | Navegación tipada y Navigation 3 | Implementada en esta rama; integración y verificación final pendientes. |
 | 7 | Acceso con Google (grupo 10) | Reutilizar incorporación y separación de cuentas. |
 | 8 | Accesos de configuración (primera tarea del grupo 8) | Conecta perfil y estadísticas ya existentes; exportación tendrá su propia entrega. |
 | — | Eliminar desde más opciones (grupo 6) | Completa los botones tras definir conservación de datos y confirmación. |
 
 Después: identidad visual (grupo 3), regreso tras publicación (grupo 4), preferencias/exportación restantes (grupo 8) e identidad empresarial/Open Graph (grupo 9). El banner empresarial sigue siendo una propuesta opcional.
 
-Seguimiento de CI de navegación: el log aportado muestra `RootViewWithoutFocusException` en `Espresso.pressBack()` en `RequestNavigationTest.selectedRequestSurvivesSavedStateRestoration` y `RestoredCoverUiTest.editorResolvesCovers`. La corrección se realizó en `fix/navigation-tests-window-focus` y está en la base de esta entrega. No dar GitHub Actions por corregido hasta tener evidencia de una nueva ejecución.
+Seguimiento histórico de CI de navegación: el log anterior muestra `RootViewWithoutFocusException` en `Espresso.pressBack()` en `RequestNavigationTest.selectedRequestSurvivesSavedStateRestoration` y `RestoredCoverUiTest.editorResolvesCovers`. La corrección se realizó en `fix/navigation-tests-window-focus` y está en la base de esta entrega. El job 135866579663 reportó después un fallo distinto: no existía el nodo `request-a/shared` al pulsarlo. Esta revisión desplaza explícitamente la LazyColumn antes de seleccionar filas y comprobar respuestas. No dar GitHub Actions por corregido hasta tener evidencia de una nueva ejecución.
 
 ## 1. Incorporación automática de borradores e imágenes
 
@@ -124,7 +128,7 @@ Ideas adicionales por evaluar dentro de futuras entregas: título/descripción d
 
 ## Otros pendientes y seguimiento existente
 
-- [ ] Recuperar las portadas publicadas al iniciar sesión sin archivos locales, con actualización reactiva en tarjetas, editor y Preview. Implementación en `fix/restore-cloudinary-covers`; consultar la verificación y evidencia pendiente al final de este documento.
+- [x] Recuperar las portadas publicadas al iniciar sesión sin archivos locales, con actualización reactiva en tarjetas, editor y Preview. Implementación de `fix/restore-cloudinary-covers` incluida en la base; esta rama añade manejo del fallo al cargar una portada local. Consultar la verificación histórica y sus límites al final.
 - [x] Completar la pantalla de login con la identidad visual de FormLink, registro, recuperación por correo, validaciones y estados de carga y error. Ver la verificación de autenticación al final. Los ajustes visuales adicionales se siguen en los grupos 2 y 3.
 - [x] Corregir la selección incremental de Firebase real/emulado para evitar conexiones de login al puerto local 9099 después de ejecutar pruebas. Ver la verificación de entorno al final.
 - [ ] Evaluar una URL más amigable que `formlink-9f735.web.app`: comparar un sitio Hosting con otro identificador y un dominio propio, incluyendo costos y cómo conservar los enlaces existentes. Coordinar con el grupo 9.
@@ -279,3 +283,38 @@ Rama `refactor/remove-unused-paths`, basada en `main` después de integrar Cuent
 Verificación local: `compileDebugKotlin`, `testDebugUnitTest`, `compileDebugAndroidTestKotlin` y `lintDebug` correctos. **185 unitarias, cero fallos, errores u omisiones**; la reducción de una corresponde únicamente a la prueba aritmética. Lint: cero errores, 36 advertencias y una sugerencia, sin `UnusedResources` (antes: 72 advertencias). Los APK de aplicación y pruebas también se generaron correctamente con `assembleDebug assembleDebugAndroidTest`. El control `scripts/check-repository.mjs` pasa.
 
 Límites: las instrumentadas modificadas compilaron, pero no se ejecutaron localmente ni se utilizó el dispositivo del usuario. La nueva PR deberá ejecutar el workflow completo antes de integrar; el CI aprobado de Cuenta no verifica esta rama. Búsqueda, orden y fijados continúan pendientes.
+
+
+## Comparación de mejoras-navegacion-respuestas (2026-11-19)
+
+Comparación de los seis commits `6232940`…`6509df6` con `origin/main` (PR #34):
+
+| Cambio de la rama | Estado frente al checklist |
+|---|---|
+| Rutas tipadas y Navigation 3 | Implementado: rutas con identificadores, restauración y regreso al origen. El grupo 4 sigue pendiente. |
+| Dashboard | Mejora del grupo 7 ya completado: jerarquía, indicadores, gráfica y estados de carga/error/caché. |
+| Bandeja y detalle | Implementados filtros, resumen, estados vacíos, lectura y presentación de snapshots. Búsqueda textual pendiente. |
+| Estadísticas por componente | Implementadas para los nueve tipos existentes, con períodos, variantes históricas, ausentes/inválidos y aislamiento por formulario/propietario. No implementa exportación. |
+| Lint y plurales | Ajustes de recursos ES/EN, plurales de importación, Preview, gráfica y declaraciones Android. |
+| Portadas y estados desconocidos | Manejo del error de lectura de portada local y conservación de estados históricos desconocidos; pruebas de metadatos y números canónicos remotos. |
+
+Corrección del job 135866579663: `RequestNavigationTest` buscaba filas que la lista diferida todavía no había compuesto. Se usa `performScrollToNode` sobre `request-list` antes de cada selección y sobre `request-detail-list` antes de comprobar la respuesta visible. Se conservan ambos regresos, restauración y posición de lista; no se añaden pausas ni se alteran producción o el workflow.
+
+La evidencia anterior es histórica y corresponde a sus revisiones respectivas. Los resultados de esta corrección se registran a continuación; el CI remoto requiere una nueva ejecución.
+
+Verificación local de esta revisión:
+
+- `compileDebugKotlin`, `testDebugUnitTest`, `compileDebugAndroidTestKotlin` y `lintDebug`: correctos. **234 unitarias, sin fallos, errores ni omisiones**. Lint: cero errores y 29 advertencias.
+- `RequestNavigationTest`: **5/5 correctas** en Pixel 9 Android 17/API 37. Incluye el caso que falló en CI, ambos controles de regreso, restauración y posición de lista.
+- Suite instrumentada completa con Firebase Auth/Firestore locales: ejecución correcta. El XML de resultados registra **127 casos: 126 correctos y 1 omitido**, sin fallos ni errores. La omisión es `CloudinaryPublicationTest.realUnsignedUploadOfASyntheticImage`, que requiere activar explícitamente una subida real; no se activó. La consola de Gradle imprime 128 al finalizar, por lo que se usa el conteo verificable del XML.
+- `git diff --check` y `scripts/check-repository.mjs`: correctos. Se usó el AVD existente en modo `-read-only -no-snapshot`, sin guardar los cambios de esta sesión. No se utilizaron dispositivos físicos ni se desplegaron servicios.
+
+Comandos de pruebas (con Auth/Firestore locales activos en `demo-formlink`):
+
+```sh
+./gradlew compileDebugKotlin testDebugUnitTest compileDebugAndroidTestKotlin lintDebug --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process
+./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true -Pandroid.testInstrumentationRunnerArguments.class=com.uvg.cc3087.myapp.RequestNavigationTest --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process
+./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process
+```
+
+Pendientes de evidencia: nueva ejecución de GitHub Actions tras publicar los commits, revisión humana, TalkBack y teclado físico. La web no cambia. La corrección y el checklist se conservan en commits separados de esta rama; no se realiza merge.
