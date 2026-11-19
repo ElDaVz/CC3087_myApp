@@ -5,7 +5,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
@@ -20,11 +19,9 @@ class FormSyncEngineTest {
         var merged = false
         var acknowledged = false
         override fun observe(owner: String?) = forms
-        override fun pendingCount(owner: String) = flowOf(queue.size)
         override suspend fun get(owner: String?, id: String): FormDraft? = null
         override suspend fun save(owner: String?, draft: FormDraft) = Unit
         override suspend fun delete(owner: String?, id: String) = Unit
-        override suspend fun importGuests(owner: String, ids: Set<String>) = Unit
         override suspend fun pending(owner: String) = queue.toList()
         override suspend fun acknowledge(owner: String, pending: PendingForm) { acknowledged = true; queue = queue.filterNot { it.revision == pending.revision } }
         override suspend fun mergeRemote(owner: String, forms: List<FormDraft>) { merged = true }
@@ -111,7 +108,7 @@ class FormSyncEngineTest {
         job.cancel()
     }
 
-    @Test fun cancellingAWorkerLeavesPendingDataAndClearsTheBusyIndicator() = runTest {
+    @Test fun cancellingAWorkerLeavesPendingDataAndReleasesTheSyncLock() = runTest {
         val local = Local(listOf(PendingForm(form, 1, false)))
         val gate = CompletableDeferred<Unit>()
         val remote = object : RemoteFormSource {
@@ -122,11 +119,12 @@ class FormSyncEngineTest {
         val engine = FormSyncEngine(local, remote) { "a" }
         val job = launch { engine.sync("a") }
         runCurrent()
-        assertEquals(SyncPhase.SYNCING, engine.state.value.phase)
         job.cancel(); runCurrent()
-        assertEquals(SyncPhase.IDLE, engine.state.value.phase)
         assertEquals(1, local.queue.size)
         assertFalse(local.acknowledged)
+        gate.complete(Unit)
+        assertEquals(SyncResult.SUCCESS, engine.sync("a"))
+        assertTrue(local.queue.isEmpty())
     }
 
     @Test fun serverFailureLeavesTheDurableQueueAndRetryUsesTheSameDocumentId() = runTest {
@@ -142,7 +140,6 @@ class FormSyncEngineTest {
         assertEquals(SyncResult.RETRY, engine.sync("a"))
         assertEquals(1, local.queue.size)
         assertFalse(local.merged)
-        assertEquals(SyncPhase.ERROR, engine.state.value.phase)
         fail = false
         assertEquals(SyncResult.SUCCESS, engine.sync("a"))
         assertEquals(listOf("f", "f"), ids)

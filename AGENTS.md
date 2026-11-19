@@ -7,14 +7,14 @@
 
 ## Git workflow
 - Work in the original project checkout. Do not create temporary checkouts or worktrees in `/tmp` or elsewhere.
-- Handle small tasks with focused commits; use a dedicated branch for every new feature or fix.
+- Always work on a branch, including small tasks. Use focused commits per task and a dedicated branch for each new feature or fix.
 - Preserve unrelated local files and changes. Do not merge a pull request unless the user requests it.
 
 ## Verification & Build Commands
 - **Quick Kotlin compile check**: `./gradlew compileDebugKotlin`
 - **Build debug APK**: `./gradlew assembleDebug`
 - **Run all unit tests**: `./gradlew testDebugUnitTest`
-- **Run single unit test**: `./gradlew testDebugUnitTest --tests "com.uvg.cc3087.myapp.ExampleUnitTest"`
+- **Run single unit test**: `./gradlew testDebugUnitTest --tests "com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModelTest"`
 - **Note**: Full `./gradlew lint` or `./gradlew check` can be very slow or time out in headless CLI sessions. Prefer `compileDebugKotlin` and `testDebugUnitTest` for fast feedback loops.
 
 ## Toolchain & Environment

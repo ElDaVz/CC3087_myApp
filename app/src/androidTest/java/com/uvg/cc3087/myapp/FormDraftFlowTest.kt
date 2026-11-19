@@ -12,7 +12,7 @@ import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
 import com.uvg.cc3087.myapp.data.model.TemplateType
 import com.uvg.cc3087.myapp.data.repository.FormRepository
-import com.uvg.cc3087.myapp.data.repository.RoomFormRepository
+import com.uvg.cc3087.myapp.data.repository.OfflineFirstFormRepository
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.ui.navigation.FormLinkRoute
 import java.io.IOException
@@ -28,12 +28,12 @@ import org.junit.rules.RuleChain
 
 class FormDraftFlowTest {
     private lateinit var database: FormLinkDatabase
-    private lateinit var repository: RoomFormRepository
+    private lateinit var repository: OfflineFirstFormRepository
     private val databaseRule = object : ExternalResource() {
         override fun before() {
             val context = InstrumentationRegistry.getInstrumentation().targetContext
             database = Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build()
-            repository = RoomFormRepository(database.drafts())
+            repository = database.guestFormRepository()
         }
 
         override fun after() { database.close() }

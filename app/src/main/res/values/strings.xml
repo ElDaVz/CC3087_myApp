@@ -13,7 +13,6 @@
     <string name="draft">Draft</string>
     <string name="share">Share</string>
     <string name="edit">Edit</string>
-    <string name="view">View</string>
     <string name="search_forms">Search forms</string>
     <string name="more_options">More options</string>
     <string name="go_back">Go back</string>
@@ -21,13 +20,7 @@
     <string name="form_response_summary">%1$s • Updated %2$s</string>
     <string name="search_selected">Search selected</string>
     <string name="more_options_selected">More options selected</string>
-    <string name="new_form_selected">New Form selected</string>
-    <string name="form_selected">%1$s selected</string>
-    <string name="share_form">Share %1$s</string>
-    <string name="edit_form">Edit %1$s</string>
-    <string name="view_form">View %1$s</string>
     <string name="forms_selected">Forms selected</string>
-    <string name="responses_selected">Responses selected</string>
     <string name="settings_selected">Settings selected</string>
     <string name="start_from_scratch">Start from Scratch</string>
     <string name="blank_form">Blank Form</string>
@@ -41,23 +34,6 @@
     <string name="template_feedback">Feedback</string>
     <string name="template_feedback_subtitle">Customer surveys</string>
     <string name="untitled_form">Untitled form</string>
-    <string name="editor_heading">Edit form</string>
-    <string name="editor_back_to_templates">Back to templates</string>
-    <string name="editor_validate">Validate</string>
-    <string name="editor_form_information">Form information</string>
-    <string name="editor_form_title">Title</string>
-    <string name="editor_add_field">Add field</string>
-    <string name="editor_empty_fields">No fields yet. Add one to get started</string>
-    <string name="editor_field_position">Field %1$d</string>
-    <string name="editor_delete_field">Delete field</string>
-    <string name="editor_field_name">Field name</string>
-    <string name="editor_empty_field_title">The name cannot be empty</string>
-    <string name="editor_required">Required</string>
-    <string name="editor_move_field_up">Move field up</string>
-    <string name="editor_move_field_down">Move field down</string>
-    <string name="editor_type_text">Text</string>
-    <string name="editor_type_multiple_choice">Multiple choice</string>
-    <string name="editor_type_date">Date</string>
     <string name="editor_default_text_title">Text question</string>
     <string name="editor_default_choice_title">Choose an option</string>
     <string name="editor_default_date_title">Choose a date</string>
@@ -73,7 +49,6 @@
         <item quantity="other">%d responses</item>
     </plurals>
     <string name="edit_form_title">Edit form</string>
-    <string name="back_to_templates">Back to templates</string>
     <string name="preview">Preview</string>
     <string name="add_field">Add field</string>
     <string name="form_details">Form details</string>
@@ -266,8 +241,6 @@
     <string name="auth_sign_in">Sign in</string>
     <string name="auth_email">Email</string>
     <string name="auth_password">Password</string>
-    <string name="auth_invalid">Enter a valid email and password. New passwords need at least 6 characters.</string>
-    <string name="auth_failed">Could not authenticate. Check your credentials and connection, then retry.</string>
     <string name="backend_not_configured">Firebase is not configured. Local guest drafts are available.</string>
     <string name="auth_have_account">I already have an account</string>
     <string name="auth_need_account">Create a new account</string>
@@ -281,8 +254,6 @@
     <string name="sync_retry">Sync now / retry</string>
     <string name="sync_error">Saved locally. Synchronization failed; retry from Account.</string>
     <string name="sync_running">Synchronizing…</string>
-    <string name="sync_pending">Saved on this device; pending synchronization</string>
-    <string name="sync_complete">Synchronized with your account</string>
     <string name="publication_sign_in_required">Sign in to publish</string>
     <string name="publication_form_not_found">The form could not be found</string>
     <string name="publication_backend_not_configured">Firebase is not configured</string>

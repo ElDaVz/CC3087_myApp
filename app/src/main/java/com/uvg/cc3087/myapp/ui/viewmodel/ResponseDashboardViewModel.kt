@@ -63,11 +63,17 @@ class ResponseDashboardViewModel(
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {
-                if (stamp == revision) project(when (error) {
-                    is RequestAccessDeniedException -> RequestListLoadStatus.FORBIDDEN
-                    is RequestBackendUnavailableException -> RequestListLoadStatus.UNAVAILABLE
-                    else -> RequestListLoadStatus.ERROR
-                })
+                if (stamp == revision) {
+                    if (error is RequestAccessDeniedException) {
+                        source = emptyList()
+                        hasData = false
+                    }
+                    project(when (error) {
+                        is RequestAccessDeniedException -> RequestListLoadStatus.FORBIDDEN
+                        is RequestBackendUnavailableException -> RequestListLoadStatus.UNAVAILABLE
+                        else -> RequestListLoadStatus.ERROR
+                    })
+                }
             }
         }
     }

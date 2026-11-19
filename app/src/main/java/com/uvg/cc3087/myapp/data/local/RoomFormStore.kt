@@ -19,7 +19,6 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
     }
     override fun observePublishedCoverUrl(owner: String?, id: String) =
         if (owner == null) kotlinx.coroutines.flow.flowOf(null) else database.cloud().observePublishedCoverUrl(owner, id)
-    override fun pendingCount(owner: String) = dao.observePendingCount(owner)
     override suspend fun get(owner: String?, id: String) = dao.getDraft(id)?.takeIf { it.form.ownerId == owner && !it.form.deleted }?.toDraft()
 
     override suspend fun save(owner: String?, draft: FormDraft) {
@@ -58,14 +57,6 @@ class RoomFormStore(private val database: FormLinkDatabase, private val covers: 
             else dao.acknowledge(owner, pending.draft.id, pending.revision)
         }
         if (pending.deleted) pending.draft.coverPath?.let { cleanup(it) }
-    }
-    override suspend fun importGuests(owner: String, ids: Set<String>) = database.withTransaction {
-        for (id in ids) {
-            val row = dao.getDraft(id) ?: error("Guest draft disappeared")
-            check(row.form.ownerId == null && !row.form.deleted) { "Only guest drafts may be imported" }
-            check(database.guestImports().get(id)?.ownerId.let { it == null || it == owner }) { "Draft reserved for another account" }
-            dao.saveDraft(row.form.copy(ownerId = owner, revision = row.form.revision + 1, syncedRevision = 0), row.fields)
-        }
     }
     override suspend fun mergeRemote(owner: String, forms: List<FormDraft>) {
         val removed = database.withTransaction {

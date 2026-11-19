@@ -34,7 +34,7 @@ class LocalRequestRepositoryTest {
         fun open() = Room.databaseBuilder(context, FormLinkDatabase::class.java, name).build()
         try {
             open().useDatabase { db ->
-                val forms = RoomFormRepository(db.drafts(), db.requests())
+                val forms = db.guestFormRepository()
                 val requests = RoomRequestRepository(db)
                 forms.saveDraft(form)
                 val saved = requests.submit(form, "one", answers, Locale.US)
@@ -57,7 +57,7 @@ class LocalRequestRepositoryTest {
                 assertEquals(RequestStatus.COMPLETED, detail.requestStatus)
                 assertEquals(1, requests.getRequests().size)
                 assertNull(requests.getDetail("other", "one"))
-                RoomFormRepository(db.drafts()).deleteDraft("form")
+                db.guestFormRepository().deleteDraft("form")
                 assertEquals(detail, requests.getDetail("form", "one"))
             }
         } finally { context.deleteDatabase(name) }
@@ -65,7 +65,7 @@ class LocalRequestRepositoryTest {
 
     @Test fun rejectsInvalidAnswersAndChangedFormsWithoutCreatingRequests() = runBlocking {
         Room.inMemoryDatabaseBuilder(context, FormLinkDatabase::class.java).build().useDatabase { db ->
-            val forms = RoomFormRepository(db.drafts())
+            val forms = db.guestFormRepository()
             val requests = RoomRequestRepository(db)
             forms.saveDraft(form)
             assertTrue(runCatching { requests.submit(form, "bad", emptyMap(), Locale.US) }.isFailure)
@@ -102,7 +102,7 @@ class LocalRequestRepositoryTest {
             }
             Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
                 .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9).build().useDatabase { db ->
-                    val forms = RoomFormRepository(db.drafts())
+                    val forms = db.guestFormRepository()
                     assertEquals("Conservar", forms.getDraft("old")!!.title)
                     assertEquals("Pregunta anterior", forms.getDraft("old")!!.fields.single().title)
                     forms.saveDraft(form)

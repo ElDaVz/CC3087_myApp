@@ -8,7 +8,6 @@ import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.local.*
 import com.uvg.cc3087.myapp.data.model.FormDraft
-import com.uvg.cc3087.myapp.data.repository.RoomFormRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -56,11 +55,11 @@ class CoverStorageTest {
             assertTrue(prepared.bytes.size <= 2 * 1024 * 1024)
             assertTrue(runCatching { storage.prepareUpload("covers/../../private.jpg") }.isFailure)
             var database = Room.databaseBuilder(context, FormLinkDatabase::class.java, name).build()
-            try { RoomFormRepository(database.drafts(), covers = storage).saveDraft(FormDraft("f", "Cover", emptyList(), 1, 1, path)) }
+            try { database.guestFormRepository(storage).saveDraft(FormDraft("f", "Cover", emptyList(), 1, 1, path)) }
             finally { database.close() }
             database = Room.databaseBuilder(context, FormLinkDatabase::class.java, name).build()
             try {
-                val repository = RoomFormRepository(database.drafts(), covers = storage)
+                val repository = database.guestFormRepository(storage)
                 val saved = repository.getDraft("f")!!
                 assertEquals(path, saved.coverPath)
                 assertTrue(runCatching { storage.importImage(android.net.Uri.fromFile(File(context.cacheDir, "missing-image")).toString()) }.isFailure)

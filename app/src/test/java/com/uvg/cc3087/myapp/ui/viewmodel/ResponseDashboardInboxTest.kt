@@ -1,6 +1,8 @@
 package com.uvg.cc3087.myapp.ui.viewmodel
 
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.SavedStateHandle
+import com.uvg.cc3087.myapp.domain.requests.ResponsePeriod
 import com.uvg.cc3087.myapp.data.model.RequestDetail
 import com.uvg.cc3087.myapp.data.model.RequestSummary
 import com.uvg.cc3087.myapp.data.repository.RequestAccessDeniedException
@@ -22,7 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class RequestListViewModelTest {
+class ResponseDashboardInboxTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
     private val store = ViewModelStore()
     private var modelId = 0
@@ -35,7 +37,7 @@ class RequestListViewModelTest {
         val unknownDate = summary("form-c", 3).copy(submittedAt = null)
         val model = model(repository { listOf(unknownDate, older, newer, older) })
         runCurrent()
-        assertEquals(listOf(newer, older, unknownDate), model.uiState.value.requests)
+        assertEquals(listOf(newer, older, unknownDate), model.uiState.value.dashboard.requests)
         assertEquals(RequestListLoadStatus.CONTENT, model.uiState.value.status)
     }
 
@@ -43,7 +45,8 @@ class RequestListViewModelTest {
         val empty = model(repository { emptyList() })
         val unavailable = model(UnavailableRequestRepository)
         runCurrent()
-        assertEquals(RequestListLoadStatus.EMPTY, empty.uiState.value.status)
+        assertEquals(RequestListLoadStatus.CONTENT, empty.uiState.value.status)
+        assertTrue(empty.uiState.value.dashboard.sourceEmpty)
         assertEquals(RequestListLoadStatus.UNAVAILABLE, unavailable.uiState.value.status)
     }
 
@@ -56,7 +59,7 @@ class RequestListViewModelTest {
         fail = false
         model.refresh()
         runCurrent()
-        assertEquals(listOf(expected), model.uiState.value.requests)
+        assertEquals(listOf(expected), model.uiState.value.dashboard.requests)
     }
 
     @Test fun lossOfAccessRemovesPreviouslyLoadedCustomerData() = runTest {
@@ -67,10 +70,12 @@ class RequestListViewModelTest {
         runCurrent()
         denied = true
         model.refresh()
-        assertTrue(model.uiState.value.requests.isEmpty())
         runCurrent()
         assertEquals(RequestListLoadStatus.FORBIDDEN, model.uiState.value.status)
-        assertTrue(model.uiState.value.requests.isEmpty())
+        assertTrue(model.uiState.value.dashboard.requests.isEmpty())
+        assertTrue(model.uiState.value.dashboard.forms.isEmpty())
+        assertFalse(model.uiState.value.dashboard.hasUnread)
+        assertFalse(model.uiState.value.hasData)
     }
 
     @Test fun lateRefreshCannotReplaceNewerResults() = runTest {
@@ -86,7 +91,7 @@ class RequestListViewModelTest {
         runCurrent()
         gate.complete(Unit)
         runCurrent()
-        assertEquals(listOf(current), model.uiState.value.requests)
+        assertEquals(listOf(current), model.uiState.value.dashboard.requests)
     }
 
     private fun summary(form: String, epoch: Long) =
@@ -98,5 +103,5 @@ class RequestListViewModelTest {
     }
 
     private fun model(repository: RequestRepository) =
-        RequestListViewModel(repository).also { store.put("list-${modelId++}", it) }
+        ResponseDashboardViewModel(repository, SavedStateHandle()).apply { selectPeriod(ResponsePeriod.ALL) }.also { store.put("list-${modelId++}", it) }
 }
