@@ -40,7 +40,8 @@ class LocalRequestFlowTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Responder").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Responder").assertIsNotEnabled()
         compose.onNodeWithText("Guardar solicitud en este dispositivo").assertDoesNotExist()
-        compose.onNodeWithText("Editar").performClick()
+        compose.onNodeWithText("Editar", useUnmergedTree = true)
+            .performScrollTo().assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Vista previa").performClick()
         compose.onNodeWithTag("answer-name").performTextInput("Solo una prueba")
         // Finish the IME interaction before scrolling and tapping a moving footer.

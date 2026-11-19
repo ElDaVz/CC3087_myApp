@@ -325,6 +325,14 @@ Seguimiento del job 135930418496: la API de GitHub confirma `head_sha=6509df6dc2
 
 - [x] Separar la generación de los APK del arranque de Android/Firebase, con un worker y daemon de compilación descartable para reducir el uso simultáneo de memoria.
 - [x] Añadir `--stacktrace --console=plain` y conservar logs de compilación como artifacts en ambos jobs Android. El paso Bash conserva el código de fallo de Gradle mediante `pipefail`.
-- [ ] Confirmar la causa interna del fallo de empaquetado y el resultado remoto. El extracto aportado muestra `packageDebug` completado y pruebas ejecutándose antes de `The operation was canceled`; no contiene la excepción interna descrita por Copilot.
+- [x] Identificar el fallo del log completo posterior: `FormDraftFlowTest.aFailedEditSurvivesReturningToFormsAndReopening` no encuentra «Editar» en el árbol combinado, aunque Compose confirma un nodo en el árbol sin combinar. Ese log llega a las instrumentadas; no acredita un fallo de empaquetado.
+- [ ] Confirmar el resultado remoto tras corregir el selector de «Editar».
 
 Por petición del usuario, este ajuste se guarda en un commit sin ejecutar pruebas, publicar commits ni esperar el pipeline.
+
+
+### Corrección del selector Editar en pruebas de borradores
+
+- [x] Buscar «Editar» con `useUnmergedTree = true` y desplazarlo a la vista antes de pulsarlo. `FormDraftFlowTest` espera la aparición de la acción tras la carga asíncrona de Room y reutiliza el acceso en creación/reapertura y edición fallida. Se ajusta el mismo selector en `LocalRequestFlowTest`.
+
+Se conserva la comprobación de que la edición fallida sobrevive al regreso y se guarda al reintentar. Cambio limitado a pruebas y seguimiento; sin ejecución de pruebas, push ni espera de CI, por petición del usuario.

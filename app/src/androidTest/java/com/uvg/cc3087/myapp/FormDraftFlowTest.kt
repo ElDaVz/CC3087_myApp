@@ -85,7 +85,7 @@ class FormDraftFlowTest {
         compose.onNodeWithContentDescription("Volver").performClick()
         pressBack()
         compose.onNodeWithText("Pedido persistente").assertExists()
-        compose.onNodeWithText("Editar").performClick()
+        openEditor()
         compose.waitUntil(10_000) {
             compose.onAllNodes(hasSetTextAction() and hasText("Nombre del cliente"))
                 .fetchSemanticsNodes().isNotEmpty()
@@ -181,13 +181,13 @@ class FormDraftFlowTest {
             }
         }
         launchApp(failingRepository)
-        compose.onNodeWithText("Editar").performClick()
+        openEditor()
         compose.onNode(hasSetTextAction() and hasText("Pedido guardado"))
             .performTextReplacement("Edición pendiente")
         compose.onNodeWithText("No se pudieron guardar los cambios en este dispositivo").assertExists()
         compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Pedido guardado").assertExists()
-        compose.onNodeWithText("Editar").performClick()
+        openEditor()
         compose.onNode(hasSetTextAction() and hasText("Edición pendiente")).assertExists()
         failSaves.set(false)
         compose.onNodeWithText("Reintentar").performClick()
@@ -202,6 +202,16 @@ class FormDraftFlowTest {
                 listOf(FormFieldDraft("name", FormFieldType.TEXT, "Nombre"))
         }
         compose.setContent { SpanishTestTheme { FormLinkRoute(forms, templates) } }
+    }
+
+    private fun openEditor() {
+        // Room loads asynchronously; the action label can be hidden by merged card semantics.
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("Editar", useUnmergedTree = true)
+                .fetchSemanticsNodes().size == 1
+        }
+        compose.onNodeWithText("Editar", useUnmergedTree = true)
+            .performScrollTo().assertIsDisplayed().performClick()
     }
 
     private fun waitForSaved() {
