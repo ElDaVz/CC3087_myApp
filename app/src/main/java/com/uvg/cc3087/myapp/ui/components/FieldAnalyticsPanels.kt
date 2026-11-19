@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -130,7 +131,7 @@ private fun AnalyticsCategories(categories: List<AnswerCategory>, denominator: I
         val percent = NumberFormat.getPercentInstance(LocalResources.current.configuration.locales[0]).format(fraction.toDouble())
         Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(category.label, style = MaterialTheme.typography.bodyMedium)
-            Text(stringResource(R.string.field_analytics_category_count, category.count, denominator, percent),
+            Text(pluralStringResource(R.plurals.field_analytics_category_count, denominator, category.count, denominator, percent),
                 style = MaterialTheme.typography.labelMedium)
             // la cifra siempre acompaña a la barra para no depender solo del color
             Box(Modifier.fillMaxWidth().height(8.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.shapes.small)) {

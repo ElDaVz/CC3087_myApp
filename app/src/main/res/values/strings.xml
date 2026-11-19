@@ -76,7 +76,7 @@
     <string name="no_matching_fields">No fields match your search.</string>
     <string name="field_position">Field %1$d</string>
     <string name="move_field_up">Move field %1$d up</string>
-    <string name="move_field_down">Move field %1$d down</string>
+    <string name="move_field_down">Move field down (position %1$d)</string>
     <string name="delete_field">Delete field</string>
     <string name="question_placeholder">Enter your question</string>
     <string name="help_text_label">Help text (optional)</string>
@@ -98,7 +98,7 @@
     <string name="option_position">Option %1$d</string>
     <string name="remove_option">Remove option %1$d</string>
     <string name="move_option_up">Move option %1$d up</string>
-    <string name="move_option_down">Move option %1$d down</string>
+    <string name="move_option_down">Move option down (position %1$d)</string>
     <string name="add_option">Add option</string>
     <string name="your_answer">Your answer</string>
     <string name="select_one">Select one option</string>
@@ -247,7 +247,10 @@
     <string name="auth_continue_guest">Continue as guest</string>
     <string name="auth_sign_out">Sign out</string>
     <string name="guest_import_running">Adding your guest drafts to this account…</string>
-    <string name="guest_import_complete">%1$d guest drafts added to your account on this device. Images remain private until you publish. Cloud synchronization has its own status.</string>
+    <plurals name="guest_import_complete">
+        <item quantity="one">%1$d guest draft added to your account on this device. Images remain private until you publish. Cloud synchronization has its own status.</item>
+        <item quantity="other">%1$d guest drafts added to your account on this device. Images remain private until you publish. Cloud synchronization has its own status.</item>
+    </plurals>
     <string name="guest_import_error">Could not add your guest drafts. They remain saved on this device and reserved for this account.</string>
     <string name="guest_import_retry">Retry import</string>
     <string name="account_failed">Could not complete the operation. Your drafts remain stored; retry.</string>
@@ -302,8 +305,14 @@
     <string name="dashboard_evolution">Response activity</string>
     <string name="dashboard_daily">Responses per day · Swipe to explore</string>
     <string name="dashboard_monthly">Responses per month · Swipe to explore</string>
-    <string name="dashboard_chart_value">%1$s: %2$d responses</string>
-    <string name="dashboard_undated">%1$d responses without a date are included in the total, outside the chart.</string>
+    <plurals name="dashboard_chart_value">
+        <item quantity="one">%1$s: %2$d response</item>
+        <item quantity="other">%1$s: %2$d responses</item>
+    </plurals>
+    <plurals name="dashboard_undated">
+        <item quantity="one">%1$d response without a date is included in the total, outside the chart.</item>
+        <item quantity="other">%1$d responses without a date are included in the total, outside the chart.</item>
+    </plurals>
     <string name="dashboard_unknown_count">Without status: %1$d</string>
     <string name="dashboard_form_label">%1$s · %2$s</string>
     <string name="dashboard_unread">Unread</string>
@@ -391,6 +400,10 @@
     <string name="field_analytics_by_hour">Selected hours</string>
     <string name="field_analytics_legacy_hint">The original component type was not recorded. Only answered and blank counts are shown; text is not interpreted as a number or date.</string>
     <string name="field_analytics_no_values">No compatible values</string>
-    <string name="field_analytics_category_count">%1$d / %2$d responses · %3$s</string>
+    <plurals name="field_analytics_category_count">
+        <item quantity="one">%1$d / %2$d response · %3$s</item>
+        <item quantity="other">%1$d / %2$d responses · %3$s</item>
+    </plurals>
+    <string name="qa_trigger_test_crash">QA DEMO: trigger test crash</string>
     <string name="field_analytics_more_categories">Additional categories not shown: %1$d</string>
 </resources>

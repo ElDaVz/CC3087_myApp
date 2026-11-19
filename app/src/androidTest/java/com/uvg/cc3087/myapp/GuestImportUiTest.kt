@@ -15,6 +15,15 @@ import org.junit.Test
 class GuestImportUiTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun aSingleImportedDraftUsesSingularWithoutClaimingPublication() {
+        compose.setContent { SpanishTestTheme {
+            GuestImportNotice(GuestImportState(GuestImportPhase.COMPLETE, 1)) {}
+        } }
+        compose.onNodeWithText("1 borrador de invitado incorporado", substring = true).assertExists()
+        compose.onNodeWithText("Las imágenes siguen siendo privadas hasta publicar.", substring = true).assertExists()
+        compose.onNodeWithText("1 borradores", substring = true).assertDoesNotExist()
+    }
+
     @Test fun retryShowsProgressThenLocalResultWithoutClaimingCloudSync() {
         val state = mutableStateOf(GuestImportState(GuestImportPhase.ERROR, 2))
         var retries = 0

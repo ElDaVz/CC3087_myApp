@@ -50,13 +50,15 @@ fun FormPreviewScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val cipher = androidx.compose.runtime.remember(context) { com.uvg.cc3087.myapp.data.security.DeviceCipher(context) }
-    var answers by rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver<HashMap<String, FormAnswer>, ByteArray>(
-        save = { values -> cipher.encrypt(java.io.ByteArrayOutputStream().also { bytes -> java.io.ObjectOutputStream(bytes).use { it.writeObject(values) } }.toByteArray()) },
+    var answers by rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver<Map<String, FormAnswer>, ByteArray>(
+        // conservamos el formato cifrado anterior, pero la pantalla solo recibe un mapa de lectura
+        save = { values -> cipher.encrypt(java.io.ByteArrayOutputStream().also { bytes -> java.io.ObjectOutputStream(bytes).use { it.writeObject(HashMap(values)) } }.toByteArray()) },
         restore = { bytes -> runCatching {
-            @Suppress("UNCHECKED_CAST")
-            (java.io.ObjectInputStream(java.io.ByteArrayInputStream(cipher.decrypt(bytes))).use { it.readObject() } as HashMap<String, FormAnswer>)
-        }.getOrDefault(hashMapOf()) }
-    )) { mutableStateOf(hashMapOf<String, FormAnswer>()) }
+            java.io.ObjectInputStream(java.io.ByteArrayInputStream(cipher.decrypt(bytes))).use { input ->
+                (input.readObject() as Map<*, *>).entries.associate { (id, answer) -> id as String to answer as FormAnswer }
+            }
+        }.getOrDefault(emptyMap()) }
+    )) { mutableStateOf<Map<String, FormAnswer>>(emptyMap()) }
     var attempted by rememberSaveable { mutableStateOf(false) }
     var submitted by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -87,7 +89,7 @@ fun FormPreviewScreen(
                 }
             },
             actions = {
-                TextButton(enabled = !submitting, onClick = { answers = hashMapOf(); attempted = false; submitted = false }) {
+                TextButton(enabled = !submitting, onClick = { answers = emptyMap(); attempted = false; submitted = false }) {
                     Text(stringResource(R.string.reset))
                 }
             }
@@ -135,7 +137,7 @@ fun FormPreviewScreen(
                         }
                         FormAnswerInput(field, answer, onChange = {
                             if (!submitting) {
-                                answers = HashMap(answers).apply { put(field.id, it) }
+                                answers = answers + (field.id to it)
                                 submitted = false
                             }
                         }, isError = error != null, questionLabel = questionLabel)

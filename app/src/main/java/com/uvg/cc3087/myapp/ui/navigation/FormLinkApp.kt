@@ -9,7 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -53,7 +53,7 @@ fun FormLinkApp() {
     LaunchedEffect(languageTags) {
         container.updateTemplateFields(FormEditorSampleData.templateFields(resources))
     }
-    var initializationAttempt by remember { mutableStateOf(0) }
+    var initializationAttempt by remember { mutableIntStateOf(0) }
     val initialized = remember(initializationAttempt) { runCatching { container.backend } }
     if (initialized.isFailure) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -63,7 +64,7 @@ internal fun ResponseActivityChart(buckets: List<ResponseBucket>, filter: Respon
                 ) {
                     items(buckets, key = { it.date.toString() }) { bucket ->
                         val label = formatter.format(bucket.date)
-                        val description = stringResource(R.string.dashboard_chart_value, label, bucket.count)
+                        val description = pluralStringResource(R.plurals.dashboard_chart_value, bucket.count, label, bucket.count)
                         Column(
                             Modifier.width(columnWidth).clearAndSetSemantics { contentDescription = description },
                             horizontalAlignment = Alignment.CenterHorizontally,

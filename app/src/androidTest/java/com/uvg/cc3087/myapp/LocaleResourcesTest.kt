@@ -69,4 +69,36 @@ class LocaleResourcesTest {
         compose.onNodeWithText("Publish").assertExists()
         compose.onNodeWithText("Sign in to publish").assertExists()
     }
+
+    @Test fun responseAndImportQuantitiesUseTheCorrectSingularAndPlural() {
+        for ((tag, response, responses, draft, drafts) in listOf(
+            listOf("en-US", "response", "responses", "guest draft added", "guest drafts added"),
+            listOf("es-GT", "respuesta", "respuestas", "borrador de invitado incorporado", "borradores de invitado incorporados")
+        )) {
+            val resources = context.createConfigurationContext(configuration(tag)).resources
+            for (count in listOf(0, 1, 2, 1_000_000)) {
+                val noun = if (count == 1) response else responses
+                val importNoun = if (count == 1) draft else drafts
+                assertEquals("date: $count $noun", resources.getQuantityString(R.plurals.dashboard_chart_value, count, "date", count))
+                assertEquals("0 / $count $noun · 0%", resources.getQuantityString(R.plurals.field_analytics_category_count,
+                    count, 0, count, "0%"))
+                assertTrue(resources.getQuantityString(R.plurals.dashboard_undated, count, count).contains("$count $noun"))
+                assertTrue(resources.getQuantityString(R.plurals.guest_import_complete, count, count).startsWith("$count $importNoun"))
+                assertEquals("$count $noun", resources.getQuantityString(R.plurals.response_count, count, count))
+            }
+            assertTrue(resources.getString(R.string.qa_trigger_test_crash).isNotBlank())
+        }
+        val spanish = context.createConfigurationContext(configuration("es-GT")).resources
+        assertEquals("1000000 opciones seleccionadas", spanish.getQuantityString(R.plurals.selected_options_count, 1_000_000, 1_000_000))
+    }
+
+    @Test fun installedStartupProvidersRemainPrivateAndLauncherInheritsTheAppLabel() {
+        @Suppress("DEPRECATION")
+        val info = context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PROVIDERS)
+        val startup = checkNotNull(info.providers).single { it.name == "androidx.startup.InitializationProvider" }
+        assertTrue(!startup.exported)
+        val application = context.applicationInfo
+        val activity = context.packageManager.getActivityInfo(android.content.ComponentName(context, MainActivity::class.java), 0)
+        assertEquals(application.loadLabel(context.packageManager).toString(), activity.loadLabel(context.packageManager).toString())
+    }
 }
