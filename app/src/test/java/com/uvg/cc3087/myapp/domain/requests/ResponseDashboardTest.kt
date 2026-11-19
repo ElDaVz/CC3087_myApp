@@ -55,4 +55,15 @@ class ResponseDashboardTest {
         assertTrue(result.requests.isEmpty())
         assertEquals("f", result.forms.single().id)
     }
+
+    @Test fun unreadCountUsesFilteredDeduplicatedRowsButTheBadgeRemainsGlobal() {
+        val visible = row("visible", "2026-11-12T18:00:00Z", read = true)
+        val hidden = row("old", "2020-01-01T18:00:00Z", form = "other")
+        val filtered = responseDashboard(listOf(visible, hidden, hidden), ResponseFilter("f"), now, zone)
+        assertEquals(0, filtered.unreadCount)
+        assertTrue(filtered.hasUnread)
+        val all = responseDashboard(listOf(visible, hidden, hidden), ResponseFilter(period = ResponsePeriod.ALL), now, zone)
+        assertEquals(1, all.unreadCount)
+        assertEquals(2, all.requests.size)
+    }
 }

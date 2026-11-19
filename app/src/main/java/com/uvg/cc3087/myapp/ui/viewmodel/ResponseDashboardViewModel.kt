@@ -17,7 +17,8 @@ data class ResponseDashboardUiState(
     val status: RequestListLoadStatus = RequestListLoadStatus.LOADING,
     val filter: ResponseFilter = ResponseFilter(),
     val dashboard: ResponseDashboard = ResponseDashboard(),
-    val hasData: Boolean = false
+    val hasData: Boolean = false,
+    val isRefreshing: Boolean = false
 )
 
 class ResponseDashboardViewModel(
@@ -48,18 +49,30 @@ class ResponseDashboardViewModel(
         if (next != calendar) { calendar = next; project() }
     }
     fun refresh() = observe(requestSync = true)
-    private fun project(status: RequestListLoadStatus = if (hasData) RequestListLoadStatus.CONTENT else RequestListLoadStatus.LOADING) {
-        mutableState.value = ResponseDashboardUiState(status, filter, responseDashboard(source, filter, clock.instant(), zone()), hasData)
+    private fun project(
+        status: RequestListLoadStatus = mutableState.value.status,
+        isRefreshing: Boolean = mutableState.value.isRefreshing
+    ) {
+        // cambiar filtros o fecha no debe ocultar un error ni inventar una nueva carga
+        mutableState.value = ResponseDashboardUiState(
+            status, filter, responseDashboard(source, filter, clock.instant(), zone()), hasData, isRefreshing
+        )
     }
     private fun observe(requestSync: Boolean = false) {
         val stamp = ++revision
         job?.cancel()
-        project(if (hasData) RequestListLoadStatus.CONTENT else RequestListLoadStatus.LOADING)
+        project(if (hasData) RequestListLoadStatus.CONTENT else RequestListLoadStatus.LOADING,
+            isRefreshing = requestSync)
         job = viewModelScope.launch {
             try {
                 if (requestSync) repository.requestRefresh()
                 repository.observeRequests().collect { rows ->
-                    if (stamp == revision) { source = rows; hasData = true; project() }
+                    if (stamp == revision) {
+                        source = rows
+                        hasData = true
+                        // la emisión confirma la lectura local, no que la sincronización remota haya terminado
+                        project(RequestListLoadStatus.CONTENT, isRefreshing = false)
+                    }
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {
@@ -72,7 +85,7 @@ class ResponseDashboardViewModel(
                         is RequestAccessDeniedException -> RequestListLoadStatus.FORBIDDEN
                         is RequestBackendUnavailableException -> RequestListLoadStatus.UNAVAILABLE
                         else -> RequestListLoadStatus.ERROR
-                    })
+                    }, isRefreshing = false)
                 }
             }
         }
