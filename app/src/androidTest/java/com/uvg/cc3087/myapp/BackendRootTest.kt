@@ -3,8 +3,13 @@ package com.uvg.cc3087.myapp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.uvg.cc3087.myapp.data.model.AuthState
+import com.uvg.cc3087.myapp.data.model.FormStatus
+import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.data.repository.AuthRepository
 import com.uvg.cc3087.myapp.ui.navigation.FormLinkApp
+import com.uvg.cc3087.myapp.ui.screens.Forms
+import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
+import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import org.junit.Rule
 import org.junit.Test
 import kotlinx.coroutines.flow.first
@@ -53,7 +58,7 @@ class BackendRootTest {
                 }
             }
         }
-        compose.onNodeWithText(guestTitle).performScrollTo().assertIsDisplayed()
+        assertFormTitleDisplayed(guestTitle)
         compose.onNodeWithText("Nuevo formulario").performScrollTo().performClick()
         compose.onNodeWithText("Formulario de pedido").performClick()
         compose.onNode(hasSetTextAction() and hasText("Formulario de pedido")).performTextReplacement(title)
@@ -61,24 +66,53 @@ class BackendRootTest {
         compose.onNodeWithText("Continuar").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("¡Formulario guardado!").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Volver a mis formularios").performScrollTo().performClick()
-        compose.waitUntil(30_000) { compose.onAllNodesWithText("Al día en la última comprobación").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(30_000) {
+            compose.onAllNodesWithText("Al día en la última comprobación", useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
         compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
         signOutFromAccount(services.auth)
-        compose.onNodeWithText(title).assertDoesNotExist()
-        compose.onNodeWithText(guestTitle).assertDoesNotExist()
+        compose.onNodeWithText(title, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText(guestTitle, useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").performTextInput(email)
         compose.onNodeWithText("Contraseña").performTextInput("password123")
         compose.onNode(hasText("Iniciar sesión") and hasClickAction()).performScrollTo().performClick()
-        compose.waitUntil(30_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
+        assertFormTitleDisplayed(title)
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
         compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
         signOutFromAccount(services.auth)
-        compose.onNodeWithText(title).assertDoesNotExist()
-        compose.onNodeWithText(guestTitle).assertDoesNotExist()
+        compose.onNodeWithText(title, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText(guestTitle, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    private fun assertFormTitleDisplayed(title: String) {
+        // room puede terminar antes de que compose refleje la incorporación en la tarjeta
+        compose.waitUntil(30_000) {
+            compose.onAllNodesWithText(title, useUnmergedTree = true).fetchSemanticsNodes().size == 1
+        }
+        // buscamos el texto real de la tarjeta aunque su contenedor agrupe la semántica
+        compose.onNodeWithText(title, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun formTitleCanBeVerifiedInsideTheCardSemantics() {
+        val title = "Formulario incorporado de prueba"
+        compose.setContent {
+            SpanishTestTheme {
+                Forms(
+                    FormsUiState(
+                        forms = listOf(FormSummary(
+                            "imported-test", title, 0, "18 nov", FormStatus.DRAFT, ""
+                        )),
+                        status = FormsLoadStatus.CONTENT
+                    )
+                )
+            }
+        }
+        assertFormTitleDisplayed(title)
     }
 
     private fun signOutFromAccount(auth: AuthRepository) {

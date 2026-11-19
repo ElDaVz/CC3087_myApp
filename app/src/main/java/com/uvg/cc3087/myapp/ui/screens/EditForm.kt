@@ -84,7 +84,8 @@ fun EditForm(
     onRemoveCover: () -> Unit = {},
     onContinue: (() -> FormValidationResult)? = null,
     onConsumeContinue: () -> Unit = {},
-    syncMessage: String? = null
+    syncMessage: String? = null,
+    onPreviewClick: (() -> Unit)? = null
 ) {
     val registryOwner = LocalActivityResultRegistryOwner.current
     val picker = if (registryOwner != null) {
@@ -166,7 +167,7 @@ fun EditForm(
                     actions = {
                         IconButton(enabled = canEdit, onClick = {
                             focusManager.clearFocus()
-                            showPreview = true
+                            if (onPreviewClick != null) onPreviewClick() else showPreview = true
                         }) {
                             Icon(
                                 imageVector = Icons.Outlined.Visibility,
