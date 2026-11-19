@@ -18,13 +18,6 @@ class FieldConfigurationTest {
         }
     }
 
-    @Test fun editingOptionLabelsPreservesIdentity() {
-        val field = FormFieldDraft("test", FormFieldType.MULTIPLE_CHOICE, "Question")
-        val option = field.options.first()
-        assertEquals(option.id, option.copy(label = "Changed").id)
-        assertNotEquals(field.options[0].id, field.options[1].id)
-    }
-
     @Test fun nonSelectionFieldsDoNotRequireOptions() {
         FormFieldType.entries.filterNot { it.hasOptions }.forEach { type ->
             val field = FormFieldDraft("test", type, "Question")

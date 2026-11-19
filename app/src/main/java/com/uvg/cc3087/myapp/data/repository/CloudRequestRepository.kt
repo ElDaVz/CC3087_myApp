@@ -111,10 +111,12 @@ private fun RemoteRequestEntity.detail(): RequestDetail {
             "checked" -> RequestAnswerValue.Checked(row.getBoolean("value"))
             else -> RequestAnswerValue.Text(row.getString("value"))
         }, row.readFieldSnapshot(), row.optString("number").toBigDecimalOrNull())
-    }, requestStatus = RequestStatus.valueOf(status))
+    }, requestStatus = knownStatus())
 }
 
 private fun RemoteRequestEntity.summary(read: Boolean) = RequestSummary(
     formId, responseId, formTitle, Instant.ofEpochMilli(submittedAt),
-    requestStatus = RequestStatus.entries.find { it.name == status }, isRead = read
+    requestStatus = knownStatus(), isRead = read
 )
+
+private fun RemoteRequestEntity.knownStatus(): RequestStatus? = RequestStatus.entries.find { it.name == status }

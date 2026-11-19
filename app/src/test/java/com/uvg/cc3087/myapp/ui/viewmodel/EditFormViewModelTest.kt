@@ -14,9 +14,18 @@ import com.uvg.cc3087.myapp.testing.FakeTemplateRepository
 import com.uvg.cc3087.myapp.testing.FakeFormRepository
 import com.uvg.cc3087.myapp.testing.MainDispatcherRule
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
+import com.uvg.cc3087.myapp.data.repository.FormRepository
+import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.ui.state.EditFormAction
 import com.uvg.cc3087.myapp.ui.state.EditFormUiState
+import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
 import com.uvg.cc3087.myapp.ui.state.FieldMoveDirection
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -28,6 +37,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.io.IOException
 import java.time.LocalDate
 import java.util.Locale
 
@@ -43,6 +53,70 @@ class EditFormViewModelTest {
         FormFieldDraft("middle", FormFieldType.MULTIPLE_CHOICE, "Pedido"),
         FormFieldDraft("last", FormFieldType.DATE, "Fecha")
     )
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test fun coverReadFailureDoesNotBlockOpeningOrSavingTheDraft() = runTest(mainDispatcherRule.dispatcher) {
+        val stored = FakeFormRepository(listOf(FormDraft("a", "Pedido", fields, 1, 1)))
+        val repository = object : FormRepository by stored {
+            override fun observePublishedCoverUrl(id: String) = flow<String?> {
+                throw IOException("cover metadata unavailable")
+            }
+        }
+        val model = EditFormViewModel(templateRepository(), SavedStateHandle(), repository)
+            .also { viewModels.put("failed-cover", it) }
+        model.openDraft("a")
+        runCurrent()
+
+        assertTrue(model.uiState.value.publishedCoverLoadFailed)
+        assertFalse(model.uiState.value.isLoading)
+        assertEquals(null, model.uiState.value.loadError)
+        assertEquals(fields, model.uiState.value.fields)
+        assertEquals(DraftSaveStatus.SAVED, model.uiState.value.saveStatus)
+        assertTrue(stored.savedDrafts.isEmpty())
+
+        model.onAction(EditFormAction.ChangeTitle("Pedido actualizado"))
+        runCurrent()
+        assertEquals("Pedido actualizado", stored.savedDrafts.single().title)
+        assertEquals(DraftSaveStatus.SAVED, model.uiState.value.saveStatus)
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test fun lateCoverFailurePreservesPendingEditsAndReopeningRetriesTheRead() = runTest(mainDispatcherRule.dispatcher) {
+        val stored = FakeFormRepository(listOf(FormDraft("a", "Pedido", fields, 1, 1)))
+        val covers = MutableStateFlow<Result<String?>>(Result.success("remote-a"))
+        val repository = object : FormRepository by stored {
+            override fun observePublishedCoverUrl(id: String) = covers.map { it.getOrThrow() }
+        }
+        val saved = SavedStateHandle()
+        val model = EditFormViewModel(templateRepository(), saved, repository)
+            .also { viewModels.put("late-failed-cover", it) }
+        model.openDraft("a")
+        runCurrent()
+        stored.saveDelayMillis = 1000
+        model.onAction(EditFormAction.ChangeTitle("Edición pendiente"))
+        runCurrent()
+        covers.value = Result.failure(IOException("cover metadata unavailable"))
+        runCurrent()
+
+        assertTrue(model.uiState.value.publishedCoverLoadFailed)
+        assertEquals("remote-a", model.uiState.value.publishedCoverUrl)
+        assertEquals("remote-a", saved.get<String>("editor_published_cover"))
+        assertEquals("Edición pendiente", model.uiState.value.title)
+        assertEquals(fields, model.uiState.value.fields)
+        assertEquals(DraftSaveStatus.SAVING, model.uiState.value.saveStatus)
+        assertTrue(stored.savedDrafts.isEmpty())
+        advanceUntilIdle()
+        assertEquals("Edición pendiente", stored.savedDrafts.single().title)
+        assertEquals(DraftSaveStatus.SAVED, model.uiState.value.saveStatus)
+
+        covers.value = Result.success("remote-recovered")
+        model.openDraft("a")
+        runCurrent()
+        assertFalse(model.uiState.value.publishedCoverLoadFailed)
+        assertEquals("remote-recovered", model.uiState.value.publishedCoverUrl)
+        assertEquals("Edición pendiente", model.uiState.value.title)
+        assertEquals(1, stored.savedDrafts.size)
+    }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test fun lateCoverMetadataPreservesEditsAndStopsWhenChangingDraft() {

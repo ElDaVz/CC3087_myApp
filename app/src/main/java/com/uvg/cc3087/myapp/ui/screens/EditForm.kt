@@ -224,6 +224,9 @@ fun EditForm(
                     }
                     if (uiState.importingCover) Text(stringResource(R.string.cover_importing))
                     if (uiState.coverError) Text(stringResource(R.string.cover_error), color = MaterialTheme.colorScheme.error)
+                    if (uiState.publishedCoverLoadFailed) {
+                        Text(stringResource(R.string.published_cover_load_error), color = MaterialTheme.colorScheme.error)
+                    }
                     Text(
                         stringResource(R.string.form_details),
                         style = MaterialTheme.typography.titleMedium

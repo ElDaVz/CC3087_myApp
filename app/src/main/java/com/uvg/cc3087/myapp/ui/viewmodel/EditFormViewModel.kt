@@ -341,12 +341,22 @@ class EditFormViewModel(
     private fun observeCover(id: String) {
         coverObservation?.cancel()
         coverObservation = viewModelScope.launch {
-            formRepository.observePublishedCoverUrl(id).collect { url ->
+            try {
+                formRepository.observePublishedCoverUrl(id).collect { url ->
+                    val current = mutableUiState.value
+                    if (current.draftId == id) {
+                        // la portada publicada no debe reemplazar una edición pendiente
+                        mutableUiState.value = current.copy(publishedCoverUrl = url, publishedCoverLoadFailed = false)
+                        savedStateHandle[PUBLISHED_COVER_KEY] = url
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
                 val current = mutableUiState.value
                 if (current.draftId == id) {
-                    // Publication metadata changes presentation only, never the pending draft revision.
-                    mutableUiState.value = current.copy(publishedCoverUrl = url)
-                    savedStateHandle[PUBLISHED_COVER_KEY] = url
+                    // conservamos la última portada y dejamos que el borrador siga guardándose
+                    mutableUiState.value = current.copy(publishedCoverLoadFailed = true)
                 }
             }
         }
