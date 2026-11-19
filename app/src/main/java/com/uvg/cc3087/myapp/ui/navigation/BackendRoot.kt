@@ -30,10 +30,9 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
     val authState by services.auth.state.collectAsStateWithLifecycle()
     val authModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(services.auth))
     val authUi by authModel.uiState.collectAsStateWithLifecycle()
-    var showAccount by rememberSaveable { mutableStateOf(false) }
     val uid = authState.userId
     LaunchedEffect(authState) {
-        if (authState !is AuthState.Initializing) { showAccount = false; authModel.clearCredentials() }
+        if (authState !is AuthState.Initializing) authModel.clearCredentials()
     }
     if (authState is AuthState.Initializing) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -71,24 +70,23 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
             val importState by accountModel.importState.collectAsStateWithLifecycle()
             val syncState by accountModel.syncState.collectAsStateWithLifecycle()
             val message = if (uid == null) null else accountSyncMessage(syncState)
-            if (showAccount && uid == null) AuthScreen(authUi, services.auth.configured,
-                authModel::email, authModel::password, authModel::confirmation, authModel::mode, authModel::submit,
-                onBack = {
-                    if (authUi.mode != AuthMode.LOGIN) authModel.mode(AuthMode.LOGIN)
-                    else { showAccount = false; authModel.clearCredentials() }
+            val responseRepository = remember(uid) { if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests }
+            FormLinkRoute(forms, templates, responseRepository,
+                guestImportNotice = { GuestImportNotice(importState, accountModel::retryImport) },
+                analytics = services.analytics, coverStorage = covers, syncMessage = message,
+                accountContent = { goBack ->
+                    if (uid == null) AuthScreen(authUi, services.auth.configured,
+                        authModel::email, authModel::password, authModel::confirmation, authModel::mode, authModel::submit,
+                        onBack = {
+                            if (authUi.mode != AuthMode.LOGIN) authModel.mode(AuthMode.LOGIN)
+                            else { goBack(); authModel.clearCredentials() }
+                        })
+                    else AccountScreen((authState as AuthState.SignedIn).session,
+                        accountUi, importState, syncState, onBack = goBack,
+                        onRetryImport = accountModel::retryImport,
+                        onSignOut = accountModel::signOut, onSync = accountModel::requestSync,
+                        onConfirmSignOut = accountModel::confirmSignOut, onDismissSignOut = accountModel::dismissSignOut)
                 })
-            else if (showAccount) AccountScreen((authState as AuthState.SignedIn).session,
-                accountUi, importState, syncState,
-                onBack = { showAccount = false },
-                onRetryImport = accountModel::retryImport,
-                onSignOut = accountModel::signOut, onSync = accountModel::requestSync,
-                onConfirmSignOut = accountModel::confirmSignOut, onDismissSignOut = accountModel::dismissSignOut)
-            else {
-                val responseRepository = remember(uid) { if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests }
-                FormLinkRoute(forms, templates, responseRepository,
-                    guestImportNotice = { GuestImportNotice(importState, accountModel::retryImport) },
-                    analytics = services.analytics, coverStorage = covers, onAccountClick = { showAccount = true }, syncMessage = message)
-            }
         }
     }
 }
