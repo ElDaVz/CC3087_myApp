@@ -26,11 +26,11 @@ class RequestNavigationTest {
         compose.onNodeWithText("Respuestas").performClick()
         compose.onNodeWithTag("metric-total").performScrollTo().performClick()
         compose.onNodeWithText("Solicitudes recibidas").assertExists()
-        compose.onNodeWithTag("request-a/shared").performClick()
-        compose.onNodeWithText("Respuesta de a").assertExists()
+        openRequest("a")
+        assertAnswerDisplayed("a")
         dispatchBack()
-        compose.onNodeWithTag("request-b/shared").performClick()
-        compose.onNodeWithText("Respuesta de b").assertExists()
+        openRequest("b")
+        assertAnswerDisplayed("b")
         compose.onNodeWithText("Respuesta de a").assertDoesNotExist()
         compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Solicitudes recibidas").assertExists()
@@ -43,10 +43,10 @@ class RequestNavigationTest {
         launchApp(TestRequests(listOf(request("a"), request("b"))), restoration)
         compose.onNodeWithText("Respuestas").performClick()
         compose.onNodeWithTag("metric-total").performScrollTo().performClick()
-        compose.onNodeWithTag("request-b/shared").performClick()
+        openRequest("b")
         restoration.emulateSavedInstanceStateRestore()
         compose.onNodeWithText("Detalle de solicitud").assertExists()
-        compose.onNodeWithText("Respuesta de b").assertExists()
+        assertAnswerDisplayed("b")
         dispatchBack()
         compose.onNodeWithText("Solicitudes recibidas").assertExists()
     }
@@ -55,9 +55,8 @@ class RequestNavigationTest {
         launchApp(TestRequests((1..30).map { request("form-$it") }))
         compose.onNodeWithText("Respuestas").performClick()
         compose.onNodeWithTag("metric-total").performScrollTo().performClick()
-        compose.onNodeWithTag("request-list").performScrollToNode(hasTestTag("request-form-25/shared"))
-        compose.onNodeWithTag("request-form-25/shared").performClick()
-        compose.onNodeWithText("Respuesta de form-25").assertExists()
+        openRequest("form-25")
+        assertAnswerDisplayed("form-25")
         dispatchBack()
         compose.onNodeWithTag("request-form-25/shared").assertIsDisplayed()
     }
@@ -80,6 +79,19 @@ class RequestNavigationTest {
         compose.onNodeWithText("Todavía no has recibido solicitudes.").assertIsDisplayed()
         compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithText("Mis formularios").assertExists()
+    }
+
+    private fun openRequest(form: String) {
+        // Lazy rows may not exist in the semantics tree until the list scrolls to them.
+        val tag = "request-$form/shared"
+        compose.onNodeWithTag("request-list").performScrollToNode(hasTestTag(tag))
+        compose.onNodeWithTag(tag).assertIsDisplayed().performClick()
+    }
+
+    private fun assertAnswerDisplayed(form: String) {
+        val answer = "Respuesta de $form"
+        compose.onNodeWithTag("request-detail-list").performScrollToNode(hasText(answer))
+        compose.onNodeWithText(answer).assertIsDisplayed()
     }
 
     private fun dispatchBack() {
