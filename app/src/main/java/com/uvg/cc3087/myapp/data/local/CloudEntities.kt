@@ -18,6 +18,13 @@ data class RemoteRequestEntity(val ownerId: String, val formId: String, val resp
 data class CoverUploadEntity(val ownerId: String, val formId: String, val hash: String, val url: String, val publicId: String)
 
 @Dao
+interface LinkDao {
+    @Query("SELECT * FROM form_links WHERE ownerId = :owner AND formId = :form")
+    suspend fun get(owner: String, form: String): FormLinkEntity?
+    @Upsert suspend fun save(row: FormLinkEntity)
+}
+
+@Dao
 interface CloudDao {
     @Query("SELECT * FROM cover_uploads WHERE ownerId = :owner AND formId = :form AND hash = :hash")
     suspend fun uploadedCover(owner: String, form: String, hash: String): CoverUploadEntity?
