@@ -7,11 +7,12 @@ Entregas pequeñas, una tarea por rama y commits por cambios relacionados. Las t
 - **Implementado en main:** dashboard, lectura local de respuestas, autenticación y recuperación por correo, eliminación con confirmación, Cuenta, sincronización e incorporación automática con reservas de Room v9. La PR #33 se integró; su fix de cierre de sesión pasó los tres jobs de GitHub Actions.
 - **Limpieza integrada en main:** la PR #34 integró `refactor/remove-unused-paths`, retirando rutas antiguas y trasladando sus pruebas útiles al código de producción.
 - **Navegación integrada en main:** la base actual ya contiene Navigation 3, mejoras de dashboard/bandeja/detalle, estadísticas por componente y la corrección de sincronización de las pruebas de borradores. Este estado se comprobó en el checkout; no acredita por sí solo un resultado de GitHub Actions.
-- **Implementado en `feature/settings-appearance`:** Configuración con accesos a Cuenta y Estadísticas y apariencia Sistema/Claro/Oscuro persistente por dispositivo. Pendiente de integración y revisión humana; evidencia local al final.
+- **Configuración y apariencia integradas en main:** Cuenta, Estadísticas y tema Sistema/Claro/Oscuro por dispositivo ya están en la base actual. La [ejecución de la rama de Ajustes](https://github.com/ElDaVz/CC3087_myApp/actions/runs/44648156244) terminó correctamente. La ejecución posterior en main falló antes de arrancar los emuladores; se sigue por separado en el fix de CI. La revisión humana permanece pendiente.
+- **Fix de CI en `fix/ci-configuration-cache`:** desactivar la caché de configuración únicamente en las tres invocaciones Gradle del workflow y conservar reportes de diagnóstico. Pendiente de integrar y comprobar en GitHub; no cambia código de la app.
 - **Archivos locales retirados:** los archivos npm sin consumidores de la raíz y la copia antigua de Pendientes se eliminaron durante la limpieza; nunca estuvieron versionados. Los esquemas Room y las configuraciones necesarias se conservan.
 - **Pendiente:** búsqueda/orden/fijados de formularios, búsqueda textual de respuestas, exportación, Google y las mejoras restantes sin marcar.
 
-Cuenta, limpieza y navegación ya están integradas. La prioridad actual acordada es resolver Configuración y apariencia en una entrega y continuar con búsqueda, ordenación, fijados y el menú vacío de Plantillas como tareas separadas. Google permanece pendiente. Cada tarea tendrá su rama desde main cuando su base esté integrada; commits por cambios relacionados y descripción de PR para que el usuario la cree y evalúe. No crear checkouts temporales, publicar ramas ni crear o fusionar PRs sin petición del usuario.
+Cuenta, limpieza, navegación y Configuración/apariencia ya están integradas. La prioridad actual es estabilizar CI mediante un fix mínimo y continuar con búsqueda, ordenación, fijados y el menú vacío de Plantillas como tareas separadas. Google permanece pendiente. Cada tarea tendrá su rama desde main cuando su base esté integrada; commits por cambios relacionados y descripción de PR para que el usuario la cree y evalúe. No crear checkouts temporales, publicar ramas ni crear o fusionar PRs sin petición del usuario.
 
 ## Experiencia de respuestas y estadísticas por componentes
 
@@ -32,13 +33,13 @@ Prioridad vigente: terminar una tarea antes de iniciar la siguiente. Las antigua
 
 | Orden | Entrega | Estado y límite |
 |---|---|---|
-| 1 | Configuración y apariencia | Implementada en `feature/settings-appearance`; pendiente de integrar. Cuenta, Estadísticas y tema por dispositivo. |
-| 2 | Búsqueda de formularios | Próxima tarea: solo búsqueda, con las reglas del grupo 5. |
+| 1 | Fix mínimo de CI | Implementado en `fix/ci-configuration-cache`; pendiente de integrar y verificar en GitHub. Configuración/apariencia ya integrada en main. |
+| 2 | Búsqueda de formularios | Plan aprobado: `feature/forms-search` desde main tras integrar el fix de CI. Solo búsqueda, con las reglas del grupo 5. |
 | 3 | Ordenación en el menú superior | Rama independiente después de integrar búsqueda; reutilizar sus filtros. |
 | 4 | Fijados y menú por formulario | Rama independiente; conservar eliminación confirmada. |
 | 5 | Menú superior de Plantillas | Definir una utilidad concreta o retirarlo; no añadir acciones ficticias. |
 
-Dashboard, importación automática, Cuenta, limpieza y navegación ya están en main. Google, identidad visual, regreso tras publicación, exportación e identidad empresarial conservan sus pendientes. Cada nueva entrega parte del main que contenga sus dependencias; no se crean ramas encadenadas por anticipado.
+Dashboard, importación automática, Cuenta, limpieza, navegación y Configuración/apariencia ya están en main. Google, identidad visual, regreso tras publicación, exportación e identidad empresarial conservan sus pendientes. Cada nueva entrega parte del main que contenga sus dependencias; no se crean ramas encadenadas por anticipado.
 
 Seguimiento histórico de CI de navegación: el log anterior muestra `RootViewWithoutFocusException` en `Espresso.pressBack()` en `RequestNavigationTest.selectedRequestSurvivesSavedStateRestoration` y `RestoredCoverUiTest.editorResolvesCovers`. La corrección se realizó en `fix/navigation-tests-window-focus` y está en la base de esta entrega. El job 135866579663 reportó después un fallo distinto: no existía el nodo `request-a/shared` al pulsarlo. Esta revisión desplaza explícitamente la LazyColumn antes de seleccionar filas y comprobar respuestas. No dar GitHub Actions por corregido hasta tener evidencia de una nueva ejecución.
 
@@ -83,6 +84,17 @@ Decisiones funcionales acordadas (todavía sin implementar; se repartirán entre
 - Fijados primero entre coincidencias del filtro/búsqueda; después relevancia y orden elegido. Menú por tarjeta con fijar/desfijar y la eliminación confirmada existente. Estado sin resultados y limpieza de búsqueda/filtros.
 - Preferencias mediante repositorio DataStore y ViewModel; añadir fecha numérica al resumen. No requiere cambios de backend ni esquema Room.
 
+Plan aprobado para la próxima tarea corta de búsqueda (`feature/forms-search`, después de integrar el fix de CI):
+
+- La lupa despliega un campo sobre la lista, con foco y teclado. La consulta combina con Todos/Activos/Borradores y se conserva al abrir un formulario y regresar.
+- Limpiar vacía la consulta conservando campo y filtro; cerrar también oculta campo y teclado. Atrás primero cierra el teclado y después la búsqueda.
+- Consulta y despliegue se restauran con el SavedStateHandle cifrado de la sesión; se separan por propietario y no se guardan en DataStore ni telemetría. El contrato FormRepository permanece sin cambios.
+- Motor independiente de Compose: cálculo fuera del hilo principal y cancelación de consultas obsoletas. Normalizar mayúsculas, tildes y espacios; exigir todas las palabras. Relevancia exacta, prefijo, parcial y aproximada, conservando el orden del repositorio en empates.
+- Admitir inserción, eliminación, sustitución y transposición adyacente: una edición en palabras de 4–7 caracteres, dos desde 8 y ninguna en palabras más cortas. `inscripcion` encuentra «Inscripción»; `pediod` encuentra «Pedido»; `pedido mensual` exige ambas palabras.
+- Diferenciar lista inicialmente vacía, filtro sin coincidencias y búsqueda sin resultados; ofrecer limpiar consulta o restablecer consulta y filtro. Mantener carga, error y reintento.
+- Validar relevancia, tolerancia, filtros, actualizaciones, restauración, aislamiento de sesiones, teclado y regreso desde editor; revisar claro, oscuro y texto grande. Separar commits de motor/estado, UI/pruebas y documentación.
+
+
 ## 6. Eliminación con confirmación y recuperación
 
 Implementado en main: eliminación explícita confirmada, retirada de publicación y conservación de solicitudes. Siguen pendientes el menú ampliado, recuperación/deshacer y selección múltiple.
@@ -103,7 +115,7 @@ Decisiones implementadas: Respuestas abre resumen y acceso a bandeja completa; s
 
 ## 8. Configuración y exportación
 
-- [x] Conectar Configuración desde Mis formularios, Plantillas, Dashboard y Bandeja; abrir Cuenta o autenticación y Estadísticas reutilizando sus pantallas. Implementado en `feature/settings-appearance`, pendiente de integrar.
+- [x] Conectar Configuración desde Mis formularios, Plantillas, Dashboard y Bandeja; abrir Cuenta o autenticación y Estadísticas reutilizando sus pantallas. Integrado en main desde la entrega `feature/settings-appearance`.
 - [x] Ofrecer apariencia Sistema (predeterminada), Claro y Oscuro, persistente por dispositivo para invitado y cuentas, con la paleta morada de FormLink. DataStore mediante repositorio y ViewModel independientes de la sesión; error/reintento sin perder la elección confirmada.
 - [ ] Añadir el orden predeterminado de formularios cuando se implemente la entrega de ordenación.
 - [ ] Añadir el acceso a exportación cuando exista una exportación funcional; no mostrar un botón vacío.
@@ -363,3 +375,26 @@ backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink 
 ```
 
 Pendiente: revisión humana, TalkBack, teclado físico y ejecución de CI de esta entrega. Búsqueda, ordenación, fijados, menú de Plantillas y exportación conservan sus tareas independientes. La web permanece sin cambios; sus pruebas no se repiten en esta entrega.
+
+
+## Fix mínimo de caché de configuración en CI (2026-11-19)
+
+Rama `fix/ci-configuration-cache`, basada en main después de integrar Configuración y apariencia. Cambio limitado al workflow y su seguimiento; la búsqueda aprobada se implementará en `feature/forms-search` cuando este fix esté integrado.
+
+Diagnóstico: la [ejecución 44650319212 en main](https://github.com/ElDaVz/CC3087_myApp/actions/runs/44650319212) pasó los jobs Android y web/reglas. Falló `Build instrumentation APKs before starting emulators`, antes de iniciar el emulador Android o Firebase. La rama de Ajustes había [pasado su workflow](https://github.com/ElDaVz/CC3087_myApp/actions/runs/44648156244). El log de main muestra un error al serializar `ProcessNavigationXmlTask`, seguido de un NPE en `ModuleVersionResolveException.getMessage`. Este último coincide con el [bug de Gradle #36284](https://github.com/gradle/gradle/issues/36284), que dificulta mostrar fallos de resolución de dependencias. No se ha identificado la dependencia ni la causa original del fallo de GitHub; el nombre de la tarea no demuestra que sobre Navigation 3.
+
+Decisión: usar `--no-configuration-cache` en las tres invocaciones Gradle de CI: compilación/unitarias/Lint/APK, ensamblado de APKs instrumentados y ejecución instrumentada con Firebase local. `org.gradle.configuration-cache=true` permanece activo para desarrollo local. Se mantienen `setup-gradle`, cachés de dependencias/npm/Firebase, versiones del toolchain, emulador y todos los controles existentes. Con la configuración actual, `setup-gradle@v4` no restaura la caché de configuración entre ejecuciones porque no se ha configurado `cache-encryption-key`; la [documentación de la acción](https://github.com/gradle/actions/blob/v4/docs/setup-gradle.md#saving-configuration-cache-data) distingue esa caché de las dependencias.
+
+Los artefactos Android e instrumentados incluyen ahora `build/reports/configuration-cache/` y `build/reports/problems/`, además de logs y resultados existentes. Se mantiene el fallo del job cuando Gradle falla: los bloques Bash que capturan logs se ejecutan con `-e -o pipefail`. Desactivar la caché evita esa vía de serialización; si GitHub muestra después un fallo de dependencias, deberá diagnosticarse con el artefacto y el error concretos. No se considera garantizada la resolución del error remoto por un ensamblado local con dependencias ya descargadas.
+
+
+Validación local del fix:
+
+- YAML parseado correctamente; se verifican las tres invocaciones con `--no-configuration-cache`, las rutas de diagnóstico en ambos artefactos y la propiedad local de caché sin cambios. Sintaxis Bash correcta para los tres bloques extraídos del propio YAML.
+- El bloque Android exacto, ejecutado con `bash --noprofile --norc -eo pipefail`, completó compilación, **242 unitarias sin fallos/errores/omisiones**, Lint sin errores (29 advertencias) y `assembleDebug`. El bloque previo a los emuladores completó `assembleDebug assembleDebugAndroidTest` con los argumentos actualizados. Logs locales en `ci-logs/android-build.log` y `ci-logs/instrumented-build.log`, ignorados por Git.
+- Se comprobó también que una tubería fallida con `tee` mantiene código de salida 1 bajo `pipefail`.
+- El comando instrumentado exacto del YAML pasó en Pixel_9 Android 17/API 37, con Firebase Auth/Firestore locales: **134 pruebas, 133 correctas, cero fallos/errores y una omitida**, correspondiente a la subida real optativa a Cloudinary.
+- El primer intento instrumentado se interrumpió con `device offline` tras 31 pruebas y el dispositivo dejó de aparecer en ADB. El registro XML marcó el caso en curso como fallido sin texto de aserción. Se conservaron sus salidas en `app/build/ci-validation/device-offline-attempt/`; tras reiniciar el mismo AVD en frío, el comando completo pasó. No se atribuye esa desconexión al fallo de caché de GitHub ni se afirma una causa del cierre del emulador.
+- Chequeo de seguridad del repositorio y `git diff --check` correctos. El workflow de web/reglas no cambia y sus pruebas no se repiten en esta entrega.
+
+La validación local usa dependencias ya descargadas. La ejecución de esta rama en GitHub y la integración en main permanecen pendientes; no se declara corregido el fallo remoto hasta disponer de esa evidencia. Los commits quedan locales y se entrega la descripción de PR para que el usuario la cree y evalúe. Después de integrar este fix se iniciará la rama de búsqueda desde main.
