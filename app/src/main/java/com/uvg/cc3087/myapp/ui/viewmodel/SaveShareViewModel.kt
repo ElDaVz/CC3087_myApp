@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.data.repository.FormRepository
+import com.uvg.cc3087.myapp.data.repository.InvitationMode
 import com.uvg.cc3087.myapp.data.repository.PublicationError
 import com.uvg.cc3087.myapp.data.repository.PublicationException
 import com.uvg.cc3087.myapp.ui.state.DraftLoadError
@@ -104,6 +105,10 @@ class SaveShareViewModel(
             }
         }
     }
+    fun selectInvitationMode(mode: InvitationMode) {
+        mutableUiState.value = mutableUiState.value.copy(invitationMode = mode)
+    }
+
     fun archive() {
         val state = mutableUiState.value
         if (state.publishing) return

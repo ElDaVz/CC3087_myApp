@@ -14,6 +14,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -38,6 +39,8 @@ fun SaveShareScreen(
     onRetry: () -> Unit,
     onCopyLink: (String) -> Boolean,
     onWhatsAppShare: (String) -> Boolean,
+    onSystemShare: (String) -> Boolean = { false },
+    onInvitationMode: (com.uvg.cc3087.myapp.data.repository.InvitationMode) -> Unit = {},
     modifier: Modifier = Modifier,
     onPublish: (() -> Unit)? = null, onArchive: (() -> Unit)? = null
 ) {
@@ -45,12 +48,12 @@ fun SaveShareScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     fun copyLink() {
-        val link = uiState.publicLink?.takeIf { uiState.canShare } ?: return
+        val link = uiState.selectedLink?.takeIf { uiState.canShare } ?: return
         val message = if (onCopyLink(link)) R.string.link_copied else R.string.link_copy_error
         scope.launch { snackbar.showSnackbar(resources.getString(message)) }
     }
     fun shareLink() {
-        val link = uiState.publicLink?.takeIf { uiState.canShare } ?: return
+        val link = uiState.selectedLink?.takeIf { uiState.canShare } ?: return
         if (!onWhatsAppShare(link)) {
             scope.launch { snackbar.showSnackbar(resources.getString(R.string.whatsapp_unavailable)) }
         }
@@ -122,7 +125,19 @@ fun SaveShareScreen(
                         if (uiState.publication?.status == "PUBLISHED" && onArchive != null) TextButton(onClick = onArchive, enabled = !uiState.publishing) { Text(stringResource(R.string.archive_publication)) }
                         Spacer(Modifier.height(16.dp))
                     }
-                    ShareableLinkCard(uiState.publicLink, uiState.canShare, ::copyLink)
+                    ShareableLinkCard(uiState.selectedLink, uiState.canShare, ::copyLink)
+                    if (uiState.canShare && uiState.publication?.links?.singleUseUrl != null) {
+                        Spacer(Modifier.height(12.dp))
+                        InvitationModeSelector(uiState.invitationMode, onInvitationMode)
+                    }
+                    uiState.trackingLink?.takeIf { uiState.canShare }?.let {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.tracking_link_notice),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Spacer(Modifier.height(24.dp))
                     Button(
                         enabled = uiState.canShare,
@@ -137,6 +152,21 @@ fun SaveShareScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.share_via_whatsapp), style = MaterialTheme.typography.labelMedium)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(
+                        enabled = uiState.canShare && uiState.trackingLink != null,
+                        onClick = {
+                            uiState.trackingLink?.let {
+                                if (!onSystemShare(it)) {
+                                    scope.launch { snackbar.showSnackbar(resources.getString(R.string.share_error)) }
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+                    ) {
+                        Text(stringResource(R.string.share_tracking_link), style = MaterialTheme.typography.labelMedium)
                     }
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(
@@ -159,6 +189,27 @@ fun SaveShareScreen(
                 TextButton(onClick = onBackToForms, modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)) {
                     Text(stringResource(R.string.back_to_my_forms), style = MaterialTheme.typography.labelMedium)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InvitationModeSelector(
+    selected: com.uvg.cc3087.myapp.data.repository.InvitationMode,
+    onSelect: (com.uvg.cc3087.myapp.data.repository.InvitationMode) -> Unit
+) {
+    val modes = com.uvg.cc3087.myapp.data.repository.InvitationMode.entries
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        modes.forEachIndexed { index, mode ->
+            SegmentedButton(
+                selected = mode == selected,
+                onClick = { onSelect(mode) },
+                shape = SegmentedButtonDefaults.itemShape(index, modes.size),
+                modifier = Modifier.testTag("invitation-mode-${mode.name}")
+            ) {
+                Text(stringResource(if (mode == com.uvg.cc3087.myapp.data.repository.InvitationMode.OPEN)
+                    R.string.invitation_open else R.string.invitation_single_use))
             }
         }
     }
