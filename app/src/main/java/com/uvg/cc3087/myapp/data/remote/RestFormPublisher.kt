@@ -21,7 +21,8 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
     private val exclusive: suspend (suspend () -> FormPublication) -> FormPublication,
     private val analytics: com.uvg.cc3087.myapp.domain.telemetry.ProductAnalytics = com.uvg.cc3087.myapp.domain.telemetry.NoProductAnalytics,
     private val covers: CoverStorage? = null, private val uploader: CoverUploader? = null,
-    private val profiles: ProfileRepository? = null, private val logoStorage: PrivateLogoStorage? = null) : FormPublisher {
+    private val profiles: ProfileRepository? = null, private val logoStorage: PrivateLogoStorage? = null,
+    private val secretLinks: SecretLinkRepository? = null) : FormPublisher {
     private fun checkSession(owner: String) { check(currentOwner() == owner) { "Session changed" } }
     private fun asset(row: PublicationEntity): CoverAsset? = row.coverUrl?.let {
         CoverAsset.fromWire(mapOf("url" to it, "publicId" to row.coverPublicId, "hash" to row.coverHash))
@@ -57,17 +58,20 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
         catch (_: Exception) { previous }
     }
+    private suspend fun links(owner: String, formId: String, publicUrl: String): FormLinks =
+        secretLinks?.forForm(owner, formId, publicUrl) ?: FormLinks(publicUrl)
+
     override suspend fun publication(owner: String, form: FormDraft): FormPublication? {
         val row = database.cloud().publication(owner, form.id) ?: return null
         val previous = asset(row)
         val hash = when {
             form.coverAction == "REMOVE" -> null
             needsUpload(form, previous) -> try { prepare(form).hash }
-                catch (error: PublicationException) { return FormPublication(row.url, row.status, row.version, row.firstPublishedAt, false, row.coverUrl) }
+                catch (error: PublicationException) { return FormPublication(row.url, row.status, row.version, row.firstPublishedAt, false, row.coverUrl, links(owner, form.id, row.url)) }
             else -> previous?.hash
         }
         return FormPublication(row.url, row.status, row.version, row.firstPublishedAt,
-            row.fingerprint == contentFingerprint(form, hash), row.coverUrl)
+            row.fingerprint == contentFingerprint(form, hash), row.coverUrl, links(owner, form.id, row.url))
     }
     override suspend fun publish(owner: String, form: FormDraft): FormPublication = exclusive {
         checkSession(owner)
@@ -128,10 +132,22 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
             if (remote["firstPublishedAt"] == null) privateTimes += "firstPublishedAt"
             if (database.drafts().getDraft(form.id)?.toDraft() != form)
                 throw PublicationException(PublicationError.DRAFT_CHANGED)
-            client.commit(owner, listOf(
+            val secret = links(owner, form.id, "https://${client.project}.web.app/f/${form.id}")
+            val writes = mutableListOf(
                 client.update("forms/${form.id}", privateValues, privateTimes, JSONObject().put("updateTime", privateDoc.getString("updateTime"))),
                 client.update("publishedForms/${form.id}", publicValues, times,
-                    if (oldPublicDoc == null) JSONObject().put("exists", false) else JSONObject().put("updateTime", oldPublicDoc.getString("updateTime")))))
+                    if (oldPublicDoc == null) JSONObject().put("exists", false) else JSONObject().put("updateTime", oldPublicDoc.getString("updateTime"))))
+            secret.trackingToken?.let { token ->
+                writes += client.update("forms/${form.id}/links/tracking",
+                    mapOf("ownerId" to owner, "token" to token, "active" to true))
+                writes += client.update("forms/${form.id}/links/trackingSummary",
+                    mapOf("ownerId" to owner, "submissions" to 0, "pending" to 0, "inProgress" to 0, "completed" to 0))
+            }
+            secret.singleUseUrl?.substringAfterLast('/')?.let { token ->
+                writes += client.update("forms/${form.id}/links/invitations/$token",
+                    mapOf("ownerId" to owner, "token" to token, "active" to true, "used" to false))
+            }
+            client.commit(owner, writes)
         }
         checkSession(owner)
         val confirmed = FirestoreRest.fields(checkNotNull(client.get(owner, "publishedForms/${form.id}")))
@@ -143,7 +159,8 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
         analytics.firstPublished(form, System.currentTimeMillis(),
             (confirmed["firstFieldCount"] as? Number)?.toInt() ?: form.fields.size,
             confirmed["firstTemplateType"] as? String ?: form.templateType ?: "LEGACY")
-        FormPublication(row.url, row.status, row.version, row.firstPublishedAt, row.fingerprint == fingerprint, cover?.url)
+        FormPublication(row.url, row.status, row.version, row.firstPublishedAt, row.fingerprint == fingerprint,
+            cover?.url, links(owner, form.id, row.url))
     }
     suspend fun refresh(owner: String) {
         val docs = client.query(owner, "publishedForms")

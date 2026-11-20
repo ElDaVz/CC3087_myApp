@@ -119,6 +119,36 @@ test('private edits stay private and archiving preserves previous submissions',a
  await assertSucceeds(getDoc(doc(owner,'forms/f/responses/00000000-0000-4000-8000-000000000001')));
  await assertFails(deleteDoc(doc(owner,'forms/f')));
 });
+test('single-use invitations validate on load and can be claimed only once', async () => {
+ const p=await publish();
+ const owner=environment.authenticatedContext('owner').firestore();
+ const publicDb=environment.unauthenticatedContext().firestore();
+ const token='a'.repeat(32);
+ const ref=doc(owner,'forms/f/links/invitations',token);
+ await assertFails(setDoc(doc(publicDb,'forms/f/links/invitations',token),{ownerId:'owner',token,active:true,used:false}));
+ await assertFails(setDoc(doc(owner,'forms/f/links/invitations',token),{ownerId:'owner',token:'bad',active:true,used:false}));
+ await assertSucceeds(setDoc(ref,{ownerId:'owner',token,active:true,used:false}));
+ await assertSucceeds(getDoc(doc(publicDb,'forms/f/links/invitations',token)));
+ await assertSucceeds(updateDoc(ref,{used:true}));
+ await assertFails(updateDoc(ref,{used:false}));
+ await assertFails(updateDoc(ref,{active:false}));
+ await assertFails(setDoc(ref,{ownerId:'owner',token,active:true,used:false}));
+});
+
+test('tracking metadata is owner-only and never readable by the public', async () => {
+ await publish();
+ const owner=environment.authenticatedContext('owner').firestore();
+ const publicDb=environment.unauthenticatedContext().firestore();
+ const token='b'.repeat(32);
+ await assertSucceeds(setDoc(doc(owner,'forms/f/links/tracking'),{ownerId:'owner',token,active:true}));
+ await assertSucceeds(setDoc(doc(owner,'forms/f/links/trackingSummary'),{ownerId:'owner',submissions:0,pending:0,inProgress:0,completed:0}));
+ await assertFails(getDoc(doc(publicDb,'forms/f/links/tracking')));
+ await assertFails(getDoc(doc(publicDb,'forms/f/links/trackingSummary')));
+ await assertFails(getDoc(doc(environment.authenticatedContext('other').firestore(),'forms/f/links/tracking')));
+ await assertFails(getDoc(doc(environment.authenticatedContext('other').firestore(),'forms/f/links/trackingSummary')));
+ await assertFails(setDoc(doc(publicDb,'forms/f/links/trackingSummary'),{ownerId:'owner',submissions:1,pending:0,inProgress:0,completed:0}));
+});
+
 test('ten short-text questions can be submitted',async()=>{
  const p=await publish(Array.from({length:10},(_,i)=>({...field(`q${i}`),position:i})));
  await assertSucceeds(response(environment.unauthenticatedContext().firestore(),p,Array(10).fill('Respuesta')));

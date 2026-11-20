@@ -48,11 +48,16 @@ class BackendServices(private val context: Context, private val database: FormLi
     val sync = remote?.let { FormSyncEngine(local, it) { auth.state.value.userId } }
     val logoStorage = PrivateLogoStorage(context)
     val formListPreferences: FormListPreferences = DataStoreFormListPreferences.create(context)
+    val secretLinks by lazy { com.uvg.cc3087.myapp.data.repository.SecretLinkRepository(
+        com.uvg.cc3087.myapp.data.local.RoomLinkStore(database.links()) { id ->
+            "https://${client?.project ?: "formlink"}.web.app/f/$id"
+        }
+    ) }
     val publisher by lazy { client?.let { com.uvg.cc3087.myapp.data.remote.RestFormPublisher(it, checkNotNull(remote), database,
         { auth.state.value.userId }, { block -> checkNotNull(sync).exclusive(block) }, analytics, covers,
         if (BuildConfig.CLOUDINARY_UPLOADS_ENABLED)
             com.uvg.cc3087.myapp.data.remote.CloudinaryCoverUploader(BuildConfig.CLOUDINARY_CLOUD_NAME, BuildConfig.CLOUDINARY_UPLOAD_PRESET)
-        else null, profiles, logoStorage) } }
+        else null, profiles, logoStorage, secretLinks) } }
     val guestImports: GuestImportRepository = GuestDraftImporter(guestImportStore, { auth.state.value.userId }, ::schedule)
     val profiles: ProfileRepository by lazy {
         RoomProfileRepository(database, logoStorage, client) { auth.state.value.userId }

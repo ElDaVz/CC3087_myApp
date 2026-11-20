@@ -1,16 +1,19 @@
 import './style.css';
 import {initializeAnalytics,event} from './analytics';
-import {duration} from './form';
-import {backend,loadForm,submit} from './backend';
+import {duration,parseLink} from './form';
+import {backend,loadForm,loadInvitation,claimInvitation,submit} from './backend';
 import {message as showMessage, render as showForm} from './view';
+import {trackingPath} from './tracking';
 
 const root=document.querySelector<HTMLElement>('#app')!;
-const match=location.pathname.match(/^\/f\/([A-Za-z0-9_-]{1,128})\/?$/);
+const target=parseLink(location.pathname);
 function message(text:string,retry?:()=>void,state:'info'|'loading'|'error'|'success'='info'){showMessage(root,text,retry,state);}
 const started=Date.now();
 async function run(){
- if(!match){message('Abre el enlace de un formulario para completar una solicitud.');return;}
- const id=match[1];
+ const tracking=trackingPath(location.pathname);
+ if(tracking){message('El resumen de seguimiento se consulta desde la app FormLink.');return;}
+ if(!target){message('Abre el enlace de un formulario para completar una solicitud.');return;}
+ const id=target.id;
  message('Cargando formulario…', undefined, 'loading');
  try {
   const {db,app}=await backend();
@@ -24,12 +27,15 @@ async function run(){
   function remember(){try{sessionStorage.setItem(key,JSON.stringify(attempt));}catch{/* Storage can be unavailable; keep the current attempt in memory. */}}
   remember();
   if(attempt.complete){message('Tu solicitud ya fue enviada. Gracias.', undefined, 'success');return;}
-  const form=await loadForm(db,id);
+  const form=target.kind==='invitation'
+   ? await loadInvitation(db,id,target.token!)
+   : await loadForm(db,id);
   const metadata={form_id:id,attempt_id:attempt.id,form_type:form.templateType};
   // Analytics readiness may lag behind the form; logging remains independent from submission.
   await initializeAnalytics(app);
   if(!attempt.openedSent){attempt.openedSent=true;remember();event('form_opened',metadata);}
   showForm(root,form,async answers=>{
+   if(target.kind==='invitation') await claimInvitation(db,id,target.token!);
    await submit(db,id,attempt.id,form,answers);
    attempt.complete=true;
    const seconds=duration(attempt.start,Date.now());
