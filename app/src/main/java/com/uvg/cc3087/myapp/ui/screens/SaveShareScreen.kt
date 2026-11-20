@@ -154,7 +154,7 @@ fun SaveShareScreen(
                         Text(stringResource(R.string.copy_link), style = MaterialTheme.typography.labelMedium)
                     }
                     Spacer(Modifier.height(24.dp))
-                    SavedFormStats(uiState.draft.fields.size, uiState.canShare)
+                    SavedFormStats(uiState.draft.fields.size, uiState.responseCount, uiState.formStatus)
                 }
                 TextButton(onClick = onBackToForms, modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)) {
                     Text(stringResource(R.string.back_to_my_forms), style = MaterialTheme.typography.labelMedium)
@@ -212,7 +212,7 @@ private fun ShareableLinkCard(link: String?, canShare: Boolean, onCopy: () -> Un
 }
 
 @Composable
-private fun SavedFormStats(fieldCount: Int, published: Boolean) {
+private fun SavedFormStats(fieldCount: Int, responseCount: Int, status: com.uvg.cc3087.myapp.data.model.FormStatus) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(48.dp),
@@ -225,16 +225,22 @@ private fun SavedFormStats(fieldCount: Int, published: Boolean) {
         ) {
             SavedFormStat(stringResource(R.string.saved_fields), fieldCount.toString(), Modifier.weight(1f))
             VerticalDivider(Modifier.height(32.dp))
-            SavedFormStat(stringResource(R.string.responses), "0", Modifier.weight(1f))
+            SavedFormStat(stringResource(R.string.responses), responseCount.toString(), Modifier.weight(1f))
             VerticalDivider(Modifier.height(32.dp))
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.saved_status), style = MaterialTheme.typography.labelMedium)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val statusLabel = when (status) {
+                        com.uvg.cc3087.myapp.data.model.FormStatus.ACTIVE -> R.string.form_status_published
+                        com.uvg.cc3087.myapp.data.model.FormStatus.ARCHIVED -> R.string.form_status_archived
+                        com.uvg.cc3087.myapp.data.model.FormStatus.DRAFT -> R.string.draft
+                    }
                     Box(Modifier.size(8.dp).background(
-                        if (published) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        if (status == com.uvg.cc3087.myapp.data.model.FormStatus.ACTIVE) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
                         CircleShape
                     ))
-                    Text(stringResource(if (published) R.string.active else R.string.draft), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(statusLabel), style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

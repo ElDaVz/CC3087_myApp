@@ -425,4 +425,6 @@
     <string name="close_forms_search">Cerrar búsqueda</string>
     <string name="reset_forms_search">Mostrar todos los formularios</string>
     <string name="forms_search_empty">No hay formularios que coincidan con tu búsqueda</string>
+    <string name="form_status_published">Publicado</string>
+    <string name="form_status_archived">Archivado</string>
 </resources>

@@ -7,6 +7,8 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.uvg.cc3087.myapp.data.model.FormStatus
+import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.data.repository.PublicationError
 import com.uvg.cc3087.myapp.data.repository.PublicationException
@@ -16,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class SaveShareViewModel(
@@ -26,17 +29,36 @@ class SaveShareViewModel(
     val uiState = mutableUiState.asStateFlow()
     private var loadJob: Job? = null
     private var revision = 0L
+    private var summary: FormSummary? = null
 
     init {
+        // el conteo y el estado viven en el repositorio; sin conexión conservamos el último dato local
+        viewModelScope.launch {
+            repository.observeForms().catch { /* mantiene el último resumen conocido */ }
+                .collect { forms ->
+                    val id = savedStateHandle.get<String>(DRAFT_ID_KEY) ?: return@collect
+                    val found = forms.firstOrNull { it.id == id } ?: return@collect
+                    summary = found
+                    mutableUiState.value = mutableUiState.value.copy(
+                        responseCount = found.responseCount, formStatus = found.status
+                    )
+                }
+        }
         savedStateHandle.get<String>(DRAFT_ID_KEY)?.let(::openDraft)
     }
 
+    private fun SaveShareUiState.withSummary(): SaveShareUiState = copy(
+        responseCount = summary?.responseCount ?: 0,
+        formStatus = summary?.status ?: FormStatus.DRAFT
+    )
+
     fun openDraft(id: String) {
+        if (savedStateHandle.get<String>(DRAFT_ID_KEY) != id) summary = null
         savedStateHandle[DRAFT_ID_KEY] = id
         revision++
         val currentRevision = revision
         loadJob?.cancel()
-        mutableUiState.value = SaveShareUiState(isLoading = true)
+        mutableUiState.value = SaveShareUiState(isLoading = true).withSummary()
         loadJob = viewModelScope.launch {
             try {
                 val draft = repository.getDraft(id)
@@ -47,13 +69,13 @@ class SaveShareViewModel(
                         draft = draft, publication = publication,
                         publicLink = publication?.takeIf { it.status == "PUBLISHED" }?.url,
                         loadError = if (draft == null) DraftLoadError.NOT_FOUND else null
-                    )
+                    ).withSummary()
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
                 if (revision == currentRevision) {
-                    mutableUiState.value = SaveShareUiState(loadError = DraftLoadError.FAILED)
+                    mutableUiState.value = SaveShareUiState(loadError = DraftLoadError.FAILED).withSummary()
                 }
             }
         }
@@ -69,7 +91,10 @@ class SaveShareViewModel(
             try {
                 val published = repository.publish(id)
                 if (revision != operationRevision) return@launch
-                mutableUiState.value = mutableUiState.value.copy(publication = published, publicLink = published.url, publishing = false)
+                mutableUiState.value = mutableUiState.value.copy(
+                    publication = published, publicLink = published.url, publishing = false,
+                    formStatus = if (published.status == "PUBLISHED") FormStatus.ACTIVE else mutableUiState.value.formStatus
+                )
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {
                 if (revision != operationRevision) return@launch
