@@ -31,7 +31,8 @@ fun ChooseTemplate(
     onBlankFormClick: () -> Unit = {},
     onTemplateClick: (FormTemplate) -> Unit = {},
     onResponsesClick: () -> Unit = {},
-    hasUnreadResponses: Boolean = false
+    hasUnreadResponses: Boolean = false,
+    onSettingsClick: (() -> Unit)? = null
 ) {
 
     Scaffold(
@@ -70,7 +71,7 @@ fun ChooseTemplate(
         },
 
         bottomBar = {
-            FormsBottomBar({}, onResponsesClick, onFormsClick = onBackClick, hasUnreadResponses = hasUnreadResponses)
+            FormsBottomBar({}, onResponsesClick, onFormsClick = onBackClick, hasUnreadResponses = hasUnreadResponses, onSettingsClick = onSettingsClick)
         }
 
     ) { padding ->

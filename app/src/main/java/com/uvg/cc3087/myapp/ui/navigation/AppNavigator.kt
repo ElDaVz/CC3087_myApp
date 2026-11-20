@@ -24,6 +24,12 @@ internal class AppNavigator(private val backStack: MutableList<NavKey>) {
         backStack.subList(1, backStack.size).clear()
     }
 
+    fun showSettings() {
+        val existing = backStack.indexOfLast { it == AppRoute.Settings }
+        if (existing >= 0) backStack.subList(existing + 1, backStack.size).clear()
+        else navigate(AppRoute.Settings)
+    }
+
     fun showDashboard() {
         if (backStack.lastOrNull() == AppRoute.Dashboard) return
         showForms()

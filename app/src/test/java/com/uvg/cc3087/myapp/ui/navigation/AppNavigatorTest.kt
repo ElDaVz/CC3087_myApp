@@ -79,4 +79,33 @@ class AppNavigatorTest {
     @Test fun aStackWithoutTheFormsRootIsRejected() {
         assertThrows(IllegalArgumentException::class.java) { AppNavigator(mutableListOf()) }
     }
+
+    @Test fun settingsReturnsToEachOriginAndRepeatedTapsDoNotDuplicateIt() {
+        listOf(AppRoute.Forms, AppRoute.ChooseTemplate, AppRoute.Dashboard, AppRoute.Responses()).forEach { origin ->
+            navigator.showForms()
+            navigator.navigate(origin)
+            navigator.showSettings()
+            navigator.showSettings()
+            assertEquals(1, stack.count { it == AppRoute.Settings })
+            navigator.back()
+            assertTrue(navigator.isCurrent(origin))
+        }
+    }
+
+    @Test fun statisticsAndAccountReturnToSettingsAndFormsClearsTheHistory() {
+        navigator.navigate(AppRoute.Dashboard)
+        navigator.showSettings()
+        navigator.navigate(AppRoute.Statistics)
+        navigator.back()
+        assertTrue(navigator.isCurrent(AppRoute.Settings))
+        navigator.navigate(AppRoute.Account)
+        navigator.back()
+        assertTrue(navigator.isCurrent(AppRoute.Settings))
+        navigator.navigate(AppRoute.Statistics)
+        navigator.showSettings()
+        assertEquals(listOf(AppRoute.Forms, AppRoute.Dashboard, AppRoute.Settings), stack)
+        navigator.navigate(AppRoute.Statistics)
+        navigator.showForms()
+        assertEquals(listOf(AppRoute.Forms), stack)
+    }
 }

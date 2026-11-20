@@ -28,6 +28,8 @@ import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
 import com.uvg.cc3087.myapp.ui.screens.Forms
 import com.uvg.cc3087.myapp.ui.screens.ResponseDashboardScreen
 import com.uvg.cc3087.myapp.ui.screens.SaveShareScreen
+import com.uvg.cc3087.myapp.ui.screens.SettingsScreen
+import com.uvg.cc3087.myapp.ui.theme.LocalAppearance
 import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
 import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
@@ -62,6 +64,7 @@ internal fun FormLinkGraph(
     // también conservamos el desplazamiento al cambiar de pestaña
     val dashboardList = rememberLazyListState()
     val requestList = rememberLazyListState()
+    val statisticsList = rememberLazyListState()
     val startEditor: (FormTemplate?) -> Unit = { template ->
         // dos toques rápidos no deben crear dos borradores durante la transición
         if (navigator.isCurrent(AppRoute.ChooseTemplate)) {
@@ -71,6 +74,47 @@ internal fun FormLinkGraph(
             )
             navigator.navigate(AppRoute.Editor(checkNotNull(editor.uiState.value.draftId)))
         }
+    }
+
+    @Composable
+    fun DashboardDestination(route: AppRoute) {
+        val state by dashboard.uiState.collectAsStateWithLifecycle()
+        val fieldAnalytics: FieldAnalyticsViewModel = viewModel(factory = FieldAnalyticsViewModel.factory(requestRepository))
+        val fieldState by fieldAnalytics.uiState.collectAsStateWithLifecycle()
+        val lifecycle = LocalLifecycleOwner.current
+        LaunchedEffect(state.filter, state.hasData, state.status) {
+            fieldAnalytics.select(state.filter.formId.takeIf {
+                state.hasData && state.status != RequestListLoadStatus.FORBIDDEN
+            }, state.filter.period)
+        }
+        LaunchedEffect(fieldAnalytics, lifecycle) {
+            lifecycle.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (isActive) { fieldAnalytics.checkCalendar(); delay(30_000) }
+            }
+        }
+        ResponseDashboardScreen(
+            state = state,
+            listState = if (route == AppRoute.Statistics) statisticsList else dashboardList,
+            onForm = dashboard::selectForm,
+            onPeriod = dashboard::selectPeriod,
+            onInbox = {
+                requestList.requestScrollToItem(0)
+                navigator.navigate(AppRoute.Responses(InboxFilter.fromKey(it?.name ?: "ALL")))
+            },
+            onUnknown = {
+                requestList.requestScrollToItem(0)
+                navigator.navigate(AppRoute.Responses(InboxFilter.UNKNOWN))
+            },
+            onOpen = { navigator.navigate(AppRoute.RequestDetail(it.formId, it.responseId)) },
+            onBack = { navigator.backFrom(route) },
+            onForms = navigator::showForms,
+            onSettingsClick = navigator::showSettings,
+            onRefresh = { dashboard.refresh(); fieldAnalytics.retry() },
+            syncMessage = syncMessage,
+            isDemo = requestsAreDemo,
+            analyticsState = fieldState,
+            onAnalyticsRetry = fieldAnalytics::retry
+        )
     }
 
     NavDisplay(
@@ -94,6 +138,7 @@ internal fun FormLinkGraph(
                         { navigator.navigate(AppRoute.Account) }
                     } else null,
                     onResponsesClick = navigator::showDashboard,
+                    onSettingsClick = navigator::showSettings,
                     hasUnreadResponses = dashboardState.dashboard.hasUnread,
                     onNewFormClick = {
                         if (navigator.isCurrent(AppRoute.Forms)) {
@@ -125,6 +170,7 @@ internal fun FormLinkGraph(
                     uiState = state,
                     onBackClick = { navigator.backFrom(route) },
                     onResponsesClick = navigator::showDashboard,
+                    onSettingsClick = navigator::showSettings,
                     hasUnreadResponses = responses.dashboard.hasUnread,
                     onBlankFormClick = { startEditor(null) },
                     onTemplateClick = startEditor
@@ -154,43 +200,8 @@ internal fun FormLinkGraph(
                     onWhatsAppShare = { shareFormLinkOnWhatsApp(context, it) }
                 )
             }
-            entry<AppRoute.Dashboard> { route ->
-                val state by dashboard.uiState.collectAsStateWithLifecycle()
-                val fieldAnalytics: FieldAnalyticsViewModel = viewModel(factory = FieldAnalyticsViewModel.factory(requestRepository))
-                val fieldState by fieldAnalytics.uiState.collectAsStateWithLifecycle()
-                val lifecycle = LocalLifecycleOwner.current
-                LaunchedEffect(state.filter, state.hasData, state.status) {
-                    fieldAnalytics.select(state.filter.formId.takeIf {
-                        state.hasData && state.status != RequestListLoadStatus.FORBIDDEN
-                    }, state.filter.period)
-                }
-                LaunchedEffect(fieldAnalytics, lifecycle) {
-                    lifecycle.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        while (isActive) { fieldAnalytics.checkCalendar(); delay(30_000) }
-                    }
-                }
-                ResponseDashboardScreen(
-                    state = state,
-                    listState = dashboardList,
-                    onForm = dashboard::selectForm,
-                    onPeriod = dashboard::selectPeriod,
-                    onInbox = {
-                        requestList.requestScrollToItem(0)
-                        navigator.navigate(AppRoute.Responses(InboxFilter.fromKey(it?.name ?: "ALL")))
-                    },
-                    onUnknown = {
-                        requestList.requestScrollToItem(0)
-                        navigator.navigate(AppRoute.Responses(InboxFilter.UNKNOWN))
-                    },
-                    onOpen = { navigator.navigate(AppRoute.RequestDetail(it.formId, it.responseId)) },
-                    onBack = { navigator.backFrom(route) },
-                    onRefresh = { dashboard.refresh(); fieldAnalytics.retry() },
-                    syncMessage = syncMessage,
-                    isDemo = requestsAreDemo,
-                    analyticsState = fieldState,
-                    onAnalyticsRetry = fieldAnalytics::retry
-                )
-            }
+            entry<AppRoute.Dashboard> { DashboardDestination(AppRoute.Dashboard) }
+            entry<AppRoute.Statistics> { DashboardDestination(AppRoute.Statistics) }
             entry<AppRoute.Responses> { route ->
                 var status by rememberSaveable { mutableStateOf(route.filter) }
                 val state by dashboard.uiState.collectAsStateWithLifecycle()
@@ -209,7 +220,8 @@ internal fun FormLinkGraph(
                     onForms = navigator::showForms,
                     onRefresh = dashboard::refresh,
                     syncMessage = syncMessage,
-                    isDemo = requestsAreDemo
+                    isDemo = requestsAreDemo,
+                    onSettings = navigator::showSettings
                 )
             }
             entry<AppRoute.RequestDetail> { route ->
@@ -219,6 +231,19 @@ internal fun FormLinkGraph(
                     repository = requestRepository,
                     onBack = { navigator.backFrom(route) },
                     isDemo = requestsAreDemo
+                )
+            }
+            entry<AppRoute.Settings> { route ->
+                val appearance = LocalAppearance.current
+                SettingsScreen(
+                    appearance = appearance.state,
+                    onTheme = appearance.select,
+                    onRetry = appearance.retry,
+                    onBack = { navigator.backFrom(route) },
+                    onAccount = if (accountContent != null) {
+                        { navigator.navigate(AppRoute.Account) }
+                    } else null,
+                    onStatistics = { navigator.navigate(AppRoute.Statistics) }
                 )
             }
             entry<AppRoute.Account> { route ->

@@ -49,7 +49,8 @@ fun RequestListScreen(
     hasActiveFilters: Boolean = statusFilter != "ALL" || onlyUnread,
     onClearFilters: () -> Unit = {},
     isRefreshing: Boolean = false,
-    showCachedWarning: Boolean = false
+    showCachedWarning: Boolean = false,
+    onSettingsClick: (() -> Unit)? = null
 ) {
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
@@ -85,6 +86,7 @@ fun RequestListScreen(
                 onMessage = { message -> scope.launch { snackbar.showSnackbar(resources.getString(message)) } },
                 onResponsesClick = {},
                 onFormsClick = onForms,
+                onSettingsClick = onSettingsClick,
                 responsesSelected = true,
                 hasUnreadResponses = hasContent && hasUnreadResponses
             )

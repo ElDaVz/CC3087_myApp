@@ -23,6 +23,8 @@ internal sealed interface AppRoute : NavKey {
     @Serializable data class RequestDetail(val formId: String, val responseId: String) : AppRoute {
         init { require(formId.isNotBlank() && responseId.isNotBlank()) }
     }
+    @Serializable data object Settings : AppRoute
+    @Serializable data object Statistics : AppRoute
     @Serializable data object Account : AppRoute
 }
 

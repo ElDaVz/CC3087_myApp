@@ -21,7 +21,6 @@
     <string name="search_selected">Búsqueda seleccionada</string>
     <string name="more_options_selected">Más opciones seleccionadas</string>
     <string name="forms_selected">Formularios seleccionados</string>
-    <string name="settings_selected">Configuración seleccionada</string>
     <string name="start_from_scratch">Empezar desde cero</string>
     <string name="blank_form">Formulario en blanco</string>
     <string name="recommended_templates">Plantillas recomendadas</string>
@@ -413,4 +412,13 @@
     </plurals>
     <string name="qa_trigger_test_crash">DEMO QA: provocar fallo de prueba</string>
     <string name="field_analytics_more_categories">Otras categorías no mostradas: %1$d</string>
+    <string name="settings_shortcuts">Tu actividad</string>
+    <string name="settings_statistics">Estadísticas</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_appearance_device">Se aplica a este dispositivo, incluido el modo invitado y todas las cuentas.</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="theme_read_error">No se pudo cargar tu preferencia de apariencia. Se conserva el tema anterior; al iniciar se usa el del sistema.</string>
+    <string name="theme_save_error">No se pudo guardar la apariencia. Se conserva tu selección anterior.</string>
 </resources>

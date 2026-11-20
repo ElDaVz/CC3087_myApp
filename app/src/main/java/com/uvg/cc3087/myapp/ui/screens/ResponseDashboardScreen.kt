@@ -50,7 +50,9 @@ fun ResponseDashboardScreen(
     syncMessage: String? = null,
     isDemo: Boolean = false,
     analyticsState: FieldAnalyticsUiState? = null,
-    onAnalyticsRetry: () -> Unit = {}
+    onAnalyticsRetry: () -> Unit = {},
+    onForms: () -> Unit = onBack,
+    onSettingsClick: (() -> Unit)? = null
 ) {
     val data = state.dashboard
     val showData = state.hasData && state.status != RequestListLoadStatus.FORBIDDEN
@@ -88,7 +90,8 @@ fun ResponseDashboardScreen(
                     scope.launch { snackbar.showSnackbar(resources.getString(message)) }
                 },
                 onResponsesClick = {},
-                onFormsClick = onBack,
+                onFormsClick = onForms,
+                onSettingsClick = onSettingsClick,
                 responsesSelected = true,
                 hasUnreadResponses = showData && data.hasUnread
             )
