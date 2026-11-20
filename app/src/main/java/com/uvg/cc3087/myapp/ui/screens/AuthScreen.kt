@@ -30,7 +30,8 @@ import com.uvg.cc3087.myapp.ui.viewmodel.*
 @Composable
 fun AuthScreen(state: AuthUiState, configured: Boolean,
     onEmail: (String) -> Unit, onPassword: (String) -> Unit, onConfirmation: (String) -> Unit,
-    onMode: (AuthMode) -> Unit, onSubmit: () -> Unit, onBack: () -> Unit) {
+    onMode: (AuthMode) -> Unit, onSubmit: () -> Unit, onBack: () -> Unit,
+    googleAvailable: Boolean = false, onGoogle: () -> Unit = {}) {
     BackHandler { if (!state.busy) onBack() }
     val title = stringResource(when (state.mode) {
         AuthMode.LOGIN -> R.string.auth_sign_in
@@ -76,6 +77,11 @@ fun AuthScreen(state: AuthUiState, configured: Boolean,
                     if (state.busy) CircularProgressIndicator()
                     Button(onClick = onSubmit, enabled = configured && !state.busy, modifier = Modifier.fillMaxWidth()) {
                         Text(if (state.mode == AuthMode.RECOVERY) stringResource(R.string.auth_send_link) else title)
+                    }
+                    if (googleAvailable && state.mode != AuthMode.RECOVERY) {
+                        OutlinedButton(onClick = onGoogle, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.auth_google))
+                        }
                     }
                     if (state.mode != AuthMode.RECOVERY) TextButton(onClick = {
                         onMode(if (state.mode == AuthMode.LOGIN) AuthMode.REGISTER else AuthMode.LOGIN)

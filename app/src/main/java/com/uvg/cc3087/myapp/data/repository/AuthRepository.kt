@@ -7,6 +7,7 @@ interface AuthRepository {
     val configured: Boolean
     val state: StateFlow<AuthState>
     suspend fun signIn(email: String, password: String)
+    suspend fun signInWithGoogle(idToken: String): Unit = throw UnsupportedOperationException()
     suspend fun signUp(email: String, password: String)
     suspend fun sendPasswordReset(email: String)
     suspend fun signOut()

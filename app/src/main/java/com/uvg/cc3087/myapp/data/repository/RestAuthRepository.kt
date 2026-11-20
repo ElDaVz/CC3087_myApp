@@ -32,6 +32,7 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
         }
     } }
     override suspend fun signIn(email: String, password: String) = authRequest { authenticate("signInWithPassword", email, password) }
+    override suspend fun signInWithGoogle(idToken: String) = authRequest { authenticateGoogle(idToken) }
     override suspend fun signUp(email: String, password: String) = authRequest { authenticate("signUp", email, password) }
     override suspend fun sendPasswordReset(email: String) = authRequest {
         val key = checkNotNull(apiKey)
@@ -47,6 +48,28 @@ class RestAuthRepository(private val apiKey: String?, private val cipher: Device
         try { block() }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) { throw AuthException(authFailure(error)) }
+    }
+    private suspend fun authenticateGoogle(idToken: String) {
+        val key = checkNotNull(apiKey) { "Firebase is not configured" }
+        state.first { it !is AuthState.Initializing }
+        val (stamp, guests) = mutex.withLock {
+            generation to if (mutableState.value == AuthState.Guest) guestImports?.snapshotGuestIds().orEmpty() else emptySet()
+        }
+        val result = http.request("$base/v1/accounts:signInWithIdp?key=$key", JSONObject()
+            .put("postBody", "id_token=$idToken&providerId=google.com")
+            .put("requestUri", "http://localhost")
+            .put("returnIdpCredential", true)
+            .put("returnSecureToken", true))
+        mutex.withLock {
+            currentCoroutineContext().ensureActive()
+            check(stamp == generation) { "Session changed" }
+            guestImports?.prepare(result.getString("localId"), guests)
+            currentCoroutineContext().ensureActive()
+            persist(JSONObject().put("uid", result.getString("localId"))
+                .put("email", result.optString("email", ""))
+                .put("idToken", result.getString("idToken")).put("refreshToken", result.getString("refreshToken"))
+                .put("expiresAt", now() + result.getString("expiresIn").toLong() * 1000))
+        }
     }
     private suspend fun authenticate(action: String, email: String, password: String) {
         val key = checkNotNull(apiKey) { "Firebase is not configured" }

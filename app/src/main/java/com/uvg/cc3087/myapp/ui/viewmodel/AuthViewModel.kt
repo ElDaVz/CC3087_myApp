@@ -21,7 +21,10 @@ data class AuthUiState(
     val unavailable: Boolean = false, val recoverySent: Boolean = false
 )
 
-class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
+class AuthViewModel(
+    private val repository: AuthRepository,
+    private val google: GoogleCredentialProvider = UnavailableGoogleCredentialProvider
+) : ViewModel() {
     private val mutableState = MutableStateFlow(AuthUiState())
     val uiState = mutableState.asStateFlow()
     private var request: Job? = null
@@ -86,5 +89,31 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             }
         }
     }
-    companion object { fun factory(repository: AuthRepository) = viewModelFactory { initializer { AuthViewModel(repository) } } }
+    val googleAvailable: Boolean get() = repository.configured && google.available
+
+    fun googleSignIn() {
+        val s = mutableState.value
+        if (s.busy || !googleAvailable) return
+        mutableState.value = s.copy(busy = true, error = null)
+        val stamp = ++generation
+        request = viewModelScope.launch {
+            try {
+                val token = google.idToken()
+                if (stamp != generation) return@launch
+                if (token != null) repository.signInWithGoogle(token)
+                if (stamp == generation) mutableState.value = AuthUiState()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                if (stamp == generation) mutableState.value = AuthUiState(
+                    email = s.email, mode = s.mode,
+                    error = (error as? AuthException)?.reason ?: AuthFailure.UNEXPECTED
+                )
+            }
+        }
+    }
+
+    companion object {
+        fun factory(repository: AuthRepository, google: GoogleCredentialProvider = UnavailableGoogleCredentialProvider) =
+            viewModelFactory { initializer { AuthViewModel(repository, google) } }
+    }
 }

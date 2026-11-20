@@ -34,8 +34,21 @@ class AuthViewModelTest {
         override suspend fun signUp(email: String, password: String) = signIn(email, password)
         override suspend fun sendPasswordReset(email: String) { received = email to ""; waitForResult() }
         override suspend fun signOut() { state.value = AuthState.Guest }
+        override suspend fun signInWithGoogle(idToken: String) {
+            received = idToken to ""
+            waitForResult()
+            state.value = AuthState.SignedIn(UserSession("uid", "google@example.com"))
+        }
     }
-    private fun model(repo: FakeAuth = FakeAuth()) = AuthViewModel(repo).also { store.put("auth", it) }
+    private class FakeGoogle(var token: String?) : GoogleCredentialProvider {
+        override suspend fun idToken() = token
+    }
+    private class UnavailableGoogle : GoogleCredentialProvider {
+        override val available = false
+        override suspend fun idToken(): String? = error("Google is not configured")
+    }
+    private fun model(repo: FakeAuth = FakeAuth(), google: GoogleCredentialProvider = UnavailableGoogleCredentialProvider) =
+        AuthViewModel(repo, google).also { store.put("auth", it) }
     @Test fun validatesFieldsAndRegistrationConfirmation() = runTest {
         val repo = FakeAuth(); val model = model(repo)
         model.submit()
@@ -96,6 +109,24 @@ class AuthViewModelTest {
             assertTrue(repo.state.value is AuthState.SignedIn)
         }
     }
+    @Test fun googleCancellationLeavesGuestAndFailureIsVisible() = runTest {
+        val unavailable = model(FakeAuth(), UnavailableGoogle())
+        assertFalse(unavailable.googleAvailable)
+        unavailable.googleSignIn(); runCurrent()
+        assertEquals(AuthUiState(), unavailable.uiState.value)
+
+        val cancelled = model(FakeAuth(), FakeGoogle(null))
+        assertTrue(cancelled.googleAvailable)
+        cancelled.googleSignIn(); runCurrent()
+        assertEquals(AuthUiState(), cancelled.uiState.value)
+
+        val repo = FakeAuth().apply { failure = AuthFailure.NETWORK; gate.complete(Unit) }
+        val failed = model(repo, FakeGoogle("google-id-token"))
+        failed.googleSignIn(); runCurrent()
+        assertEquals(AuthFailure.NETWORK, failed.uiState.value.error)
+        assertEquals("google-id-token" to "", repo.received)
+    }
+
     @Test fun closingFlowDiscardsLateRecoverySuccessAndFailure() = runTest {
         for (failure in listOf(null, AuthFailure.NETWORK)) {
             val repo = FakeAuth().apply { ignoreCancellation = true; this.failure = failure }; val model = model(repo)

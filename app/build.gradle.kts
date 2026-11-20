@@ -45,6 +45,7 @@ android {
         buildConfigField("boolean", "FIREBASE_EMULATORS", "java.lang.Boolean.parseBoolean(\"false\")")
         buildConfigField("boolean", "CLOUDINARY_UPLOADS_ENABLED", "java.lang.Boolean.parseBoolean(\"true\")")
         buildConfigField("boolean", "TELEMETRY_ENABLED", "true")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${providers.gradleProperty("googleWebClientId").orElse("").get().replace("\\", "\\\\").replace("\"", "\\\"")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -83,6 +84,9 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
