@@ -28,7 +28,8 @@ abstract class FormDraftDao {
     @Query("""SELECT
         (SELECT COUNT(*) FROM form_drafts WHERE ownerId = :owner AND deleted = 0 AND revision != syncedRevision) AS drafts,
         (SELECT COUNT(*) FROM form_drafts WHERE ownerId = :owner AND deleted = 1 AND revision != syncedRevision) AS deletions,
-        (SELECT COUNT(*) FROM remote_requests WHERE ownerId = :owner AND statusRevision != syncedStatusRevision) AS responseStatuses""")
+        (SELECT COUNT(*) FROM remote_requests WHERE ownerId = :owner AND statusRevision != syncedStatusRevision) AS responseStatuses,
+        (SELECT COUNT(*) FROM owner_profiles WHERE ownerId = :owner AND revision != syncedRevision) AS profiles""")
     abstract fun observeAccountPending(owner: String): Flow<com.uvg.cc3087.myapp.data.repository.AccountPendingChanges>
 
     @Query("UPDATE form_drafts SET syncedRevision = :revision WHERE id = :id AND ownerId = :owner AND revision = :revision")
