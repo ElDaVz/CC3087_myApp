@@ -36,7 +36,7 @@ class FormsViewModelTest {
 
     @Test
     fun allFilterKeepsRepositoryOrder() = runTest {
-        val viewModel = FormsViewModel(FakeFormRepository(forms), SavedStateHandle())
+        val viewModel = model(FakeFormRepository(forms), SavedStateHandle())
         observe(viewModel)
 
         assertEquals(FormFilter.ALL, viewModel.uiState.value.selectedFilter)
@@ -45,7 +45,7 @@ class FormsViewModelTest {
 
     @Test
     fun activeFilterShowsOnlyActiveForms() = runTest {
-        val viewModel = FormsViewModel(FakeFormRepository(forms), SavedStateHandle())
+        val viewModel = model(FakeFormRepository(forms), SavedStateHandle())
         observe(viewModel)
 
         viewModel.selectFilter(FormFilter.ACTIVE)
@@ -57,7 +57,7 @@ class FormsViewModelTest {
 
     @Test
     fun draftFilterShowsOnlyDraftForms() = runTest {
-        val viewModel = FormsViewModel(FakeFormRepository(forms), SavedStateHandle())
+        val viewModel = model(FakeFormRepository(forms), SavedStateHandle())
         observe(viewModel)
 
         viewModel.selectFilter(FormFilter.DRAFT)
@@ -70,7 +70,7 @@ class FormsViewModelTest {
     @Test
     fun switchingBackToAllDoesNotLoseForms() = runTest {
         val repository = FakeFormRepository(forms)
-        val viewModel = FormsViewModel(repository, SavedStateHandle())
+        val viewModel = model(repository, SavedStateHandle())
         observe(viewModel)
 
         viewModel.selectFilter(FormFilter.DRAFT)
@@ -85,7 +85,7 @@ class FormsViewModelTest {
     @Test
     fun repositoryUpdatesRespectTheSelectedFilter() = runTest {
         val repository = FakeFormRepository(forms)
-        val viewModel = FormsViewModel(repository, SavedStateHandle())
+        val viewModel = model(repository, SavedStateHandle())
         observe(viewModel)
         viewModel.selectFilter(FormFilter.DRAFT)
         runCurrent()
@@ -100,7 +100,7 @@ class FormsViewModelTest {
 
     @Test
     fun filterWithoutMatchesReturnsAnEmptyList() = runTest {
-        val viewModel = FormsViewModel(
+        val viewModel = model(
             FakeFormRepository(listOf(forms[0])),
             SavedStateHandle()
         )
@@ -116,7 +116,7 @@ class FormsViewModelTest {
 
     @Test
     fun switchingAwayFromAnEmptyFilterRestoresContent() = runTest {
-        val viewModel = FormsViewModel(FakeFormRepository(listOf(forms[0])), SavedStateHandle())
+        val viewModel = model(FakeFormRepository(listOf(forms[0])), SavedStateHandle())
         observe(viewModel)
 
         viewModel.selectFilter(FormFilter.DRAFT)
@@ -132,7 +132,7 @@ class FormsViewModelTest {
     @Test
     fun removingTheLastMatchingFormEmitsEmptyWithoutReloading() = runTest {
         val repository = FakeFormRepository(forms)
-        val viewModel = FormsViewModel(repository, SavedStateHandle())
+        val viewModel = model(repository, SavedStateHandle())
         observe(viewModel)
         viewModel.selectFilter(FormFilter.DRAFT)
         runCurrent()
@@ -151,7 +151,7 @@ class FormsViewModelTest {
     fun recreatingViewModelRestoresTheSavedFilter() = runTest {
         val savedStateHandle = SavedStateHandle()
         val repository = FakeFormRepository(forms)
-        val original = FormsViewModel(repository, savedStateHandle)
+        val original = model(repository, savedStateHandle)
         observe(original)
         original.selectFilter(FormFilter.DRAFT)
         runCurrent()
@@ -160,7 +160,7 @@ class FormsViewModelTest {
         val savedValues = savedStateHandle.keys().associateWith { key ->
             savedStateHandle.get<Any?>(key)
         }
-        val restored = FormsViewModel(repository, SavedStateHandle(savedValues))
+        val restored = model(repository, SavedStateHandle(savedValues))
         observe(restored)
 
         assertEquals(FormFilter.DRAFT, restored.uiState.value.selectedFilter)
@@ -172,7 +172,7 @@ class FormsViewModelTest {
         val savedStateHandle = SavedStateHandle(
             mapOf("selected_forms_filter" to "OLD_FILTER")
         )
-        val viewModel = FormsViewModel(FakeFormRepository(forms), savedStateHandle)
+        val viewModel = model(FakeFormRepository(forms), savedStateHandle)
         observe(viewModel)
 
         assertEquals(FormFilter.ALL, viewModel.uiState.value.selectedFilter)
@@ -188,7 +188,7 @@ class FormsViewModelTest {
                 emit(forms)
             }
         }
-        val viewModel = FormsViewModel(repository, SavedStateHandle())
+        val viewModel = model(repository, SavedStateHandle())
         observe(viewModel)
         viewModel.selectFilter(FormFilter.DRAFT)
         runCurrent()
@@ -204,26 +204,26 @@ class FormsViewModelTest {
 
     @Test
     fun listExposesLoadingEmptyContentAndErrorStates() = runTest {
-        val emptyModel = FormsViewModel(FakeFormRepository(emptyList()), SavedStateHandle())
+        val emptyModel = model(FakeFormRepository(emptyList()), SavedStateHandle())
         assertEquals(FormsLoadStatus.LOADING, emptyModel.uiState.value.status)
         observe(emptyModel)
         assertEquals(FormsLoadStatus.EMPTY, emptyModel.uiState.value.status)
 
-        val contentModel = FormsViewModel(FakeFormRepository(forms), SavedStateHandle())
+        val contentModel = model(FakeFormRepository(forms), SavedStateHandle())
         observe(contentModel)
         assertEquals(FormsLoadStatus.CONTENT, contentModel.uiState.value.status)
 
         val broken = object : FormRepository by FakeFormRepository(forms) {
             override fun observeForms(): Flow<List<FormSummary>> = flow { throw IOException("read failed") }
         }
-        val errorModel = FormsViewModel(broken, SavedStateHandle())
+        val errorModel = model(broken, SavedStateHandle())
         observe(errorModel)
         assertEquals(FormsLoadStatus.ERROR, errorModel.uiState.value.status)
     }
 
     @Test fun deletionRequiresConfirmationAndCanBeCancelled() = runTest {
         val repository = FakeFormRepository(forms)
-        val model = FormsViewModel(repository, SavedStateHandle())
+        val model = model(repository, SavedStateHandle())
         observe(model)
         model.requestDeletion(forms[0])
         runCurrent()
@@ -247,7 +247,7 @@ class FormsViewModelTest {
                 backing.deleteDraft(id)
             }
         }
-        val model = FormsViewModel(repository, SavedStateHandle())
+        val model = model(repository, SavedStateHandle())
         observe(model)
         model.selectFilter(FormFilter.DRAFT)
         model.requestDeletion(forms[1])
@@ -273,7 +273,7 @@ class FormsViewModelTest {
                 backing.deleteDraft(id)
             }
         }
-        val model = FormsViewModel(repository, SavedStateHandle())
+        val model = model(repository, SavedStateHandle())
         observe(model)
         model.requestDeletion(forms[0])
         model.confirmDeletion()
@@ -286,6 +286,101 @@ class FormsViewModelTest {
         assertTrue(model.uiState.value.deletion.completed)
         assertEquals(forms.drop(1), model.uiState.value.forms)
     }
+
+    @Test fun searchCombinesWithFilterAndTracksRepositoryUpdates() = runTest {
+        val repository = FakeFormRepository(forms)
+        val vm = model(repository, SavedStateHandle())
+        observe(vm)
+        vm.openSearch()
+        vm.updateSearch("middle")
+        vm.selectFilter(FormFilter.ACTIVE)
+        runCurrent()
+        assertEquals(FormsLoadStatus.EMPTY, vm.uiState.value.status)
+        assertEquals(com.uvg.cc3087.myapp.ui.state.FormsEmptyReason.SEARCH, vm.uiState.value.emptyReason)
+        vm.selectFilter(FormFilter.DRAFT)
+        runCurrent()
+        assertEquals(listOf(forms[1]), vm.uiState.value.forms)
+        repository.forms.value = listOf(forms[1].copy(title = "Changed"))
+        runCurrent()
+        assertTrue(vm.uiState.value.forms.isEmpty())
+        vm.clearSearch()
+        runCurrent()
+        assertEquals("Changed", vm.uiState.value.forms.single().title)
+        assertTrue(vm.uiState.value.searchExpanded)
+        assertEquals(FormFilter.DRAFT, vm.uiState.value.selectedFilter)
+        vm.closeSearch()
+        runCurrent()
+        assertEquals(false, vm.uiState.value.searchExpanded)
+        assertEquals(FormFilter.DRAFT, vm.uiState.value.selectedFilter)
+    }
+
+    @Test fun restoredSearchIsScopedToItsOwnSavedStateAndResetKeepsFieldOpen() = runTest {
+        val handle = SavedStateHandle()
+        val repository = FakeFormRepository(forms)
+        val original = model(repository, handle)
+        observe(original)
+        original.openSearch()
+        original.updateSearch("middle")
+        original.selectFilter(FormFilter.DRAFT)
+        runCurrent()
+        val restored = model(repository, SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }))
+        observe(restored)
+        assertEquals("middle", restored.uiState.value.searchQuery)
+        assertTrue(restored.uiState.value.searchExpanded)
+        assertEquals(listOf(forms[1]), restored.uiState.value.forms)
+        val otherSession = model(repository, SavedStateHandle())
+        observe(otherSession)
+        assertEquals("", otherSession.uiState.value.searchQuery)
+        assertEquals(false, otherSession.uiState.value.searchExpanded)
+        restored.resetSearchAndFilter()
+        runCurrent()
+        assertEquals(forms, restored.uiState.value.forms)
+        assertEquals(FormFilter.ALL, restored.uiState.value.selectedFilter)
+        assertTrue(restored.uiState.value.searchExpanded)
+        assertEquals("middle", original.uiState.value.searchQuery)
+    }
+
+    @Test fun emptyReasonsDistinguishSourceFilterAndSearch() = runTest {
+        val repository = FakeFormRepository(emptyList())
+        val vm = model(repository, SavedStateHandle())
+        observe(vm)
+        vm.updateSearch("missing")
+        runCurrent()
+        assertEquals(com.uvg.cc3087.myapp.ui.state.FormsEmptyReason.SOURCE, vm.uiState.value.emptyReason)
+        repository.forms.value = listOf(forms[0])
+        vm.selectFilter(FormFilter.DRAFT)
+        runCurrent()
+        assertEquals(com.uvg.cc3087.myapp.ui.state.FormsEmptyReason.FILTER, vm.uiState.value.emptyReason)
+        vm.selectFilter(FormFilter.ALL)
+        runCurrent()
+        assertEquals(com.uvg.cc3087.myapp.ui.state.FormsEmptyReason.SEARCH, vm.uiState.value.emptyReason)
+    }
+
+    @Test fun latestQueryWinsWhenWorkerHasNotRunAndRetryPreservesSearch() = runTest {
+        val worker = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        var fail = true
+        val repository = object : FormRepository by FakeFormRepository(forms) {
+            override fun observeForms(): Flow<List<FormSummary>> = flow {
+                if (fail) throw IOException("read failed")
+                emit(forms)
+            }
+        }
+        val vm = FormsViewModel(repository, SavedStateHandle(), worker)
+        observe(vm)
+        vm.openSearch()
+        vm.updateSearch("first")
+        vm.updateSearch("last")
+        runCurrent()
+        assertEquals(FormsLoadStatus.ERROR, vm.uiState.value.status)
+        fail = false
+        vm.retryLoading()
+        runCurrent()
+        assertEquals("last", vm.uiState.value.searchQuery)
+        assertEquals(listOf(forms[2]), vm.uiState.value.forms)
+    }
+
+    private fun model(repository: FormRepository, handle: SavedStateHandle) =
+        FormsViewModel(repository, handle, mainDispatcherRule.dispatcher)
 
     private fun TestScope.observe(viewModel: FormsViewModel) {
         // statein comienza a observar el repositorio cuando tiene una suscripción

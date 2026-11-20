@@ -7,10 +7,15 @@ data class FormsUiState(
     val forms: List<FormSummary> = emptyList(),
     val selectedFilter: FormFilter = FormFilter.ALL,
     val status: FormsLoadStatus = FormsLoadStatus.LOADING,
-    val deletion: FormDeletionState = FormDeletionState()
+    val deletion: FormDeletionState = FormDeletionState(),
+    val searchQuery: String = "",
+    val searchExpanded: Boolean = false,
+    val emptyReason: FormsEmptyReason = FormsEmptyReason.SOURCE
 )
 
 enum class FormsLoadStatus { LOADING, EMPTY, CONTENT, ERROR }
+
+enum class FormsEmptyReason { SOURCE, FILTER, SEARCH }
 
 data class FormDeletionState(
     val target: FormSummary? = null,

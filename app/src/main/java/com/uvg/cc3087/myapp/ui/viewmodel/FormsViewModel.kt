@@ -14,6 +14,12 @@ import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.ui.state.FormDeletionState
+import com.uvg.cc3087.myapp.domain.search.FormSearch
+import com.uvg.cc3087.myapp.ui.state.FormsEmptyReason
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,12 +37,16 @@ import kotlinx.coroutines.flow.update
 @OptIn(ExperimentalCoroutinesApi::class)
 class FormsViewModel(
     private val repository: FormRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val searchDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
     private val savedFilter = savedStateHandle.getStateFlow(
         SELECTED_FILTER_KEY,
         FormFilter.ALL.name
     )
+
+    private val savedQuery = savedStateHandle.getStateFlow(SEARCH_QUERY_KEY, "")
+    private val searchExpanded = savedStateHandle.getStateFlow(SEARCH_EXPANDED_KEY, false)
 
     private val deletion = MutableStateFlow(FormDeletionState())
 
@@ -48,32 +58,65 @@ class FormsViewModel(
             .catch { emit(FormsUiState(status = FormsLoadStatus.ERROR)) }
     }
 
-    // si cambia la lista o el filtro, calculamos un solo estado para la pantalla
-    val uiState: StateFlow<FormsUiState> = combine(
-        sourceState,
-        savedFilter,
-        deletion
-    ) { source, filterName, deletionState ->
-        val forms = source.forms
-        val selectedFilter = restoreFilter(filterName)
-        val visibleForms = when (selectedFilter) {
-            FormFilter.ALL -> forms
-            FormFilter.ACTIVE -> forms.filter { it.status == FormStatus.ACTIVE }
-            FormFilter.DRAFT -> forms.filter { it.status == FormStatus.DRAFT }
-        }
+    private data class SearchInput(val source: FormsUiState, val filter: FormFilter, val query: String)
 
-        // una lista con datos también puede quedar vacía al aplicar el filtro
-        val status = when (source.status) {
-            FormsLoadStatus.LOADING, FormsLoadStatus.ERROR -> source.status
-            FormsLoadStatus.EMPTY, FormsLoadStatus.CONTENT ->
-                if (visibleForms.isEmpty()) FormsLoadStatus.EMPTY else FormsLoadStatus.CONTENT
+    private val results = combine(sourceState, savedFilter, savedQuery) { source, filter, query ->
+        SearchInput(source, restoreFilter(filter), query)
+    }.mapLatest { (source, filter, query) ->
+        withContext(searchDispatcher) {
+            val filtered = when (filter) {
+                FormFilter.ALL -> source.forms
+                FormFilter.ACTIVE -> source.forms.filter { it.status == FormStatus.ACTIVE }
+                FormFilter.DRAFT -> source.forms.filter { it.status == FormStatus.DRAFT }
+            }
+            val visible = FormSearch.find(filtered, query)
+            source.copy(
+                forms = visible,
+                selectedFilter = filter,
+                searchQuery = query,
+                status = when (source.status) {
+                    FormsLoadStatus.LOADING, FormsLoadStatus.ERROR -> source.status
+                    else -> if (visible.isEmpty()) FormsLoadStatus.EMPTY else FormsLoadStatus.CONTENT
+                },
+                emptyReason = when {
+                    source.forms.isEmpty() -> FormsEmptyReason.SOURCE
+                    filtered.isEmpty() -> FormsEmptyReason.FILTER
+                    else -> FormsEmptyReason.SEARCH
+                }
+            )
         }
-        source.copy(forms = visibleForms, selectedFilter = selectedFilter, status = status, deletion = deletionState)
+    }
+
+    // Echo input immediately while cancellable matching runs on the worker dispatcher.
+    // Never display results belonging to an older query.
+    val uiState: StateFlow<FormsUiState> = combine(
+        results, savedQuery, searchExpanded, deletion
+    ) { result, query, expanded, deletionState ->
+        result.copy(
+            searchQuery = query, searchExpanded = expanded, deletion = deletionState,
+            forms = if (result.searchQuery == query) result.forms else emptyList(),
+            status = if (result.searchQuery == query) result.status else FormsLoadStatus.LOADING
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = FormsUiState(selectedFilter = restoreFilter(savedFilter.value))
+        initialValue = FormsUiState(
+            selectedFilter = restoreFilter(savedFilter.value),
+            searchQuery = savedQuery.value, searchExpanded = searchExpanded.value
+        )
     )
+
+    fun openSearch() { savedStateHandle[SEARCH_EXPANDED_KEY] = true }
+    fun updateSearch(query: String) { savedStateHandle[SEARCH_QUERY_KEY] = query }
+    fun clearSearch() { updateSearch("") }
+    fun closeSearch() {
+        clearSearch()
+        savedStateHandle[SEARCH_EXPANDED_KEY] = false
+    }
+    fun resetSearchAndFilter() {
+        clearSearch()
+        selectFilter(FormFilter.ALL)
+    }
 
     fun requestDeletion(form: FormSummary) {
         if (!deletion.value.inProgress) deletion.value = FormDeletionState(target = form)
@@ -114,6 +157,8 @@ class FormsViewModel(
     }
 
     companion object {
+        private const val SEARCH_QUERY_KEY = "forms_search_query"
+        private const val SEARCH_EXPANDED_KEY = "forms_search_expanded"
         private const val SELECTED_FILTER_KEY = "selected_forms_filter"
 
         private fun restoreFilter(name: String): FormFilter =
