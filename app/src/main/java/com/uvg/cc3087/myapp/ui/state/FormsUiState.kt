@@ -6,6 +6,7 @@ import com.uvg.cc3087.myapp.data.model.FormSummary
 data class FormsUiState(
     val forms: List<FormSummary> = emptyList(),
     val selectedFilter: FormFilter = FormFilter.ALL,
+    val selectedSort: FormSortOrder = FormSortOrder.RECENT_FIRST,
     val status: FormsLoadStatus = FormsLoadStatus.LOADING,
     val deletion: FormDeletionState = FormDeletionState(),
     val searchQuery: String = "",

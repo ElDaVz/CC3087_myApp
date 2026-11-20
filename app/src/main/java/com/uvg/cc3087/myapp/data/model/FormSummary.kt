@@ -16,5 +16,7 @@ data class FormSummary(
     val status: FormStatus,
     val imageUrl: String,
     val publishedCoverUrl: String? = null,
-    val coverAction: String = "KEEP"
+    val coverAction: String = "KEEP",
+    /** Numeric last modification time, used only for local sorting. */
+    val updatedAt: Long = 0
 )

@@ -8,13 +8,17 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.uvg.cc3087.myapp.data.model.FormStatus
+import com.uvg.cc3087.myapp.data.repository.FormListPreferences
 import com.uvg.cc3087.myapp.data.repository.FormRepository
+import com.uvg.cc3087.myapp.data.repository.InMemoryFormListPreferences
 import com.uvg.cc3087.myapp.ui.state.FormFilter
+import com.uvg.cc3087.myapp.ui.state.FormSortOrder
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.ui.state.FormDeletionState
 import com.uvg.cc3087.myapp.domain.search.FormSearch
+import com.uvg.cc3087.myapp.domain.search.FormSort
 import com.uvg.cc3087.myapp.ui.state.FormsEmptyReason
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +42,9 @@ import kotlinx.coroutines.flow.update
 class FormsViewModel(
     private val repository: FormRepository,
     private val savedStateHandle: SavedStateHandle,
-    private val searchDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val searchDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val preferences: FormListPreferences = InMemoryFormListPreferences(),
+    private val owner: String = "guest"
 ) : ViewModel() {
     private val savedFilter = savedStateHandle.getStateFlow(
         SELECTED_FILTER_KEY,
@@ -47,6 +53,9 @@ class FormsViewModel(
 
     private val savedQuery = savedStateHandle.getStateFlow(SEARCH_QUERY_KEY, "")
     private val searchExpanded = savedStateHandle.getStateFlow(SEARCH_EXPANDED_KEY, false)
+    private val sortOrder = preferences.observe(owner)
+        .catch { emit(FormSortOrder.RECENT_FIRST) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, FormSortOrder.RECENT_FIRST)
 
     private val deletion = MutableStateFlow(FormDeletionState())
 
@@ -58,21 +67,27 @@ class FormsViewModel(
             .catch { emit(FormsUiState(status = FormsLoadStatus.ERROR)) }
     }
 
-    private data class SearchInput(val source: FormsUiState, val filter: FormFilter, val query: String)
+    private data class SearchInput(
+        val source: FormsUiState, val filter: FormFilter, val query: String, val sort: FormSortOrder
+    )
 
-    private val results = combine(sourceState, savedFilter, savedQuery) { source, filter, query ->
-        SearchInput(source, restoreFilter(filter), query)
-    }.mapLatest { (source, filter, query) ->
+    private val results = combine(sourceState, savedFilter, savedQuery, sortOrder) { source, filter, query, sort ->
+        SearchInput(source, restoreFilter(filter), query, sort)
+    }.mapLatest { (source, filter, query, sort) ->
         withContext(searchDispatcher) {
             val filtered = when (filter) {
                 FormFilter.ALL -> source.forms
                 FormFilter.ACTIVE -> source.forms.filter { it.status == FormStatus.ACTIVE }
                 FormFilter.DRAFT -> source.forms.filter { it.status == FormStatus.DRAFT }
             }
-            val visible = FormSearch.find(filtered, query)
+            // Search relevance is the primary key; the chosen order only breaks rank ties.
+            val visible = if (query.isBlank()) FormSort.apply(filtered, sort)
+            else FormSearch.ranked(filtered, query).groupBy { it.rank }.toSortedMap().values
+                .flatMap { group -> FormSort.apply(group.map { it.form }, sort) }
             source.copy(
                 forms = visible,
                 selectedFilter = filter,
+                selectedSort = sort,
                 searchQuery = query,
                 status = when (source.status) {
                     FormsLoadStatus.LOADING, FormsLoadStatus.ERROR -> source.status
@@ -102,6 +117,7 @@ class FormsViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = FormsUiState(
             selectedFilter = restoreFilter(savedFilter.value),
+            selectedSort = sortOrder.value,
             searchQuery = savedQuery.value, searchExpanded = searchExpanded.value
         )
     )
@@ -156,6 +172,10 @@ class FormsViewModel(
         savedStateHandle[SELECTED_FILTER_KEY] = filter.name
     }
 
+    fun selectSortOrder(order: FormSortOrder) {
+        viewModelScope.launch { preferences.set(owner, order) }
+    }
+
     companion object {
         private const val SEARCH_QUERY_KEY = "forms_search_query"
         private const val SEARCH_EXPANDED_KEY = "forms_search_expanded"
@@ -164,9 +184,14 @@ class FormsViewModel(
         private fun restoreFilter(name: String): FormFilter =
             FormFilter.entries.firstOrNull { it.name == name } ?: FormFilter.ALL
 
-        fun factory(repository: FormRepository): ViewModelProvider.Factory = viewModelFactory {
+        fun factory(repository: FormRepository): ViewModelProvider.Factory =
+            factory(repository, InMemoryFormListPreferences(), "guest")
+
+        fun factory(
+            repository: FormRepository, preferences: FormListPreferences, owner: String
+        ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                FormsViewModel(repository, createSavedStateHandle())
+                FormsViewModel(repository, createSavedStateHandle(), Dispatchers.Default, preferences, owner)
             }
         }
     }
