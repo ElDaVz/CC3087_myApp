@@ -4,9 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import com.uvg.cc3087.myapp.data.model.FormStatus
 import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.data.model.FormDraft
+import com.uvg.cc3087.myapp.data.repository.FormListPreferences
 import com.uvg.cc3087.myapp.data.repository.FormRepository
+import com.uvg.cc3087.myapp.data.repository.InMemoryFormListPreferences
 import com.uvg.cc3087.myapp.testing.MainDispatcherRule
 import com.uvg.cc3087.myapp.ui.state.FormFilter
+import com.uvg.cc3087.myapp.ui.state.FormSortOrder
 import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -356,6 +359,52 @@ class FormsViewModelTest {
         assertEquals(com.uvg.cc3087.myapp.ui.state.FormsEmptyReason.SEARCH, vm.uiState.value.emptyReason)
     }
 
+    @Test fun sortUsesStoredCountsAndNumericModificationTime() = runTest {
+        val preferences = InMemoryFormListPreferences()
+        preferences.set("owner-a", FormSortOrder.FEWEST_RESPONSES)
+        val list = listOf(
+            form("many", FormStatus.DRAFT).copy(responseCount = 9, updatedAt = 30),
+            form("few-new", FormStatus.DRAFT).copy(responseCount = 1, updatedAt = 20),
+            form("few-old", FormStatus.DRAFT).copy(responseCount = 1, updatedAt = 10)
+        )
+        val vm = FormsViewModel(
+            FakeFormRepository(list), SavedStateHandle(), mainDispatcherRule.dispatcher,
+            preferences, "owner-a"
+        )
+        observe(vm)
+
+        assertEquals(listOf(list[1], list[2], list[0]), vm.uiState.value.forms)
+
+        vm.selectSortOrder(FormSortOrder.MOST_RESPONSES)
+        runCurrent()
+        assertEquals(listOf(list[0], list[1], list[2]), vm.uiState.value.forms)
+    }
+
+    @Test fun sortPreferenceIsPartitionedByOwner() = runTest {
+        val preferences = InMemoryFormListPreferences()
+        preferences.set("owner-a", FormSortOrder.OLDEST_FIRST)
+        val vm = model(FakeFormRepository(forms), SavedStateHandle(), preferences, "owner-b")
+        observe(vm)
+        assertEquals(FormSortOrder.RECENT_FIRST, vm.uiState.value.selectedSort)
+    }
+
+    @Test fun searchRelevanceComesBeforeTheChosenOrder() = runTest {
+        val preferences = InMemoryFormListPreferences()
+        preferences.set("guest", FormSortOrder.MOST_RESPONSES)
+        val exact = form("exact", FormStatus.DRAFT).copy(title = "Pedido", responseCount = 0, updatedAt = 1)
+        val low = form("low", FormStatus.DRAFT).copy(title = "Pedido A", responseCount = 1, updatedAt = 1)
+        val high = form("high", FormStatus.DRAFT).copy(title = "Pedido B", responseCount = 5, updatedAt = 2)
+        val vm = FormsViewModel(
+            FakeFormRepository(listOf(low, exact, high)), SavedStateHandle(),
+            mainDispatcherRule.dispatcher, preferences, "guest"
+        )
+        observe(vm)
+        vm.updateSearch("pedido")
+        runCurrent()
+
+        assertEquals(listOf(exact, high, low), vm.uiState.value.forms)
+    }
+
     @Test fun latestQueryWinsWhenWorkerHasNotRunAndRetryPreservesSearch() = runTest {
         val worker = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
         var fail = true
@@ -382,6 +431,11 @@ class FormsViewModelTest {
     private fun model(repository: FormRepository, handle: SavedStateHandle) =
         FormsViewModel(repository, handle, mainDispatcherRule.dispatcher)
 
+    private fun model(
+        repository: FormRepository, handle: SavedStateHandle,
+        preferences: FormListPreferences, owner: String
+    ) = FormsViewModel(repository, handle, mainDispatcherRule.dispatcher, preferences, owner)
+
     private fun TestScope.observe(viewModel: FormsViewModel) {
         // statein comienza a observar el repositorio cuando tiene una suscripción
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -399,12 +453,15 @@ class FormsViewModelTest {
         override suspend fun deleteDraft(id: String) { forms.value = forms.value.filterNot { it.id == id } }
     }
 
+    private var nextUpdatedAt = 1_000L
+
     private fun form(id: String, status: FormStatus) = FormSummary(
         id = id,
         title = id,
         responseCount = 0,
         updatedDate = "8 oct",
         status = status,
-        imageUrl = ""
+        imageUrl = "",
+        updatedAt = nextUpdatedAt--
     )
 }

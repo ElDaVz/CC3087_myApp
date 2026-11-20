@@ -15,11 +15,17 @@ internal object FormSearch {
         Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD), ""
     ).trim().replace(spaces, " ")
 
-    suspend fun find(forms: List<FormSummary>, query: String): List<FormSummary> {
+    data class Ranked(val form: FormSummary, val rank: Int, val position: Int)
+
+    suspend fun find(forms: List<FormSummary>, query: String): List<FormSummary> =
+        ranked(forms, query).map { it.form }
+
+    /** Rank and original position stay available so a chosen order can break ties safely. */
+    suspend fun ranked(forms: List<FormSummary>, query: String): List<Ranked> {
         val normalized = normalize(query)
-        if (normalized.isEmpty()) return forms
+        if (normalized.isEmpty()) return forms.mapIndexed { index, form -> Ranked(form, 0, index) }
         val words = normalized.split(' ')
-        return forms.mapNotNull { form ->
+        return forms.mapNotNullIndexed { position, form ->
             coroutineContext.ensureActive()
             val title = normalize(form.title)
             val titleWords = title.split(' ')
@@ -30,10 +36,16 @@ internal object FormSearch {
                 words.all { word -> titleWords.any { candidate ->
                     word in candidate || withinEdits(word, candidate)
                 } } -> 3
-                else -> return@mapNotNull null
+                else -> return@mapNotNullIndexed null
             }
-            form to rank
-        }.sortedBy { it.second }.map { it.first }
+            Ranked(form, rank, position)
+        }.sortedWith(compareBy<Ranked> { it.rank }.thenBy { it.position })
+    }
+
+    private inline fun <T : Any, R : Any> List<T>.mapNotNullIndexed(action: (Int, T) -> R?): List<R> {
+        val result = ArrayList<R>(size)
+        forEachIndexed { index, item -> action(index, item)?.let(result::add) }
+        return result
     }
 
     // Bounded optimal string alignment: insertion, deletion, substitution and
