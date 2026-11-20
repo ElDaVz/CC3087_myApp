@@ -5,6 +5,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.repository.FormLinks
+import com.uvg.cc3087.myapp.data.repository.FormPublication
+import com.uvg.cc3087.myapp.data.repository.InvitationMode
 import com.uvg.cc3087.myapp.ui.screens.SaveShareScreen
 import com.uvg.cc3087.myapp.ui.state.SaveShareUiState
 import org.junit.Assert.assertEquals
@@ -56,5 +59,37 @@ class SaveShareScreenTest {
         compose.onNodeWithText("Compartir por WhatsApp").performScrollTo().performClick()
         assertEquals(link, copied)
         assertEquals(link, shared)
+    }
+
+    @Test fun singleUseInvitationChangesTheCopiedLinkAndTrackingUsesSystemShare() {
+        val publication = FormPublication(
+            "https://example.invalid/f/saved", "PUBLISHED", 1, 100, true, null,
+            FormLinks(
+                "https://example.invalid/f/saved",
+                "https://example.invalid/i/abcdefghijklmnopqrstuvwx",
+                "trackingtoken0123456789"
+            )
+        )
+        var copied: String? = null
+        var systemShared: String? = null
+        var mode: InvitationMode? = null
+        compose.setContent {
+            SpanishTestTheme {
+                SaveShareScreen(
+                    SaveShareUiState(draft = draft, publicLink = publication.url, publication = publication),
+                    {}, {}, {},
+                    onCopyLink = { copied = it; true },
+                    onWhatsAppShare = { true },
+                    onSystemShare = { systemShared = it; true },
+                    onInvitationMode = { mode = it }
+                )
+            }
+        }
+        compose.onNodeWithTag("invitation-mode-SINGLE_USE").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(InvitationMode.SINGLE_USE, mode) }
+        compose.onNodeWithText("Copiar enlace").performScrollTo().performClick()
+        assertEquals("https://example.invalid/i/abcdefghijklmnopqrstuvwx", copied)
+        compose.onNodeWithText("Compartir enlace de seguimiento").performScrollTo().performClick()
+        assertEquals("https://example.invalid/t/trackingtoken0123456789", systemShared)
     }
 }

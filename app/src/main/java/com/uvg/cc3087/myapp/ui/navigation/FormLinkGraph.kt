@@ -23,6 +23,7 @@ import com.uvg.cc3087.myapp.data.repository.AccountSyncState
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.data.repository.RequestRepository
 import com.uvg.cc3087.myapp.ui.resources.copyFormLink
+import com.uvg.cc3087.myapp.ui.resources.shareFormLink
 import com.uvg.cc3087.myapp.ui.resources.shareFormLinkOnWhatsApp
 import com.uvg.cc3087.myapp.ui.resources.titleResId
 import com.uvg.cc3087.myapp.ui.screens.ChooseTemplate
@@ -213,7 +214,9 @@ internal fun FormLinkGraph(
                     onPublish = model::publish,
                     onArchive = model::archive,
                     onCopyLink = { copyFormLink(context, it) },
-                    onWhatsAppShare = { shareFormLinkOnWhatsApp(context, it) }
+                    onWhatsAppShare = { shareFormLinkOnWhatsApp(context, it) },
+                    onSystemShare = { shareFormLink(context, it) },
+                    onInvitationMode = model::selectInvitationMode
                 )
             }
             entry<AppRoute.Dashboard> { DashboardDestination(AppRoute.Dashboard) }

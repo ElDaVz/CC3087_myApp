@@ -427,6 +427,11 @@
     <string name="sort_most_responses">Most responses first</string>
     <string name="sort_fewest_responses">Fewest responses first</string>
     <string name="sync_requested">Sync requested</string>
+    <string name="invitation_open">Open link</string>
+    <string name="invitation_single_use">Single use</string>
+    <string name="tracking_link_notice">Private tracking link: only you can open it. It never shows answers.</string>
+    <string name="share_tracking_link">Share tracking link</string>
+    <string name="share_error">No app is available to share this link</string>
     <string name="profile_title">Contact profile</string>
     <string name="profile_private_note">These contacts are private and independent of your sign-in email.</string>
     <string name="profile_personal_section">Personal contact</string>
