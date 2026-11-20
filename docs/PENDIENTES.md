@@ -8,11 +8,11 @@ Entregas pequeñas, una tarea por rama y commits por cambios relacionados. Las t
 - **Limpieza integrada en main:** la PR #34 integró `refactor/remove-unused-paths`, retirando rutas antiguas y trasladando sus pruebas útiles al código de producción.
 - **Navegación integrada en main:** la base actual ya contiene Navigation 3, mejoras de dashboard/bandeja/detalle, estadísticas por componente y la corrección de sincronización de las pruebas de borradores. Este estado se comprobó en el checkout; no acredita por sí solo un resultado de GitHub Actions.
 - **Configuración y apariencia integradas en main:** Cuenta, Estadísticas y tema Sistema/Claro/Oscuro por dispositivo ya están en la base actual. La [ejecución de la rama de Ajustes](https://github.com/ElDaVz/CC3087_myApp/actions/runs/44648156244) terminó correctamente. La ejecución posterior en main falló antes de arrancar los emuladores; se sigue por separado en el fix de CI. La revisión humana permanece pendiente.
-- **Fix de CI en `fix/ci-configuration-cache`:** desactivar la caché de configuración únicamente en las tres invocaciones Gradle del workflow y conservar reportes de diagnóstico. Pendiente de integrar y comprobar en GitHub; no cambia código de la app.
+- **Fix de CI integrado en main:** las tres invocaciones Gradle del workflow desactivan la caché de configuración y conservan reportes de diagnóstico. Integración confirmada en el checkout actualizado; el resultado posterior de GitHub Actions todavía requiere evidencia externa.
 - **Archivos locales retirados:** los archivos npm sin consumidores de la raíz y la copia antigua de Pendientes se eliminaron durante la limpieza; nunca estuvieron versionados. Los esquemas Room y las configuraciones necesarias se conservan.
-- **Pendiente:** búsqueda/orden/fijados de formularios, búsqueda textual de respuestas, exportación, Google y las mejoras restantes sin marcar.
+- **Pendiente:** integrar la búsqueda de formularios de `feature/forms-search`; implementar orden/fijados, búsqueda textual de respuestas, exportación, Google y las mejoras restantes sin marcar.
 
-Cuenta, limpieza, navegación y Configuración/apariencia ya están integradas. La prioridad actual es estabilizar CI mediante un fix mínimo y continuar con búsqueda, ordenación, fijados y el menú vacío de Plantillas como tareas separadas. Google permanece pendiente. Cada tarea tendrá su rama desde main cuando su base esté integrada; commits por cambios relacionados y descripción de PR para que el usuario la cree y evalúe. No crear checkouts temporales, publicar ramas ni crear o fusionar PRs sin petición del usuario.
+Cuenta, limpieza, navegación y Configuración/apariencia ya están integradas. El fix mínimo de CI ya está integrado. La búsqueda está implementada en `feature/forms-search`; ordenación, fijados y el menú vacío de Plantillas continúan como tareas separadas. Google permanece pendiente. Cada tarea tendrá su rama desde main cuando su base esté integrada; commits por cambios relacionados y descripción de PR para que el usuario la cree y evalúe. No crear checkouts temporales, publicar ramas ni crear o fusionar PRs sin petición del usuario.
 
 ## Experiencia de respuestas y estadísticas por componentes
 
@@ -33,8 +33,8 @@ Prioridad vigente: terminar una tarea antes de iniciar la siguiente. Las antigua
 
 | Orden | Entrega | Estado y límite |
 |---|---|---|
-| 1 | Fix mínimo de CI | Implementado en `fix/ci-configuration-cache`; pendiente de integrar y verificar en GitHub. Configuración/apariencia ya integrada en main. |
-| 2 | Búsqueda de formularios | Plan aprobado: `feature/forms-search` desde main tras integrar el fix de CI. Solo búsqueda, con las reglas del grupo 5. |
+| 1 | Fix mínimo de CI | Integrado en main; pendiente de acreditar la ejecución posterior en GitHub. Configuración/apariencia ya integrada en main. |
+| 2 | Búsqueda de formularios | Implementado en `feature/forms-search` desde main con el fix de CI integrado. Pendiente de integrar; validación al final. Solo búsqueda, con las reglas del grupo 5. |
 | 3 | Ordenación en el menú superior | Rama independiente después de integrar búsqueda; reutilizar sus filtros. |
 | 4 | Fijados y menú por formulario | Rama independiente; conservar eliminación confirmada. |
 | 5 | Menú superior de Plantillas | Definir una utilidad concreta o retirarlo; no añadir acciones ficticias. |
@@ -64,6 +64,7 @@ Cuenta y autenticación: verificación local al final. Quedan revisión humana, 
 
 - [ ] Añadir el logo de FormLink en la parte superior derecha de Mis formularios, manteniendo accesibles búsqueda, perfil y demás acciones.
 - [ ] Revisar el fondo y contraste del logo en login y Mis formularios para que sus formas no se mezclen con el contenedor, tanto en claro como en oscuro. Reutilizar los recursos de marca existentes.
+- [ ] Revisar la distribución de acciones de las tarjetas con texto al 150 %: «Responder» se parte dentro de su columna. Seguimiento visual independiente; conservar deshabilitada la entrada móvil de respuestas según el contrato v1.
 
 ## 4. Regreso después de publicar
 
@@ -72,7 +73,7 @@ Cuenta y autenticación: verificación local al final. Quedan revisión humana, 
 
 ## 5. Búsqueda y organización de formularios
 
-- [ ] Buscar títulos similares sin exigir coincidencia exacta: ignorar mayúsculas, tildes y espacios externos, aceptar coincidencias parciales y tolerar errores tipográficos razonables. Definir ejemplos de relevancia y un estado sin resultados.
+- [x] Buscar títulos similares sin exigir coincidencia exacta: ignorar mayúsculas, tildes y espacios externos, aceptar coincidencias parciales y tolerar errores tipográficos razonables. Definir ejemplos de relevancia y un estado sin resultados.
 - [ ] Habilitar en el menú de más opciones la ordenación por fecha y por cantidad de respuestas, con dirección ascendente/descendente y etiquetas claras. Definir qué fecha se utiliza y derivar las cantidades de respuestas almacenadas.
 - [ ] Permitir fijar y desfijar formularios, mantener los fijados visibles al ordenar y conservar la preferencia por propietario, incluido invitado. El menú incluirá también la acción de eliminar del grupo 6.
 
@@ -82,9 +83,9 @@ Decisiones funcionales acordadas (todavía sin implementar; se repartirán entre
 - Fecha = última modificación numérica. Orden predeterminado reciente primero; cuatro opciones combinando fecha/respuestas y ambas direcciones, con ID como desempate.
 - Búsqueda sin mayúsculas ni tildes, espacios normalizados y todas las palabras requeridas. Prioridad: exacta, prefijo, parcial y aproximada; tolerancia de una edición por palabra de 4–7 caracteres y dos desde 8, sin tolerancia para palabras cortas.
 - Fijados primero entre coincidencias del filtro/búsqueda; después relevancia y orden elegido. Menú por tarjeta con fijar/desfijar y la eliminación confirmada existente. Estado sin resultados y limpieza de búsqueda/filtros.
-- Preferencias mediante repositorio DataStore y ViewModel; añadir fecha numérica al resumen. No requiere cambios de backend ni esquema Room.
+- Preferencias de orden/fijados mediante repositorio DataStore y ViewModel; añadir fecha numérica al resumen. No requiere cambios de backend ni esquema Room.
 
-Plan aprobado para la próxima tarea corta de búsqueda (`feature/forms-search`, después de integrar el fix de CI):
+Contrato de búsqueda implementado en `feature/forms-search` (pendiente de integrar):
 
 - La lupa despliega un campo sobre la lista, con foco y teclado. La consulta combina con Todos/Activos/Borradores y se conserva al abrir un formulario y regresar.
 - Limpiar vacía la consulta conservando campo y filtro; cerrar también oculta campo y teclado. Atrás primero cierra el teclado y después la búsqueda.
@@ -398,3 +399,31 @@ Validación local del fix:
 - Chequeo de seguridad del repositorio y `git diff --check` correctos. El workflow de web/reglas no cambia y sus pruebas no se repiten en esta entrega.
 
 La validación local usa dependencias ya descargadas. La ejecución de esta rama en GitHub y la integración en main permanecen pendientes; no se declara corregido el fallo remoto hasta disponer de esa evidencia. Los commits quedan locales y se entrega la descripción de PR para que el usuario la cree y evalúe. Después de integrar este fix se iniciará la rama de búsqueda desde main.
+
+## Verificación de búsqueda de formularios (2026-11-19)
+
+Implementado en `feature/forms-search`, desde main con el fix de caché de CI integrado. La lupa abre un campo sobre la lista. Buscar combina con Todos/Activos/Borradores; limpiar conserva campo y filtro, cerrar vacía la consulta y oculta el teclado. Atrás oculta primero el teclado y después cierra la búsqueda. La consulta, el despliegue, el filtro y la posición de lista sobreviven al recorrido por el editor y a la restauración de pantalla.
+
+El motor local ignora mayúsculas, tildes y espacios repetidos; exige todas las palabras y prioriza título exacto, prefijo, parcial y aproximado. `inscripcion` encuentra «Inscripción» y `pediod` encuentra «Pedido». Admite una edición por palabra de 4–7 caracteres, dos desde 8 y ninguna en palabras más cortas; incluye transposición adyacente. Conserva el orden del repositorio en empates. El cálculo usa un dispatcher de trabajo y cancela consultas obsoletas; la interfaz refleja la consulta mientras calcula sin mostrar resultados de otra consulta.
+
+Consulta y despliegue usan el SavedStateHandle del propietario, dentro del guardado cifrado de sesión existente. Cambiar o cerrar sesión descarta ese estado; volver a iniciar sesión no recupera la búsqueda anterior. No se añaden preferencias DataStore, eventos Analytics, cambios de FormRepository, backend ni esquema Room. Los estados vacíos distinguen origen, filtro y búsqueda, con acciones de recuperación. Ordenación, fijados y menú de Plantillas siguen pendientes en ramas independientes.
+
+Comprobaciones locales:
+
+- Compilación Kotlin y 251 pruebas unitarias correctas. Se cubren relevancia, normalización Unicode, cuatro clases de edición y sus límites, filtros combinados, cambios del repositorio, consultas sucesivas, carga/error/reintento, restauración y separación de estados de sesión.
+- Suite completa en Pixel_9 Android 17/API 37 con Firebase Auth/Firestore locales (`demo-formlink`): 139 pruebas, 138 correctas y una omisión optativa de subida real a Cloudinary. Incluye búsqueda con teclado real, Atrás, limpiar/cerrar, recuperación sin resultados, regreso del editor con desplazamiento, restauración cifrada y cierre/inicio de sesión sin reutilizar consulta. La suite completa se repitió sobre el código final con el mismo resultado.
+- Android Lint: 0 errores y 29 advertencias. `git diff --check` y comprobación de credenciales/cleartext correctos.
+- Revisión visual local con datos sintéticos: [claro](evidence/forms-search-light.png), [oscuro](evidence/forms-search-dark.png), [texto al 150 %](evidence/forms-search-large-text.png) y [sin resultados](evidence/forms-search-empty.png). Cerrar usa flecha y limpiar usa cruz; los controles de búsqueda, filtros y recuperación permanecen accesibles. Se registró por separado la redistribución pendiente de acciones de las tarjetas con texto grande. Las capturas no acreditan revisión humana ni TalkBack.
+
+Incidencias de validación: el primer intento observó el diálogo «IU del sistema no responde» y timeouts de teclado/sincronización. La prueba de teclado ahora activa temporalmente el IME en AVDs con teclado físico y restaura la preferencia al terminar. La inspección del dispositivo también produjo un conflicto de UiAutomation; se reinició el AVD y se ejecutó la suite sin conectar el inspector durante las pruebas. El caso de sincronización falló intermitentemente en tandas aisladas y pasó tanto en la suite completa como en un intento aislado posterior. El diagnóstico temporal se retiró. Los reportes iniciales se conservan localmente en `app/build/search-first-attempt/` y `app/build/search-second-attempt/`, y la primera suite completa correcta en `app/build/search-full-suite/`. No se atribuye una causa definitiva al timeout de sincronización.
+
+- [ ] Investigar en una rama de fix el timeout intermitente de `BackendRootTest.realSignupUsesWorkManagerAndSignOutClearsTheAccountEditor` con Auth/Firestore recién iniciados. La comprobación de sincronización y separación de cuentas sigue siendo necesaria; conservar el caso y obtener la causa antes de modificar tiempos o producción.
+
+Pendiente: ejecución de GitHub Actions de esta rama, revisión humana y lector de pantalla. La web no cambia y no se repiten pruebas de navegador. No se publican ramas, PRs ni servicios en esta entrega.
+
+Comandos reproducibles:
+
+```sh
+./gradlew compileDebugKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest -PfirebaseEmulators=true --no-configuration-cache --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process
+backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore './gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-configuration-cache --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process'
+```
