@@ -9,6 +9,8 @@ import com.uvg.cc3087.myapp.data.repository.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class AccountUiState(val busy: Boolean = false, val failed: Boolean = false, val confirmSignOut: Boolean = false)
 class AccountViewModel(private val auth: AuthRepository, private val owner: String?,
@@ -22,6 +24,7 @@ class AccountViewModel(private val auth: AuthRepository, private val owner: Stri
     val syncState = (owner?.let(sync::observe) ?: flowOf(AccountSyncState()))
         .stateIn(viewModelScope, SharingStarted.Eagerly, AccountSyncState())
     private val mutableState = MutableStateFlow(AccountUiState())
+    private val profileWrites = Mutex()
     val uiState = mutableState.asStateFlow()
     fun requestSync() { if (!uiState.value.busy) owner?.let(sync::requestSync) }
 
@@ -30,9 +33,11 @@ class AccountViewModel(private val auth: AuthRepository, private val owner: Stri
         val id = owner ?: return
         val repository = profiles ?: return
         viewModelScope.launch {
-            try { repository.save(id, change(profile.value)) }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { mutableState.value = uiState.value.copy(failed = true) }
+            profileWrites.withLock {
+                try { repository.save(id, change(repository.get(id))) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { mutableState.value = uiState.value.copy(failed = true) }
+            }
         }
     }
 
@@ -41,10 +46,12 @@ class AccountViewModel(private val auth: AuthRepository, private val owner: Stri
         val repository = profiles ?: return
         mutableState.value = uiState.value.copy(busy = true, failed = false)
         viewModelScope.launch {
-            try { repository.importLogo(id, uri) }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { mutableState.value = uiState.value.copy(failed = true) }
-            finally { mutableState.value = mutableState.value.copy(busy = false) }
+            profileWrites.withLock {
+                try { repository.importLogo(id, uri) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { mutableState.value = uiState.value.copy(failed = true) }
+                finally { mutableState.value = mutableState.value.copy(busy = false) }
+            }
         }
     }
 
@@ -52,9 +59,11 @@ class AccountViewModel(private val auth: AuthRepository, private val owner: Stri
         val id = owner ?: return
         val repository = profiles ?: return
         viewModelScope.launch {
-            try { repository.removeLogo(id) }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { mutableState.value = uiState.value.copy(failed = true) }
+            profileWrites.withLock {
+                try { repository.removeLogo(id) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { mutableState.value = uiState.value.copy(failed = true) }
+            }
         }
     }
     fun retryImport() {

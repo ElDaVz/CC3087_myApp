@@ -5,6 +5,7 @@ import com.uvg.cc3087.myapp.data.local.OwnerProfileDao
 import com.uvg.cc3087.myapp.data.local.PrivateLogoStorage
 import com.uvg.cc3087.myapp.data.local.toEntity
 import com.uvg.cc3087.myapp.data.local.toModel
+import com.uvg.cc3087.myapp.data.model.ContactEmail
 import com.uvg.cc3087.myapp.data.model.OwnerProfile
 import com.uvg.cc3087.myapp.data.remote.http.FirestoreRest
 import kotlinx.coroutines.flow.Flow
@@ -39,7 +40,7 @@ class RoomProfileRepository(
         require(profile.personalName.length <= 100 && profile.businessName.length <= 100)
         require(profile.personalEmail.length <= 120 && profile.businessEmail.length <= 120)
         listOf(profile.personalEmail, profile.businessEmail).forEach {
-            require(it.isBlank() || EMAIL.matches(it)) { "Invalid contact email" }
+            require(ContactEmail.isValid(it)) { "Invalid contact email" }
         }
         val previous = dao.get(owner)
         val stored = profile.copy(
@@ -82,9 +83,5 @@ class RoomProfileRepository(
         ))))
         // Only a confirmed write may be acknowledged; a late retry keeps the revision.
         dao.acknowledge(owner, row.revision)
-    }
-
-    private companion object {
-        val EMAIL = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
     }
 }

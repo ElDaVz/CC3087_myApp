@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -15,13 +17,24 @@ import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.FolderCopy
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
+import com.uvg.cc3087.myapp.data.model.ContactEmail
 import com.uvg.cc3087.myapp.data.model.OwnerProfile
 import com.uvg.cc3087.myapp.data.model.UserSession
 import com.uvg.cc3087.myapp.data.repository.*
@@ -127,9 +140,8 @@ private fun ProfileCard(
             OutlinedTextField(profile.personalName, { value -> onChange { it.copy(personalName = value) } },
                 label = { Text(stringResource(R.string.profile_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                 enabled = !busy)
-            OutlinedTextField(profile.personalEmail, { value -> onChange { it.copy(personalEmail = value) } },
-                label = { Text(stringResource(R.string.profile_email)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                enabled = !busy)
+            ProfileEmailField(profile.personalEmail, stringResource(R.string.profile_email),
+                "profile-personal-email", !busy) { value -> onChange { it.copy(personalEmail = value) } }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Text(stringResource(R.string.profile_business_section), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary)
@@ -138,9 +150,8 @@ private fun ProfileCard(
             OutlinedTextField(profile.businessName, { value -> onChange { it.copy(businessName = value) } },
                 label = { Text(stringResource(R.string.profile_business_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                 enabled = !busy)
-            OutlinedTextField(profile.businessEmail, { value -> onChange { it.copy(businessEmail = value) } },
-                label = { Text(stringResource(R.string.profile_business_email)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                enabled = !busy)
+            ProfileEmailField(profile.businessEmail, stringResource(R.string.profile_business_email),
+                "profile-business-email", !busy) { value -> onChange { it.copy(businessEmail = value) } }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onPickLogo, enabled = !busy) {
                     Text(stringResource(if (profile.logoPath == null) R.string.profile_logo_add else R.string.profile_logo_replace))
@@ -153,4 +164,55 @@ private fun ProfileCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+/**
+ * Keeps partial text local while the user types. Only a finished edit is persisted,
+ * and only when it is empty or has a valid email shape.
+ */
+@Composable
+private fun ProfileEmailField(
+    value: String,
+    label: String,
+    testTag: String,
+    enabled: Boolean,
+    onCommit: (String) -> Unit
+) {
+    var draft by remember { mutableStateOf(value) }
+    var invalid by remember { mutableStateOf(false) }
+    var focused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    // Adopt confirmed profile changes without discarding text the user is still editing.
+    LaunchedEffect(value) {
+        if (!focused) {
+            draft = value
+            invalid = false
+        }
+    }
+
+    fun finishEditing() {
+        val normalized = draft.trim()
+        if (ContactEmail.isValid(normalized)) {
+            invalid = false
+            draft = normalized
+            if (normalized != value) onCommit(normalized)
+        } else invalid = true
+    }
+
+    OutlinedTextField(
+        value = draft,
+        onValueChange = { draft = it; invalid = false },
+        label = { Text(label) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().testTag(testTag).onFocusChanged {
+            if (focused && !it.isFocused) finishEditing()
+            focused = it.isFocused
+        },
+        enabled = enabled,
+        isError = invalid,
+        supportingText = if (invalid) { { Text(stringResource(R.string.auth_email_format)) } } else null,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+    )
 }
