@@ -165,7 +165,7 @@ class RoomFormStoreTest {
                     while (card.publishedCoverUrl == null) card = summaries.receive().single()
                     assertEquals(remote, card.publishedCoverUrl)
                     assertEquals("", card.imageUrl)
-                    assertEquals(FormStatus.DRAFT, card.status)
+                    assertEquals(FormStatus.ARCHIVED, card.status)
                     var url = urls.receive()
                     while (url == null) url = urls.receive()
                     assertEquals(remote, url)
