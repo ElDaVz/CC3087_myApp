@@ -163,6 +163,37 @@ service cloud.firestore {
       }
     }
     match /{path=**}/responses/{responseId} { allow read: if owns(resource.data); }
+    match /forms/{id}/links/invitations/{token} {
+      allow get: if true;
+      allow list, delete: if false;
+      allow create: if signedIn() && owns(request.resource.data)
+        && request.resource.data.keys().hasOnly(['ownerId','token','active','used'])
+        && request.resource.data.token == token
+        && token.matches('^[A-Za-z0-9_-]{20,64}$')
+        && request.resource.data.active == true && request.resource.data.used == false;
+      // The only permitted mutation is the one-way, atomic single-use claim.
+      allow update: if resource.data.active == true && resource.data.used == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used'])
+        && request.resource.data.used == true;
+    }
+    match /forms/{id}/links/tracking {
+      allow read: if signedIn() && owns(resource.data);
+      allow create, update: if signedIn() && owns(request.resource.data)
+        && request.resource.data.keys().hasOnly(['ownerId','token','active'])
+        && request.resource.data.token.matches('^[A-Za-z0-9_-]{20,64}$')
+        && request.resource.data.active == true;
+      allow delete: if false;
+    }
+    match /forms/{id}/links/trackingSummary {
+      allow read: if signedIn() && owns(resource.data);
+      allow create, update: if signedIn() && owns(request.resource.data)
+        && request.resource.data.keys().hasOnly(['ownerId','submissions','pending','inProgress','completed'])
+        && request.resource.data.submissions is int && request.resource.data.submissions >= 0
+        && request.resource.data.pending is int && request.resource.data.pending >= 0
+        && request.resource.data.inProgress is int && request.resource.data.inProgress >= 0
+        && request.resource.data.completed is int && request.resource.data.completed >= 0;
+      allow delete: if false;
+    }
     match /publishedForms/{id} {
       allow get: if (resource != null && live(id,resource.data)) || (signedIn() && owns(get(formPath(id)).data));
       allow list: if owns(resource.data);

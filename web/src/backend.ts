@@ -1,5 +1,5 @@
 import {initializeApp,type FirebaseOptions} from 'firebase/app';
-import {getFirestore,connectFirestoreEmulator,doc,getDocFromServer,writeBatch,serverTimestamp,Timestamp,memoryLocalCache,initializeFirestore} from 'firebase/firestore';
+import {getFirestore,connectFirestoreEmulator,doc,getDocFromServer,writeBatch,serverTimestamp,Timestamp,memoryLocalCache,initializeFirestore,updateDoc} from 'firebase/firestore';
 import type {PublishedForm,Answer} from './form';
 
 let instance:Promise<{app:ReturnType<typeof initializeApp>;db:ReturnType<typeof getFirestore>}>|undefined;
@@ -22,6 +22,22 @@ export async function loadForm(db:ReturnType<typeof getFirestore>,id:string):Pro
  const form=snapshot.data() as PublishedForm;
  if(!form.active||!Array.isArray(form.fields)||form.fields.length===0||form.fields.length>10)throw Error('UNAVAILABLE');
  return form;
+}
+async function invitation(db:ReturnType<typeof getFirestore>,formId:string,token:string) {
+  const snapshot=await withTimeout(getDocFromServer(doc(db,'forms',formId,'links','invitations',token)));
+  if(!snapshot.exists()||snapshot.data().active!==true||snapshot.data().used!==false)throw Error('UNAVAILABLE');
+}
+export async function loadInvitation(db:ReturnType<typeof getFirestore>,formId:string,token:string):Promise<PublishedForm> {
+  await invitation(db,formId,token);
+  return loadForm(db,formId);
+}
+export async function claimInvitation(db:ReturnType<typeof getFirestore>,formId:string,token:string) {
+  await invitation(db,formId,token);
+  try { await withTimeout(updateDoc(doc(db,'forms',formId,'links','invitations',token),{used:true})); }
+  catch { // Another tab consumed it first; the rules still allow only one successful claim.
+   const current=await withTimeout(getDocFromServer(doc(db,'forms',formId,'links','invitations',token)));
+   if(!current.exists()||current.data().used!==false)throw Error('UNAVAILABLE');
+  }
 }
 export async function submit(db:ReturnType<typeof getFirestore>,id:string,attempt:string,form:PublishedForm,answers:Answer[]) {
  const receipt=doc(db,'publishedForms',id,'receipts',attempt);
