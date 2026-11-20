@@ -3,7 +3,8 @@ package com.uvg.cc3087.myapp.data.repository
 import com.uvg.cc3087.myapp.data.model.FormDraft
 
 data class FormPublication(val url: String, val status: String, val version: Long,
-    val firstPublishedAt: Long, val matchesDraft: Boolean, val coverUrl: String? = null)
+    val firstPublishedAt: Long, val matchesDraft: Boolean, val coverUrl: String? = null,
+    val links: FormLinks = FormLinks(url))
 enum class PublicationError {
     SIGN_IN_REQUIRED,
     FORM_NOT_FOUND,
@@ -22,6 +23,22 @@ enum class PublicationError {
 }
 
 class PublicationException(val reason: PublicationError) : Exception(reason.name)
+
+class SecretLinkRepository(private val store: LinkStore) {
+    suspend fun forForm(owner: String, formId: String, publicUrl: String): FormLinks {
+        val existing = store.get(owner, formId)
+        if (existing != null) return existing.withBase(publicUrl.substringBeforeLast("/f/"))
+        val created = FormLinks(publicUrl, tokenUrl(publicUrl.substringBefore("/f/"), LinkTokens.newToken(), "i"), LinkTokens.newToken())
+        store.save(owner, formId, created)
+        return created
+    }
+}
+
+interface LinkStore {
+    suspend fun get(owner: String, formId: String): FormLinks?
+    suspend fun save(owner: String, formId: String, links: FormLinks)
+}
+
 interface FormPublisher {
     suspend fun publication(owner: String, form: FormDraft): FormPublication?
     suspend fun publish(owner: String, form: FormDraft): FormPublication
