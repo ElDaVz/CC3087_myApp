@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import com.uvg.cc3087.myapp.ui.state.FormsEmptyReason
+import com.uvg.cc3087.myapp.ui.state.FormsSearchBackAction
+import com.uvg.cc3087.myapp.ui.state.formsSearchBackAction
 import androidx.annotation.StringRes
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -135,6 +137,7 @@ fun Forms(
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val imeVisible = WindowInsets.isImeVisible
     var requestSearchFocus by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     val previousSyncPhase = remember { mutableStateOf(syncState?.phase) }
@@ -144,8 +147,13 @@ fun Forms(
         requestSearchFocus = false
         onCloseSearch()
     }
-    // Android consumes Back while the IME is visible; the next Back closes search.
-    BackHandler(enabled = uiState.searchExpanded && !WindowInsets.isImeVisible) { closeSearch() }
+    BackHandler(enabled = uiState.searchExpanded) {
+        when (formsSearchBackAction(uiState.searchExpanded, imeVisible)) {
+            FormsSearchBackAction.IGNORE -> Unit
+            FormsSearchBackAction.HIDE_IME -> keyboard?.hide()
+            FormsSearchBackAction.CLOSE_SEARCH -> closeSearch()
+        }
+    }
     LaunchedEffect(uiState.searchExpanded, requestSearchFocus) {
         if (uiState.searchExpanded && requestSearchFocus) {
             focusRequester.requestFocus()
