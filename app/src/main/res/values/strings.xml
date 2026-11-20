@@ -421,4 +421,17 @@
     <string name="forms_search_empty">No forms match your search</string>
     <string name="form_status_published">Published</string>
     <string name="form_status_archived">Archived</string>
+    <string name="profile_title">Contact profile</string>
+    <string name="profile_private_note">These contacts are private and independent of your sign-in email.</string>
+    <string name="profile_personal_section">Personal contact</string>
+    <string name="profile_business_section">Business (optional)</string>
+    <string name="profile_business_note">Business name and logo are published only when you republish a form.</string>
+    <string name="profile_name">Name</string>
+    <string name="profile_email">Contact email</string>
+    <string name="profile_business_name">Business name</string>
+    <string name="profile_business_email">Business email</string>
+    <string name="profile_logo_add">Add logo</string>
+    <string name="profile_logo_replace">Replace logo</string>
+    <string name="profile_logo_remove">Remove logo</string>
+    <string name="profile_logo_note">The original stays encrypted on this device; only an optimized copy is published.</string>
 </resources>

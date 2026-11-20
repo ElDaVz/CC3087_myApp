@@ -65,10 +65,12 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
             }
         }
         CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-            val accountModel: AccountViewModel = viewModel(factory = AccountViewModel.factory(services.auth, uid, services.accountSync, services.guestImports, services::cancel))
+            val accountModel: AccountViewModel = viewModel(factory = AccountViewModel.factory(services.auth, uid,
+                services.accountSync, services.guestImports, services::cancel, services.profiles))
             val accountUi by accountModel.uiState.collectAsStateWithLifecycle()
             val importState by accountModel.importState.collectAsStateWithLifecycle()
             val syncState by accountModel.syncState.collectAsStateWithLifecycle()
+            val profile by accountModel.profile.collectAsStateWithLifecycle()
             val message = if (uid == null) null else accountSyncMessage(syncState)
             val responseRepository = remember(uid) { if (uid == null) requests else services.requests(uid) ?: EmptyAccountRequests }
             FormLinkRoute(forms, templates, responseRepository,
@@ -85,7 +87,9 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                         accountUi, importState, syncState, onBack = goBack,
                         onRetryImport = accountModel::retryImport,
                         onSignOut = accountModel::signOut, onSync = accountModel::requestSync,
-                        onConfirmSignOut = accountModel::confirmSignOut, onDismissSignOut = accountModel::dismissSignOut)
+                        onConfirmSignOut = accountModel::confirmSignOut, onDismissSignOut = accountModel::dismissSignOut,
+                        profile = profile, onProfileChange = accountModel::updateProfile,
+                        onLogoPick = accountModel::importLogo, onLogoRemove = accountModel::removeLogo)
                 })
         }
     }

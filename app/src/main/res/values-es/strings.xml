@@ -427,4 +427,17 @@
     <string name="forms_search_empty">No hay formularios que coincidan con tu búsqueda</string>
     <string name="form_status_published">Publicado</string>
     <string name="form_status_archived">Archivado</string>
+    <string name="profile_title">Perfil de contacto</string>
+    <string name="profile_private_note">Estos contactos son privados e independientes del correo con el que inicias sesión.</string>
+    <string name="profile_personal_section">Contacto personal</string>
+    <string name="profile_business_section">Empresa (opcional)</string>
+    <string name="profile_business_note">El nombre y el logo de la empresa se publican solo al republicar un formulario.</string>
+    <string name="profile_name">Nombre</string>
+    <string name="profile_email">Correo de contacto</string>
+    <string name="profile_business_name">Nombre de la empresa</string>
+    <string name="profile_business_email">Correo de la empresa</string>
+    <string name="profile_logo_add">Agregar logo</string>
+    <string name="profile_logo_replace">Cambiar logo</string>
+    <string name="profile_logo_remove">Quitar logo</string>
+    <string name="profile_logo_note">El original permanece cifrado en este dispositivo; solo se publica una copia optimizada.</string>
 </resources>
