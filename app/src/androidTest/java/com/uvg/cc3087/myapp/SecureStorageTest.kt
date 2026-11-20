@@ -38,7 +38,7 @@ class SecureStorageTest {
                     .openHelperFactory(EncryptedDatabase.factory(context, name)).build()
                 try {
                     assertEquals("SECRET DOMAIN DATA", RoomFormStore(db).get(null, "f")!!.title)
-                    assertEquals(9, db.openHelper.readableDatabase.version)
+                    assertEquals(12, db.openHelper.readableDatabase.version)
                     assertEquals(listOf("f"), db.guestImports().pending("owner").map { it.formId })
                     assertTrue(db.guestImports().get("completed")!!.completed)
                     assertEquals("other-owner", db.guestImports().get("other")!!.ownerId)

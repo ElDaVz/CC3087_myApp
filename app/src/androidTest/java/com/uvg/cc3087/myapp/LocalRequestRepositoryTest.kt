@@ -101,10 +101,11 @@ class LocalRequestRepositoryTest {
                 old.version = 1
             }
             Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
-                .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9).build().useDatabase { db ->
+                .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9, FormLinkDatabase.MIGRATION_9_10, FormLinkDatabase.MIGRATION_10_11, FormLinkDatabase.MIGRATION_11_12).build().useDatabase { db ->
                     val forms = db.guestFormRepository()
                     assertEquals("Conservar", forms.getDraft("old")!!.title)
                     assertEquals("Pregunta anterior", forms.getDraft("old")!!.fields.single().title)
+                    assertEquals(12, db.openHelper.readableDatabase.version)
                     forms.saveDraft(form)
                     val requests = RoomRequestRepository(db)
                     requests.submit(form, "new", answers, Locale.US)
