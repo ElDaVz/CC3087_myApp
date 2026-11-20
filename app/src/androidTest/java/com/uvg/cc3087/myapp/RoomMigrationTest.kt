@@ -15,7 +15,7 @@ class RoomMigrationTest {
     @Test fun existingVersionsKeepDraftsRequestsAndOptionalCovers() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val assets = InstrumentationRegistry.getInstrumentation().context.assets
-        for (version in (2..10)) {
+        for (version in (2..11)) {
             val name = "migration-$version-${UUID.randomUUID()}.db"
             try {
                 val schema = assets.open("com.uvg.cc3087.myapp.data.local.FormLinkDatabase/$version.json")
@@ -48,7 +48,7 @@ class RoomMigrationTest {
                     old.version = version
                 }
                 val db = Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
-                    .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9, FormLinkDatabase.MIGRATION_9_10).build()
+                    .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9, FormLinkDatabase.MIGRATION_9_10, FormLinkDatabase.MIGRATION_10_11).build()
                 try {
                     val draft = db.guestFormRepository().getDraft("old")!!
                     assertEquals("Conservar", draft.title)
@@ -61,7 +61,7 @@ class RoomMigrationTest {
                         assertTrue(db.guestImports().get("completed")!!.completed)
                         assertEquals("other-owner", db.guestImports().get("other")!!.ownerId)
                     }
-                    assertEquals(10, db.openHelper.readableDatabase.version)
+                    assertEquals(11, db.openHelper.readableDatabase.version)
                     assertNull(draft.ownerId)
                     if (version >= 5) {
                         assertEquals("hash", db.cloud().publication("owner", "old")!!.fingerprint)
