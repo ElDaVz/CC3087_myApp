@@ -144,7 +144,7 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
                     mapOf("ownerId" to owner, "submissions" to 0, "pending" to 0, "inProgress" to 0, "completed" to 0))
             }
             secret.singleUseUrl?.substringAfterLast('/')?.let { token ->
-                writes += client.update("forms/${form.id}/links/invitations/$token",
+                writes += client.update("forms/${form.id}/invitations/$token",
                     mapOf("ownerId" to owner, "token" to token, "active" to true, "used" to false))
             }
             client.commit(owner, writes)

@@ -163,7 +163,7 @@ service cloud.firestore {
       }
     }
     match /{path=**}/responses/{responseId} { allow read: if owns(resource.data); }
-    match /forms/{id}/links/invitations/{token} {
+    match /forms/{id}/invitations/{token} {
       allow get: if true;
       allow list, delete: if false;
       allow create: if signedIn() && owns(request.resource.data)

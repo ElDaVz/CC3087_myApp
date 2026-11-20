@@ -124,11 +124,11 @@ test('single-use invitations validate on load and can be claimed only once', asy
  const owner=environment.authenticatedContext('owner').firestore();
  const publicDb=environment.unauthenticatedContext().firestore();
  const token='a'.repeat(32);
- const ref=doc(owner,'forms/f/links/invitations',token);
- await assertFails(setDoc(doc(publicDb,'forms/f/links/invitations',token),{ownerId:'owner',token,active:true,used:false}));
- await assertFails(setDoc(doc(owner,'forms/f/links/invitations',token),{ownerId:'owner',token:'bad',active:true,used:false}));
+ const ref=doc(owner,'forms/f/invitations',token);
+ await assertFails(setDoc(doc(publicDb,'forms/f/invitations',token),{ownerId:'owner',token,active:true,used:false}));
+ await assertFails(setDoc(doc(owner,'forms/f/invitations',token),{ownerId:'owner',token:'bad',active:true,used:false}));
  await assertSucceeds(setDoc(ref,{ownerId:'owner',token,active:true,used:false}));
- await assertSucceeds(getDoc(doc(publicDb,'forms/f/links/invitations',token)));
+ await assertSucceeds(getDoc(doc(publicDb,'forms/f/invitations',token)));
  await assertSucceeds(updateDoc(ref,{used:true}));
  await assertFails(updateDoc(ref,{used:false}));
  await assertFails(updateDoc(ref,{active:false}));

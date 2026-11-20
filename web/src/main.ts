@@ -11,7 +11,7 @@ function message(text:string,retry?:()=>void,state:'info'|'loading'|'error'|'suc
 const started=Date.now();
 async function run(){
  const tracking=trackingPath(location.pathname);
- if(tracking){message('El resumen de seguimiento se consulta desde la app FormLink.');return;}
+ if(tracking){message('Este enlace privado identifica el seguimiento del formulario. No muestra respuestas.');return;}
  if(!target){message('Abre el enlace de un formulario para completar una solicitud.');return;}
  const id=target.id;
  message('Cargando formulario…', undefined, 'loading');
