@@ -4,12 +4,12 @@ export type Field = { id:string; type:string; label:string; description:string; 
 export type CloudImage = {url:string;publicId:string;hash:string};
 export type BusinessIdentity = {name?:string; logo?:CloudImage|null};
 export type PublishedForm = {ownerId:string; title:string; fields:Field[]; version:number; active:boolean; templateType:string;
-  cover?:CloudImage|null; business?:BusinessIdentity|null};
-export type LinkTarget = {kind:'form'|'invitation'|'tracking'; id:string; token?:string};
+  cover?:CloudImage|null; business?:BusinessIdentity|null; responseAccess?:'OPEN'|'SINGLE_USE'};
+export type LinkTarget = {kind:'form'|'invitation'; id:string; token?:string};
 export function parseLink(pathname:string):LinkTarget|null {
  const parts=pathname.split('/').filter(Boolean);
  if(parts.length===2&&parts[0]==='f'&&/^[A-Za-z0-9_-]{1,128}$/.test(parts[1]))return {kind:'form',id:parts[1]};
- if(parts.length===3&&parts[0]==='i'&&/^[A-Za-z0-9_-]{1,128}$/.test(parts[1]))return {kind:'invitation',id:parts[1],token:parts[2]};
+ if(parts.length===3&&parts[0]==='i'&&/^[A-Za-z0-9_-]{1,128}$/.test(parts[1])&&/^[A-Za-z0-9_-]{20,64}$/.test(parts[2]))return {kind:'invitation',id:parts[1],token:parts[2]};
  return null;
 }
 export type Value = string | boolean | string[] | {date:Date|null; minute:number|null};

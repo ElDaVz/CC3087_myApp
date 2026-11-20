@@ -61,35 +61,25 @@ class SaveShareScreenTest {
         assertEquals(link, shared)
     }
 
-    @Test fun singleUseInvitationChangesTheCopiedLinkAndTrackingUsesSystemShare() {
+    @Test fun confirmedInvitationCopiesItsCanonicalLink() {
+        val link = "https://example.invalid/i/saved/abcdefghijklmnopqrstuvwx"
         val publication = FormPublication(
-            "https://example.invalid/f/saved", "PUBLISHED", 1, 100, true, null,
-            FormLinks(
-                "https://example.invalid/f/saved",
-                "https://example.invalid/i/abcdefghijklmnopqrstuvwx",
-                "trackingtoken0123456789"
-            )
+            "https://example.invalid/f/saved", "PUBLISHED", 1, 100, true,
+            links = FormLinks("https://example.invalid/f/saved", link),
+            invitationMode = InvitationMode.SINGLE_USE
         )
         var copied: String? = null
-        var systemShared: String? = null
-        var mode: InvitationMode? = null
         compose.setContent {
             SpanishTestTheme {
                 SaveShareScreen(
-                    SaveShareUiState(draft = draft, publicLink = publication.url, publication = publication),
-                    {}, {}, {},
-                    onCopyLink = { copied = it; true },
-                    onWhatsAppShare = { true },
-                    onSystemShare = { systemShared = it; true },
-                    onInvitationMode = { mode = it }
+                    SaveShareUiState(draft = draft, publicLink = publication.url,
+                        publication = publication, invitationMode = InvitationMode.SINGLE_USE),
+                    {}, {}, {}, onCopyLink = { copied = it; true }, onWhatsAppShare = { true }
                 )
             }
         }
-        compose.onNodeWithTag("invitation-mode-SINGLE_USE").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals(InvitationMode.SINGLE_USE, mode) }
         compose.onNodeWithText("Copiar enlace").performScrollTo().performClick()
-        assertEquals("https://example.invalid/i/abcdefghijklmnopqrstuvwx", copied)
-        compose.onNodeWithText("Compartir enlace de seguimiento").performScrollTo().performClick()
-        assertEquals("https://example.invalid/t/trackingtoken0123456789", systemShared)
+        assertEquals(link, copied)
+        compose.onNodeWithText("Compartir enlace de seguimiento").assertDoesNotExist()
     }
 }

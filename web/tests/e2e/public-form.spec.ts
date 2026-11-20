@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 import {initializeApp,deleteApp} from 'firebase/app';
 import {initializeAuth,inMemoryPersistence,connectAuthEmulator,createUserWithEmailAndPassword} from 'firebase/auth';
-import {getFirestore,connectFirestoreEmulator,doc,setDoc,writeBatch,serverTimestamp,getDocs,collection,query,where} from 'firebase/firestore';
+import {getFirestore,connectFirestoreEmulator,doc,setDoc,writeBatch,serverTimestamp,getDocs,collection,query,where,getDoc} from 'firebase/firestore';
 
 const id=`web-${crypto.randomUUID()}`;
 let owner:string;
@@ -30,4 +30,37 @@ test('public client validates, retries offline, sends once and survives reload',
 });
 test('unknown links show a clear error',async({page})=>{
  await page.goto('/f/missing-form');await expect(page.getByText('Este formulario no existe o ya no recibe solicitudes.')).toBeVisible();
+});
+
+test('single-use link survives a failed send and rejects a second browser',async({page,context,browser})=>{
+ const token='invitation'+crypto.randomUUID().replaceAll('-','');
+ const batch=writeBatch(db);
+ batch.update(doc(db,'forms',id),{publishedVersion:2});
+ batch.update(doc(db,'publishedForms',id),{version:2,responseAccess:'SINGLE_USE'});
+ batch.set(doc(db,'forms',id,'invitations',token),{ownerId:owner,token,active:true,used:false,version:2});
+ await batch.commit();
+ await page.goto(`/f/${id}`);
+ await expect(page.getByText('Este formulario no existe o ya no recibe solicitudes.')).toBeVisible();
+ await page.goto(`/i/${id}/${token}`);
+ await expect(page.getByRole('heading',{name:'Pedido web de prueba'})).toBeVisible();
+ await page.getByLabel('Nombre del pedido').fill('Invitación de prueba');
+ await context.setOffline(true);
+ await page.getByRole('button',{name:'Enviar solicitud'}).click();
+ await expect(page.getByRole('status')).toContainText('No se confirmó',{timeout:25000});
+ expect((await getDoc(doc(db,'forms',id,'invitations',token))).data()!.used).toBe(false);
+ await context.setOffline(false);
+ await page.getByRole('button',{name:'Enviar solicitud'}).click();
+ await expect(page.getByText('Tu solicitud se guardó correctamente. Gracias.')).toBeVisible({timeout:25000});
+ // Simulate a reload after the server confirmed but before the local completion flag was saved.
+ await page.evaluate(()=>{for(const key of Object.keys(sessionStorage)){const value=JSON.parse(sessionStorage.getItem(key)!);delete value.complete;sessionStorage.setItem(key,JSON.stringify(value));}});
+ await page.reload();
+ await expect(page.getByText('Tu solicitud ya fue enviada. Gracias.')).toBeVisible();
+ const second=await browser.newContext();
+ try {
+  const other=await second.newPage();
+  await other.goto(`/i/${id}/${token}`);
+  await expect(other.getByText('Este formulario no existe o ya no recibe solicitudes.')).toBeVisible();
+ }finally{await second.close();}
+ const responses=await getDocs(query(collection(db,'forms',id,'responses'),where('ownerId','==',owner)));
+ expect(responses.docs.filter(doc=>doc.data().invitationToken===token)).toHaveLength(1);
 });

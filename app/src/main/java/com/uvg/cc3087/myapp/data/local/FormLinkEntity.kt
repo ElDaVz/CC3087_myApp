@@ -8,24 +8,23 @@ data class FormLinkEntity(
     val ownerId: String,
     val formId: String,
     val singleUseToken: String?,
+    // Legacy column retained for non-destructive migration compatibility.
     val trackingToken: String
 ) {
     fun links(publicUrl: String) = FormLinks(
         openUrl = publicUrl,
-        singleUseUrl = singleUseToken?.let { "${publicUrl.substringBeforeLast("/f/")}/i/$it" },
-        trackingToken = trackingToken
+        singleUseUrl = singleUseToken?.let { "${publicUrl.substringBeforeLast("/f/")}/i/$formId/$it" }
     )
 
     companion object {
         fun from(owner: String, formId: String, links: FormLinks): FormLinkEntity {
-            val base = links.openUrl.substringBeforeLast("/f/")
             return FormLinkEntity(
                 ownerId = owner,
                 formId = formId,
                 singleUseToken = links.singleUseUrl?.substringAfterLast('/', "")?.takeIf {
                     it != links.openUrl.substringAfterLast('/') && it.length >= 20
                 },
-                trackingToken = checkNotNull(links.trackingToken?.takeIf { it.length >= 20 })
+                trackingToken = ""
             )
         }
     }

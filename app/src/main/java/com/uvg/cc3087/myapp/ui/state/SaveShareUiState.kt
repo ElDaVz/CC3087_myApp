@@ -19,10 +19,10 @@ data class SaveShareUiState(
     val responseCount: Int = 0,
     val formStatus: FormStatus = FormStatus.DRAFT
 ) {
-    val canShare: Boolean get() = !publicLink.isNullOrBlank()
+    val canShare: Boolean get() = !publicLink.isNullOrBlank() && !publishing &&
+        invitationMode == (publication?.invitationMode ?: InvitationMode.OPEN)
     val selectedLink: String? get() = when {
         invitationMode == InvitationMode.SINGLE_USE -> publication?.links?.singleUseUrl
         else -> publicLink
     }
-    val trackingLink: String? get() = publication?.links?.trackingUrl
 }

@@ -48,7 +48,7 @@ class RoomMigrationTest {
                     old.version = version
                 }
                 val db = Room.databaseBuilder(context, FormLinkDatabase::class.java, name)
-                    .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9, FormLinkDatabase.MIGRATION_9_10, FormLinkDatabase.MIGRATION_10_11).build()
+                    .addMigrations(FormLinkDatabase.MIGRATION_1_2, FormLinkDatabase.MIGRATION_2_3, FormLinkDatabase.MIGRATION_3_4, FormLinkDatabase.MIGRATION_4_5, FormLinkDatabase.MIGRATION_5_6, FormLinkDatabase.MIGRATION_6_7, FormLinkDatabase.MIGRATION_7_8, FormLinkDatabase.MIGRATION_8_9, FormLinkDatabase.MIGRATION_9_10, FormLinkDatabase.MIGRATION_10_11, FormLinkDatabase.MIGRATION_11_12).build()
                 try {
                     val draft = db.guestFormRepository().getDraft("old")!!
                     assertEquals("Conservar", draft.title)
@@ -61,9 +61,10 @@ class RoomMigrationTest {
                         assertTrue(db.guestImports().get("completed")!!.completed)
                         assertEquals("other-owner", db.guestImports().get("other")!!.ownerId)
                     }
-                    assertEquals(11, db.openHelper.readableDatabase.version)
+                    assertEquals(12, db.openHelper.readableDatabase.version)
                     assertNull(draft.ownerId)
                     if (version >= 5) {
+                        assertEquals("OPEN", db.cloud().publication("owner", "old")!!.invitationMode)
                         assertEquals("hash", db.cloud().publication("owner", "old")!!.fingerprint)
                         assertNull(db.cloud().publication("owner", "old")!!.coverUrl)
                     }

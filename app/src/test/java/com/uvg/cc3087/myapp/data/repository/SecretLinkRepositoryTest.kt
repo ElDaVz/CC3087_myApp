@@ -25,8 +25,9 @@ class SecretLinkRepositoryTest {
 
         assertEquals(first, second)
         assertNotEquals(first.singleUseUrl, other.singleUseUrl)
-        assertNotEquals(first.trackingToken, other.trackingToken)
-        assertTrue(first.trackingUrl!!.startsWith("$base/t/"))
+        assertTrue(first.singleUseUrl!!.startsWith("$base/i/f/"))
+        assertTrue(LinkTokens.isValid(first.singleUseUrl!!.substringAfterLast('/')))
+        assertEquals(first.singleUseUrl, first.withBase(base).singleUseUrl)
         assertEquals(setOf("a" to "f", "b" to "f"), store.saved.keys)
     }
 }

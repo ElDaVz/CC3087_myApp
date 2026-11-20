@@ -435,9 +435,6 @@
     <string name="sync_requested">Sincronización solicitada</string>
     <string name="invitation_open">Enlace abierto</string>
     <string name="invitation_single_use">Un solo uso</string>
-    <string name="tracking_link_notice">Enlace privado de seguimiento: solo tú puedes abrirlo. Nunca muestra respuestas.</string>
-    <string name="share_tracking_link">Compartir enlace de seguimiento</string>
-    <string name="share_error">No hay una app disponible para compartir este enlace</string>
     <string name="auth_google">Continuar con Google</string>
     <string name="profile_title">Perfil de contacto</string>
     <string name="profile_private_note">Estos contactos son privados e independientes del correo con el que inicias sesión.</string>

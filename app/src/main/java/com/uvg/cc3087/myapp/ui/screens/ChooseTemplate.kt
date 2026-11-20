@@ -55,17 +55,6 @@ fun ChooseTemplate(
                             contentDescription = stringResource(R.string.go_back)
                         )
                     }
-                },
-
-                actions = {
-
-                    IconButton(onClick = {}) {
-
-                        Icon(
-                            Icons.Outlined.MoreVert,
-                            contentDescription = null
-                        )
-                    }
                 }
             )
         },

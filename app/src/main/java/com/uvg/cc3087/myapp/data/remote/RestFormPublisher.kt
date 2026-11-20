@@ -12,9 +12,10 @@ import org.json.JSONObject
 import java.time.Instant
 import java.security.MessageDigest
 
-fun contentFingerprint(form: FormDraft, coverHash: String? = null, businessHash: String? = null): String = MessageDigest.getInstance("SHA-256")
+fun contentFingerprint(form: FormDraft, coverHash: String? = null, businessHash: String? = null, mode: InvitationMode = InvitationMode.OPEN): String = MessageDigest.getInstance("SHA-256")
     .digest((form.title + "\u0000" + form.fields.toString() + (coverHash?.let { "\u0000cover:$it" } ?: "")
-        + (businessHash?.let { "\u0000business:$it" } ?: "")).toByteArray()).joinToString("") { "%02x".format(it) }
+        + (businessHash?.let { "\u0000business:$it" } ?: "")
+        + (if (mode == InvitationMode.SINGLE_USE) "\u0000access:SINGLE_USE" else "")).toByteArray()).joinToString("") { "%02x".format(it) }
 
 class RestFormPublisher(private val client: FirestoreRest, private val source: RemoteFormSource,
     private val database: FormLinkDatabase, private val currentOwner: () -> String?,
@@ -67,13 +68,16 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
         val hash = when {
             form.coverAction == "REMOVE" -> null
             needsUpload(form, previous) -> try { prepare(form).hash }
-                catch (error: PublicationException) { return FormPublication(row.url, row.status, row.version, row.firstPublishedAt, false, row.coverUrl, links(owner, form.id, row.url)) }
+                catch (error: PublicationException) { return FormPublication(row.url, row.status, row.version, row.firstPublishedAt, false, row.coverUrl, links(owner, form.id, row.url), InvitationMode.valueOf(row.invitationMode)) }
             else -> previous?.hash
         }
         return FormPublication(row.url, row.status, row.version, row.firstPublishedAt,
-            row.fingerprint == contentFingerprint(form, hash), row.coverUrl, links(owner, form.id, row.url))
+            row.fingerprint == contentFingerprint(form, hash, mode = InvitationMode.valueOf(row.invitationMode)), row.coverUrl, links(owner, form.id, row.url), InvitationMode.valueOf(row.invitationMode))
     }
-    override suspend fun publish(owner: String, form: FormDraft): FormPublication = exclusive {
+    override suspend fun publish(owner: String, form: FormDraft): FormPublication =
+        publish(owner, form, database.cloud().publication(owner, form.id)?.invitationMode?.let(InvitationMode::valueOf) ?: InvitationMode.OPEN)
+
+    override suspend fun publish(owner: String, form: FormDraft, mode: InvitationMode): FormPublication = exclusive {
         checkSession(owner)
         if (FormDraftValidator.validate(form.title, form.fields) != FormValidationResult.READY)
             throw PublicationException(PublicationError.INVALID_FORM)
@@ -108,14 +112,25 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
         checkSession(owner)
         val business = businessLogo(owner, previousBusiness(oldPublic))
         val businessHash = business?.hash
-        val fingerprint = contentFingerprint(form, selected?.hash, businessHash)
+        val fingerprint = contentFingerprint(form, selected?.hash, businessHash, mode)
+        val publicUrl = "https://${client.project}.web.app/f/${form.id}"
+        var secret = links(owner, form.id, publicUrl)
+        val invitation = if (mode == InvitationMode.SINGLE_USE) secret.singleUseUrl?.substringAfterLast('/')?.let {
+            client.get(owner, "forms/${form.id}/invitations/$it")?.let(FirestoreRest::fields)
+        } else null
+        val renewInvitation = mode == InvitationMode.SINGLE_USE &&
+            (invitation?.get("used") == true || invitation?.get("active") == false ||
+                (oldPublic != null && oldPublic["responseAccess"] != mode.name))
+        if (renewInvitation) secret = checkNotNull(secretLinks).renewInvitation(owner, form.id, publicUrl)
         if (oldPublic?.get("fingerprint") !=
-            fingerprint || oldPublic["active"] != true) {
+            fingerprint || oldPublic["active"] != true ||
+            (mode == InvitationMode.SINGLE_USE && (invitation == null || renewInvitation))) {
             val version = ((oldPublic?.get("version") as? Number)?.toLong() ?: 0L) + 1
             val fields = form.fields.mapIndexed { i, field -> FormFieldWire.encode(field, i) +
                 mapOf("optionIds" to field.options.map { it.id }) }
             val publicValues = linkedMapOf<String, Any?>("ownerId" to owner, "title" to form.title,
                 "fields" to fields, "active" to true, "version" to version, "fingerprint" to fingerprint,
+                "responseAccess" to mode.name,
                 "templateType" to (form.templateType ?: "LEGACY"), "cover" to selected?.toWire(),
                 "business" to business?.let { logo ->
                     mapOf("name" to (profiles?.get(owner)?.businessName?.trim().orEmpty()), "logo" to logo.toWire())
@@ -132,35 +147,35 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
             if (remote["firstPublishedAt"] == null) privateTimes += "firstPublishedAt"
             if (database.drafts().getDraft(form.id)?.toDraft() != form)
                 throw PublicationException(PublicationError.DRAFT_CHANGED)
-            val secret = links(owner, form.id, "https://${client.project}.web.app/f/${form.id}")
             val writes = mutableListOf(
                 client.update("forms/${form.id}", privateValues, privateTimes, JSONObject().put("updateTime", privateDoc.getString("updateTime"))),
                 client.update("publishedForms/${form.id}", publicValues, times,
                     if (oldPublicDoc == null) JSONObject().put("exists", false) else JSONObject().put("updateTime", oldPublicDoc.getString("updateTime"))))
-            secret.trackingToken?.let { token ->
-                writes += client.update("forms/${form.id}/links/tracking",
-                    mapOf("ownerId" to owner, "token" to token, "active" to true))
-                writes += client.update("forms/${form.id}/links/trackingSummary",
-                    mapOf("ownerId" to owner, "submissions" to 0, "pending" to 0, "inProgress" to 0, "completed" to 0))
-            }
-            secret.singleUseUrl?.substringAfterLast('/')?.let { token ->
+            if (mode == InvitationMode.SINGLE_USE) {
+                val token = checkNotNull(secret.singleUseUrl).substringAfterLast('/')
                 writes += client.update("forms/${form.id}/invitations/$token",
-                    mapOf("ownerId" to owner, "token" to token, "active" to true, "used" to false))
+                    mapOf("ownerId" to owner, "token" to token, "active" to true, "used" to false, "version" to version))
+                writes += client.update("forms/${form.id}/links/invitation", mapOf(
+                    "ownerId" to owner, "token" to token))
             }
             client.commit(owner, writes)
         }
         checkSession(owner)
         val confirmed = FirestoreRest.fields(checkNotNull(client.get(owner, "publishedForms/${form.id}")))
+        checkSession(owner)
+        if (mode == InvitationMode.SINGLE_USE) {
+            secretLinks?.restoreInvitation(owner, form.id, publicUrl, checkNotNull(secret.singleUseUrl).substringAfterLast('/'))
+        }
         val cover = CoverAsset.fromWire(confirmed["cover"])
         val row = PublicationEntity(form.id, owner, "PUBLISHED", "https://${client.project}.web.app/f/${form.id}",
             (confirmed["publishedAt"] as Instant).toEpochMilli(), (confirmed["version"] as Number).toLong(),
-            confirmed["fingerprint"] as String, (confirmed["firstPublishedAt"] as Instant).toEpochMilli(), cover?.url, cover?.publicId, cover?.hash)
+            confirmed["fingerprint"] as String, (confirmed["firstPublishedAt"] as Instant).toEpochMilli(), cover?.url, cover?.publicId, cover?.hash, confirmed["responseAccess"] as? String ?: "OPEN")
         database.cloud().savePublication(row)
         analytics.firstPublished(form, System.currentTimeMillis(),
             (confirmed["firstFieldCount"] as? Number)?.toInt() ?: form.fields.size,
             confirmed["firstTemplateType"] as? String ?: form.templateType ?: "LEGACY")
         FormPublication(row.url, row.status, row.version, row.firstPublishedAt, row.fingerprint == fingerprint,
-            cover?.url, links(owner, form.id, row.url))
+            cover?.url, links(owner, form.id, row.url), InvitationMode.valueOf(row.invitationMode))
     }
     suspend fun refresh(owner: String) {
         val docs = client.query(owner, "publishedForms")
@@ -169,9 +184,15 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
             val row = FirestoreRest.fields(doc)
             val cover = CoverAsset.fromWire(row["cover"])
             val id = doc.getString("name").substringAfterLast('/')
+            if (row["responseAccess"] == InvitationMode.SINGLE_USE.name) {
+                val pointer = client.get(owner, "forms/$id/links/invitation")?.let(FirestoreRest::fields)
+                (pointer?.get("token") as? String)?.let { token ->
+                    secretLinks?.restoreInvitation(owner, id, "https://${client.project}.web.app/f/$id", token)
+                }
+            }
             database.cloud().savePublication(PublicationEntity(id, owner, if (row["active"] == true) "PUBLISHED" else "ARCHIVED",
                 "https://${client.project}.web.app/f/$id", (row["publishedAt"] as Instant).toEpochMilli(),
-                (row["version"] as Number).toLong(), row["fingerprint"] as String, (row["firstPublishedAt"] as Instant).toEpochMilli(), cover?.url, cover?.publicId, cover?.hash))
+                (row["version"] as Number).toLong(), row["fingerprint"] as String, (row["firstPublishedAt"] as Instant).toEpochMilli(), cover?.url, cover?.publicId, cover?.hash, row["responseAccess"] as? String ?: "OPEN"))
         }
     }
     override suspend fun archive(owner: String, formId: String) {

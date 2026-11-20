@@ -136,3 +136,21 @@ test('Cloudinary banner loads responsively and falls back when the image fails',
  await expect(page.locator('.form-banner img')).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Enviar solicitud'})).toBeVisible();
 });
+
+// Exercises the real renderer, including the branch that previously threw NotFoundError.
+test('business logo renders on the left and absent or broken logos leave no business element', async ({page}) => {
+ const logo={url:'https://res.cloudinary.com/uxrkjzti/image/upload/fixture/logo.png',publicId:'fixture/logo',hash:'a'.repeat(64)};
+ await page.route(logo.url,route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><rect width="100" height="40" fill="purple"/></svg>'}));
+ await fixture(page,{...form,business:{name:'Empresa de prueba',logo}});
+ await expect(page.getByRole('heading',{name:form.title})).toBeVisible();
+ await expect(page.locator('.business-identity')).toBeVisible();
+ const business=await page.locator('.business-identity').boundingBox();
+ const brand=await page.locator('.brand').boundingBox();
+ expect(business!.x).toBeLessThan(brand!.x);
+ await page.locator('.business-identity img').evaluate(img=>img.dispatchEvent(new Event('error')));
+ await expect(page.locator('.business-identity')).toHaveCount(0);
+ await fixture(page);
+ await expect(page.getByRole('heading',{name:form.title})).toBeVisible();
+ await expect(page.locator('.business-identity')).toHaveCount(0);
+ await expect(page.locator('.site-context')).toHaveCount(0);
+});

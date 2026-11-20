@@ -2,23 +2,19 @@ package com.uvg.cc3087.myapp.data.repository
 
 import java.security.SecureRandom
 
-/** Invitation visibility. Tracking links are always secret and owner-only. */
+/** Published response access policy. */
 enum class InvitationMode { OPEN, SINGLE_USE }
 
 data class FormLinks(
     val openUrl: String,
-    val singleUseUrl: String? = null,
-    val trackingToken: String? = null
+    val singleUseUrl: String? = null
 ) {
-    val trackingUrl: String? get() = tokenUrl(base = openUrl.substringBeforeLast("/f/"), token = trackingToken, kind = "t")
-    val shareUrl: String get() = singleUseUrl ?: openUrl
-
     fun withBase(base: String): FormLinks {
         val formId = openUrl.substringAfterLast('/')
         val root = base.trimEnd('/')
         return copy(
             openUrl = "$root/f/$formId",
-            singleUseUrl = singleUseUrl?.substringAfterLast('/')?.let { "$root/i/$it" }
+            singleUseUrl = singleUseUrl?.substringAfterLast('/')?.let { "$root/i/$formId/$it" }
         )
     }
 }
