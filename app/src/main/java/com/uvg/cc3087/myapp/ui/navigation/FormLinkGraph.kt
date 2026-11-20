@@ -29,7 +29,6 @@ import com.uvg.cc3087.myapp.ui.screens.Forms
 import com.uvg.cc3087.myapp.ui.screens.ResponseDashboardScreen
 import com.uvg.cc3087.myapp.ui.screens.SaveShareScreen
 import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
-import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
@@ -170,52 +169,48 @@ internal fun FormLinkGraph(
                         while (isActive) { fieldAnalytics.checkCalendar(); delay(30_000) }
                     }
                 }
-                MyappTheme(dynamicColor = false) {
-                    ResponseDashboardScreen(
-                        state = state,
-                        listState = dashboardList,
-                        onForm = dashboard::selectForm,
-                        onPeriod = dashboard::selectPeriod,
-                        onInbox = {
-                            requestList.requestScrollToItem(0)
-                            navigator.navigate(AppRoute.Responses(InboxFilter.fromKey(it?.name ?: "ALL")))
-                        },
-                        onUnknown = {
-                            requestList.requestScrollToItem(0)
-                            navigator.navigate(AppRoute.Responses(InboxFilter.UNKNOWN))
-                        },
-                        onOpen = { navigator.navigate(AppRoute.RequestDetail(it.formId, it.responseId)) },
-                        onBack = { navigator.backFrom(route) },
-                        onRefresh = { dashboard.refresh(); fieldAnalytics.retry() },
-                        syncMessage = syncMessage,
-                        isDemo = requestsAreDemo,
-                        analyticsState = fieldState,
-                        onAnalyticsRetry = fieldAnalytics::retry
-                    )
-                }
+                ResponseDashboardScreen(
+                    state = state,
+                    listState = dashboardList,
+                    onForm = dashboard::selectForm,
+                    onPeriod = dashboard::selectPeriod,
+                    onInbox = {
+                        requestList.requestScrollToItem(0)
+                        navigator.navigate(AppRoute.Responses(InboxFilter.fromKey(it?.name ?: "ALL")))
+                    },
+                    onUnknown = {
+                        requestList.requestScrollToItem(0)
+                        navigator.navigate(AppRoute.Responses(InboxFilter.UNKNOWN))
+                    },
+                    onOpen = { navigator.navigate(AppRoute.RequestDetail(it.formId, it.responseId)) },
+                    onBack = { navigator.backFrom(route) },
+                    onRefresh = { dashboard.refresh(); fieldAnalytics.retry() },
+                    syncMessage = syncMessage,
+                    isDemo = requestsAreDemo,
+                    analyticsState = fieldState,
+                    onAnalyticsRetry = fieldAnalytics::retry
+                )
             }
             entry<AppRoute.Responses> { route ->
                 var status by rememberSaveable { mutableStateOf(route.filter) }
                 val state by dashboard.uiState.collectAsStateWithLifecycle()
-                MyappTheme(dynamicColor = false) {
-                    ResponsesRoute(
-                        state = state,
-                        status = status,
-                        list = requestList,
-                        onForm = dashboard::selectForm,
-                        onPeriod = dashboard::selectPeriod,
-                        onStatus = {
-                            status = it
-                            requestList.requestScrollToItem(0)
-                        },
-                        onOpen = { navigator.navigate(AppRoute.RequestDetail(it.formId, it.responseId)) },
-                        onBack = { navigator.backFrom(route) },
-                        onForms = navigator::showForms,
-                        onRefresh = dashboard::refresh,
-                        syncMessage = syncMessage,
-                        isDemo = requestsAreDemo
-                    )
-                }
+                ResponsesRoute(
+                    state = state,
+                    status = status,
+                    list = requestList,
+                    onForm = dashboard::selectForm,
+                    onPeriod = dashboard::selectPeriod,
+                    onStatus = {
+                        status = it
+                        requestList.requestScrollToItem(0)
+                    },
+                    onOpen = { navigator.navigate(AppRoute.RequestDetail(it.formId, it.responseId)) },
+                    onBack = { navigator.backFrom(route) },
+                    onForms = navigator::showForms,
+                    onRefresh = dashboard::refresh,
+                    syncMessage = syncMessage,
+                    isDemo = requestsAreDemo
+                )
             }
             entry<AppRoute.RequestDetail> { route ->
                 RequestDetailRoute(
