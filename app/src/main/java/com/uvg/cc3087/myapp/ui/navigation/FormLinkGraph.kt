@@ -132,6 +132,11 @@ internal fun FormLinkGraph(
                 Forms(
                     uiState = state,
                     onFilterSelected = forms::selectFilter,
+                    onOpenSearch = forms::openSearch,
+                    onSearchQueryChange = forms::updateSearch,
+                    onClearSearch = forms::clearSearch,
+                    onCloseSearch = forms::closeSearch,
+                    onResetSearchAndFilter = forms::resetSearchAndFilter,
                     guestImportNotice = guestImportNotice,
                     syncMessage = syncMessage,
                     onAccountClick = if (accountContent != null) {

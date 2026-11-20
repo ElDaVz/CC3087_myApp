@@ -70,10 +70,14 @@ class BackendRootTest {
             compose.onAllNodesWithText("Al día en la última comprobación", useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithContentDescription("Buscar formularios").performClick()
+        compose.onNodeWithTag("forms-search").performTextInput("Pedido UI")
+        compose.onNodeWithTag("forms-search").performImeAction()
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
         compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
         signOutFromAccount(services.auth)
+        compose.onNodeWithTag("forms-search").assertDoesNotExist()
         compose.onNodeWithText(title, useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithText(guestTitle, useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("Cuenta").performClick()
@@ -81,6 +85,7 @@ class BackendRootTest {
         compose.onNodeWithText("Contraseña").performTextInput("password123")
         compose.onNode(hasText("Iniciar sesión") and hasClickAction()).performScrollTo().performClick()
         assertFormTitleDisplayed(title)
+        compose.onNodeWithTag("forms-search").assertDoesNotExist()
         compose.onNodeWithContentDescription("Cuenta").performClick()
         compose.onNodeWithText("Correo electrónico").assertDoesNotExist()
         compose.onNodeWithText("¿Olvidaste tu contraseña?").assertDoesNotExist()
@@ -143,6 +148,20 @@ class BackendRootTest {
         restoration.emulateSavedInstanceStateRestore()
         compose.onNode(hasSetTextAction() and hasText(title)).assertExists()
         compose.onNodeWithText("Editar formulario").assertExists()
+    }
+
+    @Test fun guestSearchRestoresThroughTheEncryptedSessionOwner() {
+        val restoration = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+        restoration.setContent { SpanishTestTheme { FormLinkApp() } }
+        compose.onNodeWithContentDescription("Buscar formularios").performClick()
+        compose.onNodeWithTag("forms-search").performTextInput("Búsqueda sintética")
+        compose.onNodeWithTag("forms-search").performImeAction()
+        compose.onNodeWithText("Borradores").performClick()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithTag("forms-search").assertTextContains("Búsqueda sintética")
+        compose.onNodeWithText("Borradores").assertIsSelected()
+        compose.onNodeWithContentDescription("Cerrar búsqueda").performClick()
+        compose.onNodeWithTag("forms-search").assertDoesNotExist()
     }
 
     @Test fun guestCanUseTheAppAndOpenTheAccountScreenWithScopedViewModels() {

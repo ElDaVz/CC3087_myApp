@@ -1,5 +1,25 @@
 package com.uvg.cc3087.myapp.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Clear
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import com.uvg.cc3087.myapp.ui.state.FormsEmptyReason
 import androidx.annotation.StringRes
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,7 +30,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -63,7 +82,7 @@ import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun Forms(
     uiState: FormsUiState,
@@ -83,11 +102,37 @@ fun Forms(
     onConfirmDeletion: () -> Unit = {},
     onDismissDeletion: () -> Unit = {},
     onConsumeDeletionCompleted: () -> Unit = {},
-    guestImportNotice: @Composable () -> Unit = {}
+    guestImportNotice: @Composable () -> Unit = {},
+    onOpenSearch: () -> Unit = {},
+    onSearchQueryChange: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {},
+    onCloseSearch: () -> Unit = {},
+    onResetSearchAndFilter: () -> Unit = {}
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    val listState = rememberLazyListState()
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    var requestSearchFocus by remember { mutableStateOf(false) }
+    fun closeSearch() {
+        keyboard?.hide()
+        focusManager.clearFocus()
+        requestSearchFocus = false
+        onCloseSearch()
+    }
+    // Android consumes Back while the IME is visible; the next Back closes search.
+    BackHandler(enabled = uiState.searchExpanded && !WindowInsets.isImeVisible) { closeSearch() }
+    LaunchedEffect(uiState.searchExpanded, requestSearchFocus) {
+        if (uiState.searchExpanded && requestSearchFocus) {
+            focusRequester.requestFocus()
+            keyboard?.show()
+            requestSearchFocus = false
+        }
+    }
 
     // el snackbar hace visible cada interacción mientras conectamos la navegación
     fun showMessage(@StringRes messageResId: Int, vararg formatArgs: Any) {
@@ -136,7 +181,10 @@ fun Forms(
                     if (onAccountClick != null) IconButton(onClick = onAccountClick) {
                         Icon(Icons.Outlined.AccountCircle, stringResource(R.string.account_title))
                     }
-                    IconButton(onClick = { showMessage(R.string.search_selected) }) {
+                    IconButton(onClick = {
+                        requestSearchFocus = true
+                        onOpenSearch()
+                    }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = stringResource(R.string.search_forms)
@@ -156,66 +204,106 @@ fun Forms(
             FormsBottomBar(onMessage = ::showMessage, onResponsesClick = onResponsesClick, hasUnreadResponses = hasUnreadResponses, onSettingsClick = onSettingsClick)
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(
-                horizontal = 16.dp,
-                vertical = 24.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item(key = "guest-import") { guestImportNotice() }
-            item(key = "forms-controls") {
-                FormsControls(
-                    selectedFilter = uiState.selectedFilter,
-                    onFilterSelected = onFilterSelected,
-                    onNewFormClick = onNewFormClick
+        Column(Modifier.fillMaxSize().padding(innerPadding)) {
+            if (uiState.searchExpanded) {
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = { query ->
+                        onSearchQueryChange(query)
+                        coroutineScope.launch { listState.scrollToItem(0) }
+                    },
+                    label = { Text(stringResource(R.string.search_forms_label)) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        .testTag("forms-search").focusRequester(focusRequester),
+                    singleLine = true,
+                    leadingIcon = {
+                        IconButton(onClick = ::closeSearch) {
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.close_forms_search))
+                        }
+                    },
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) IconButton(onClick = onClearSearch) {
+                            Icon(Icons.Outlined.Clear, stringResource(R.string.clear_forms_search))
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        keyboard?.hide()
+                        focusManager.clearFocus()
+                    })
                 )
             }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().testTag("forms-list"),
+                contentPadding = PaddingValues(
+                    horizontal = 16.dp,
+                    vertical = 24.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item(key = "guest-import") { guestImportNotice() }
+                item(key = "forms-controls") {
+                    FormsControls(
+                        selectedFilter = uiState.selectedFilter,
+                        onFilterSelected = onFilterSelected,
+                        onNewFormClick = onNewFormClick
+                    )
+                }
 
-            if (uiState.status != FormsLoadStatus.CONTENT) {
-                item(key = "forms-status") {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        if (uiState.status == FormsLoadStatus.LOADING) CircularProgressIndicator()
-                        Text(stringResource(when {
-                            uiState.status == FormsLoadStatus.LOADING -> R.string.forms_loading
-                            uiState.status == FormsLoadStatus.ERROR -> R.string.forms_load_error
-                            uiState.selectedFilter == FormFilter.ALL -> R.string.forms_empty
-                            else -> R.string.forms_filter_empty
-                        }))
-                        if (uiState.status == FormsLoadStatus.ERROR) {
-                            OutlinedButton(onClick = onRetryLoad) { Text(stringResource(R.string.retry)) }
+                if (uiState.status != FormsLoadStatus.CONTENT) {
+                    item(key = "forms-status") {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            if (uiState.status == FormsLoadStatus.LOADING) CircularProgressIndicator()
+                            Text(stringResource(when {
+                                uiState.status == FormsLoadStatus.LOADING -> R.string.forms_loading
+                                uiState.status == FormsLoadStatus.ERROR -> R.string.forms_load_error
+                                uiState.emptyReason == FormsEmptyReason.SEARCH -> R.string.forms_search_empty
+                                uiState.emptyReason == FormsEmptyReason.FILTER -> R.string.forms_filter_empty
+                                else -> R.string.forms_empty
+                            }))
+                            if (uiState.status == FormsLoadStatus.ERROR) {
+                                OutlinedButton(onClick = onRetryLoad) { Text(stringResource(R.string.retry)) }
+                            }
+                            if (uiState.status == FormsLoadStatus.EMPTY &&
+                                (uiState.searchQuery.isNotBlank() || uiState.selectedFilter != FormFilter.ALL)) {
+                                if (uiState.searchQuery.isNotBlank()) TextButton(onClick = onClearSearch) {
+                                    Text(stringResource(R.string.clear_forms_search))
+                                }
+                                TextButton(onClick = onResetSearchAndFilter) {
+                                    Text(stringResource(R.string.reset_forms_search))
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            // usamos el id real para que compose identifique cada elemento correctamente
-            items(
-                items = uiState.forms,
-                key = { form -> form.id }
-            ) { form ->
-                FormListItem(
-                    form = form,
-                    onClick = { onFormClick(form) },
-                    onShareClick = { onShareFormClick(form) },
-                    onEditClick = { onFormClick(form) },
-                    shareEnabled = form.id != unsavedDraftId,
-                    onDeleteClick = { onDeleteFormClick(form) },
-                    deleteEnabled = form.id != unsavedDraftId && !uiState.deletion.inProgress
-                )
+                // usamos el id real para que compose identifique cada elemento correctamente
+                items(
+                    items = uiState.forms,
+                    key = { form -> form.id }
+                ) { form ->
+                    FormListItem(
+                        form = form,
+                        onClick = { onFormClick(form) },
+                        onShareClick = { onShareFormClick(form) },
+                        onEditClick = { onFormClick(form) },
+                        shareEnabled = form.id != unsavedDraftId,
+                        onDeleteClick = { onDeleteFormClick(form) },
+                        deleteEnabled = form.id != unsavedDraftId && !uiState.deletion.inProgress
+                    )
+                }
             }
         }
     }
 }
 
 // dejamos los controles separados para que la pantalla principal sea fácil de leer
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FormsControls(
     selectedFilter: FormFilter,
@@ -228,10 +316,10 @@ private fun FormsControls(
             .padding(bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = stringResource(R.string.my_forms),
@@ -240,7 +328,6 @@ private fun FormsControls(
 
             Button(
                 onClick = onNewFormClick,
-                modifier = Modifier.height(40.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
                 Icon(
@@ -252,7 +339,7 @@ private fun FormsControls(
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FormFilter.entries.forEach { filter ->
                 val labelResId = when (filter) {
                     FormFilter.ALL -> R.string.filter_all
