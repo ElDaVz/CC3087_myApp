@@ -6,7 +6,8 @@ import kotlinx.coroutines.flow.Flow
 @Entity(tableName = "form_publications")
 data class PublicationEntity(@PrimaryKey val formId: String, val ownerId: String, val status: String,
     val url: String, val publishedAt: Long, val version: Long, val fingerprint: String,
-    val firstPublishedAt: Long, val coverUrl: String? = null, val coverPublicId: String? = null, val coverHash: String? = null)
+    val firstPublishedAt: Long, val coverUrl: String? = null, val coverPublicId: String? = null, val coverHash: String? = null,
+    @ColumnInfo(defaultValue = "'OPEN'") val invitationMode: String = "OPEN")
 
 @Entity(tableName = "remote_requests", primaryKeys = ["ownerId", "formId", "responseId"])
 data class RemoteRequestEntity(val ownerId: String, val formId: String, val responseId: String,

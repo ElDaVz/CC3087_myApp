@@ -9,7 +9,6 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, clas
 
 function shell(root: HTMLElement, form?: PublishedForm) {
   const brand = node('header', undefined, 'site-header');
-  const context = node('span', 'Formulario de solicitud', 'site-context');
   const logoUrl = form ? businessLogoUrl(form.business) : null;
   if (logoUrl) {
     const business = node('div', undefined, 'business-identity');
@@ -22,8 +21,9 @@ function shell(root: HTMLElement, form?: PublishedForm) {
     business.append(image);
     const name = businessName(form!.business ?? null);
     if (name) business.append(node('span', name, 'business-name'));
-    brand.replaceChild(business, context);
-  } else brand.append(context);
+    image.addEventListener('error', () => business.remove(), {once: true});
+    brand.append(business);
+  }
   const identity = node('div', undefined, 'brand');
   const logo = node('img');
   logo.src = '/formlink-logo.svg';

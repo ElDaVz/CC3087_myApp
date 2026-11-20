@@ -68,6 +68,7 @@ class SaveShareViewModel(
                     val publication = draft?.let { repository.publication(id) }
                     mutableUiState.value = SaveShareUiState(
                         draft = draft, publication = publication,
+                        invitationMode = publication?.invitationMode ?: InvitationMode.OPEN,
                         publicLink = publication?.takeIf { it.status == "PUBLISHED" }?.url,
                         loadError = if (draft == null) DraftLoadError.NOT_FOUND else null
                     ).withSummary()
@@ -90,10 +91,11 @@ class SaveShareViewModel(
         mutableUiState.value = state.copy(publishing = true, publishError = null)
         viewModelScope.launch {
             try {
-                val published = repository.publish(id)
+                val published = repository.publish(id, state.invitationMode)
                 if (revision != operationRevision) return@launch
                 mutableUiState.value = mutableUiState.value.copy(
                     publication = published, publicLink = published.url, publishing = false,
+                    invitationMode = published.invitationMode,
                     formStatus = if (published.status == "PUBLISHED") FormStatus.ACTIVE else mutableUiState.value.formStatus
                 )
             } catch (cancelled: CancellationException) { throw cancelled }

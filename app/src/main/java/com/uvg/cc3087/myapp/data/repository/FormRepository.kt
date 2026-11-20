@@ -12,6 +12,7 @@ interface FormRepository {
     fun observePublishedCoverUrl(id: String): Flow<String?> = kotlinx.coroutines.flow.flowOf(null)
     suspend fun publication(id: String): FormPublication? = null
     suspend fun publish(id: String): FormPublication = throw PublicationException(PublicationError.SETUP_REQUIRED)
+    suspend fun publish(id: String, mode: InvitationMode): FormPublication = publish(id)
     suspend fun archive(id: String) { throw PublicationException(PublicationError.UNAVAILABLE) }
     /** Removes the form locally and queues public closure for account forms.
      * Received request snapshots and reading history survive. Cloudinary assets are retained.

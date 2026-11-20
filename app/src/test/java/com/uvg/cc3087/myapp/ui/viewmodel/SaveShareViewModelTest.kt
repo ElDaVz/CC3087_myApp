@@ -118,7 +118,7 @@ class SaveShareViewModelTest {
         val pending = kotlinx.coroutines.CompletableDeferred<com.uvg.cc3087.myapp.data.repository.FormPublication>()
         var calls = 0
         val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
-            override suspend fun publish(id: String): com.uvg.cc3087.myapp.data.repository.FormPublication { calls++; return pending.await() }
+            override suspend fun publish(id: String, mode: com.uvg.cc3087.myapp.data.repository.InvitationMode): com.uvg.cc3087.myapp.data.repository.FormPublication { calls++; return pending.await() }
         }
         val model = model(repository); model.openDraft(draft.id); runCurrent()
         model.publish(); model.publish(); runCurrent()
@@ -128,7 +128,7 @@ class SaveShareViewModelTest {
     }
     @Test fun failedPublicationRemainsRetryableWithoutInventingALink() = runTest {
         val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
-            override suspend fun publish(id: String): com.uvg.cc3087.myapp.data.repository.FormPublication = throw IOException("network")
+            override suspend fun publish(id: String, mode: com.uvg.cc3087.myapp.data.repository.InvitationMode): com.uvg.cc3087.myapp.data.repository.FormPublication = throw IOException("network")
         }
         val model = model(repository); model.openDraft(draft.id); runCurrent(); model.publish(); runCurrent()
         assertEquals(PublicationError.PUBLISH_FAILED, model.uiState.value.publishError)
@@ -136,7 +136,7 @@ class SaveShareViewModelTest {
     }
     @Test fun publicationFailureKeepsItsReasonForTheUiToTranslate() = runTest {
         val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
-            override suspend fun publish(id: String): com.uvg.cc3087.myapp.data.repository.FormPublication =
+            override suspend fun publish(id: String, mode: com.uvg.cc3087.myapp.data.repository.InvitationMode): com.uvg.cc3087.myapp.data.repository.FormPublication =
                 throw PublicationException(PublicationError.COVER_UPLOAD_FAILED)
         }
         val model = model(repository)
@@ -156,7 +156,7 @@ class SaveShareViewModelTest {
         val pending = kotlinx.coroutines.CompletableDeferred<com.uvg.cc3087.myapp.data.repository.FormPublication>()
         val other = draft.copy(id = "other")
         val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft, other)) {
-            override suspend fun publish(id: String) = pending.await()
+            override suspend fun publish(id: String, mode: com.uvg.cc3087.myapp.data.repository.InvitationMode) = pending.await()
         }
         val model = model(repository); model.openDraft(draft.id); runCurrent(); model.publish(); runCurrent()
         model.openDraft(other.id); runCurrent()

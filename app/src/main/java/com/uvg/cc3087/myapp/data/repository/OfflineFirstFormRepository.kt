@@ -45,6 +45,12 @@ class OfflineFirstFormRepository(
         val form = getDraft(id) ?: throw PublicationException(PublicationError.FORM_NOT_FOUND)
         return (publisher ?: throw PublicationException(PublicationError.BACKEND_NOT_CONFIGURED)).publish(user, form)
     }
+    override suspend fun publish(id: String, mode: InvitationMode): FormPublication {
+        checkSession()
+        val user = owner ?: throw PublicationException(PublicationError.SIGN_IN_REQUIRED)
+        val form = getDraft(id) ?: throw PublicationException(PublicationError.FORM_NOT_FOUND)
+        return (publisher ?: throw PublicationException(PublicationError.BACKEND_NOT_CONFIGURED)).publish(user, form, mode)
+    }
     override suspend fun archive(id: String) {
         checkSession()
         checkNotNull(publisher).archive(checkNotNull(owner), id)

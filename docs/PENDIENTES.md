@@ -427,3 +427,15 @@ Comandos reproducibles:
 ./gradlew compileDebugKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest -PfirebaseEmulators=true --no-configuration-cache --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process
 backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore './gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-configuration-cache --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process'
 ```
+
+
+## Corrección previa a compartir — 2026-11-20
+
+- Corregido el render del logo empresarial web: arriba a la izquierda, sin elemento cuando falta o falla la imagen y sin recortar el logo.
+- Invitaciones con URL `/i/{formId}/{token}` y rewrite de Hosting. El modo OPEN/SINGLE_USE se confirma al publicar, se conserva en Room v12 y se descarga con la publicación. Mantener migraciones anteriores; nueva migración no destructiva v11→v12.
+- Consumo de invitación, respuesta y recibo en una operación atómica. Se rechazan envíos sin token en modo restringido, reutilizaciones y reinicios de enlaces usados. Reintentos y recuperación por recibo no duplican respuestas. Republicar conserva invitaciones pendientes y genera una nueva si la anterior se consumió; cambiar de modo invalida las anteriores. El enlace controla el envío, no la confidencialidad de las preguntas.
+- Retirados el seguimiento ficticio, sus contadores fijos/escrituras/reglas, botón, ruta y pruebas redundantes. Se conserva la columna histórica de Room para compatibilidad, sin generar tokens de seguimiento. Seguimiento real por solicitud sigue pendiente.
+- Retirado el menú sin acción de Plantillas. Las plantillas locales y fixtures de pruebas que siguen teniendo consumidores se conservan.
+- Verificación local: compilación Kotlin y de pruebas instrumentadas; 257 pruebas unitarias Android, 9 unitarias web, 14 de reglas Firebase y 15 de navegador. Recuperación tras confirmación sin marca local comprobada en el recorrido de navegador. Sin dispositivo ADB conectado ni KVM: no se ejecutaron pruebas instrumentadas Android en esta revisión.
+- Google queda sin cambios en este commit. La propiedad local de OAuth del usuario no se incluye.
+- Producción pendiente: desplegar conjuntamente reglas Firestore y web/Hosting, instalar la nueva app y republicar antes de compartir invitaciones nuevas. Los enlaces antiguos `/i/{token}` carecen del ID del formulario; deben reemplazarse desde la app. No se desplegó ni publicó la rama durante esta revisión.

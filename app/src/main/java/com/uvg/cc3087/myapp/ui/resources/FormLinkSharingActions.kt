@@ -19,21 +19,6 @@ internal fun copyFormLink(context: Context, link: String): Boolean = try {
     false
 }
 
-internal fun shareFormLink(context: Context, link: String): Boolean {
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, link)
-    }
-    return try {
-        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share)))
-        true
-    } catch (_: ActivityNotFoundException) {
-        false
-    } catch (_: SecurityException) {
-        false
-    }
-}
-
 internal fun shareFormLinkOnWhatsApp(context: Context, link: String): Boolean {
     for (packageName in listOf("com.whatsapp", "com.whatsapp.w4b")) {
         val intent = Intent(Intent.ACTION_SEND).apply {

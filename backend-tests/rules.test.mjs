@@ -67,19 +67,20 @@ test('ownership transfer, publication and device paths are rejected', async () =
 });
 const config = {placeholder:'',allowMultipleAnswers:false,includeTime:false,disallowPastDates:false,allowDecimals:false,minimum:'1',maximum:'10',unit:'',options:[{id:'a',label:'A'},{id:'b',label:'B'}]};
 const field = (id='q', type='SHORT_TEXT') => ({id,type,label:'Pregunta',description:'',required:true,position:0,optionIds:['a','b'],config:{...config,allowMultipleAnswers:type==='CHECKBOX_GROUP'}});
-async function publish(fields=[field()],cover) {
+async function publish(fields=[field()],cover,responseAccess='OPEN') {
  const db=environment.authenticatedContext('owner').firestore();
  await setDoc(doc(db,'forms/f'),{...draft('owner'),fields});
  const batch=writeBatch(db);
  batch.update(doc(db,'forms/f'),{status:'PUBLISHED',publishedAt:serverTimestamp(),publishedVersion:1});
- batch.set(doc(db,'publishedForms/f'),{ownerId:'owner',title:'Pedido real',fields,active:true,version:1,fingerprint:'test',templateType:'ORDER_FORM',...(cover?{cover}:{}),publishedAt:serverTimestamp(),firstPublishedAt:serverTimestamp()});
+ batch.set(doc(db,'publishedForms/f'),{ownerId:'owner',title:'Pedido real',fields,active:true,version:1,fingerprint:'test',templateType:'ORDER_FORM',responseAccess,...(cover?{cover}:{}),publishedAt:serverTimestamp(),firstPublishedAt:serverTimestamp()});
  await assertSucceeds(batch.commit());
  return (await getDoc(doc(db,'publishedForms/f'))).data();
 }
-function response(db,p,values,id='00000000-0000-4000-8000-000000000001') {
+function response(db,p,values,id='00000000-0000-4000-8000-000000000001',invitationToken) {
  const batch=writeBatch(db);
+ if(invitationToken)batch.update(doc(db,'forms/f/invitations',invitationToken),{used:true,responseId:id});
  for(const part of [0,1])batch.set(doc(db,`forms/f/responseChecks/${id}_${part}`),{attemptId:id,part,answers:p.fields.map((f,i)=>({fieldId:f.id,value:values[i]}))});
- batch.set(doc(db,`forms/f/responses/${id}`),{ownerId:'owner',formId:'f',attemptId:id,title:p.title,fields:p.fields,version:p.version,submittedAt:serverTimestamp(),status:'PENDING',answers:p.fields.map((f,i)=>({fieldId:f.id,value:values[i]}))});
+ batch.set(doc(db,`forms/f/responses/${id}`),{ownerId:'owner',formId:'f',attemptId:id,title:p.title,fields:p.fields,version:p.version,submittedAt:serverTimestamp(),status:'PENDING',...(invitationToken?{invitationToken}:{}),answers:p.fields.map((f,i)=>({fieldId:f.id,value:values[i]}))});
  batch.set(doc(db,`publishedForms/f/receipts/${id}`),{responseId:id,formId:'f',version:p.version,submittedAt:serverTimestamp()});
  return batch.commit();
 }
@@ -119,34 +120,45 @@ test('private edits stay private and archiving preserves previous submissions',a
  await assertSucceeds(getDoc(doc(owner,'forms/f/responses/00000000-0000-4000-8000-000000000001')));
  await assertFails(deleteDoc(doc(owner,'forms/f')));
 });
-test('single-use invitations validate on load and can be claimed only once', async () => {
- const p=await publish();
+test('invitations are required, atomically consumed and cannot be reset', async () => {
+ const types=['SHORT_TEXT','PARAGRAPH','NUMBER','EMAIL','CHECKBOX','CHECKBOX_GROUP','DROPDOWN','MULTIPLE_CHOICE','DATE_TIME','SHORT_TEXT'];
+ const p=await publish(types.map((type,i)=>({...field(`q${i}`,type),position:i})),undefined,'SINGLE_USE');
+ const values=['text','paragraph','5','client@example.com',true,['a','b'],['a'],['a'],{date:Timestamp.fromDate(new Date('2099-01-01')),minute:null},'last'];
  const owner=environment.authenticatedContext('owner').firestore();
  const publicDb=environment.unauthenticatedContext().firestore();
- const token='a'.repeat(32);
+ const token='a'.repeat(32), otherToken='b'.repeat(32);
+ const data=t=>({ownerId:'owner',token:t,active:true,used:false,version:p.version});
  const ref=doc(owner,'forms/f/invitations',token);
- await assertFails(setDoc(doc(publicDb,'forms/f/invitations',token),{ownerId:'owner',token,active:true,used:false}));
- await assertFails(setDoc(doc(owner,'forms/f/invitations',token),{ownerId:'owner',token:'bad',active:true,used:false}));
- await assertSucceeds(setDoc(ref,{ownerId:'owner',token,active:true,used:false}));
- await assertSucceeds(getDoc(doc(publicDb,'forms/f/invitations',token)));
- await assertSucceeds(updateDoc(ref,{used:true}));
- await assertFails(updateDoc(ref,{used:false}));
- await assertFails(updateDoc(ref,{active:false}));
- await assertFails(setDoc(ref,{ownerId:'owner',token,active:true,used:false}));
-});
-
-test('tracking metadata is owner-only and never readable by the public', async () => {
- await publish();
- const owner=environment.authenticatedContext('owner').firestore();
- const publicDb=environment.unauthenticatedContext().firestore();
- const token='b'.repeat(32);
- await assertSucceeds(setDoc(doc(owner,'forms/f/links/tracking'),{ownerId:'owner',token,active:true}));
- await assertSucceeds(setDoc(doc(owner,'forms/f/links/trackingSummary'),{ownerId:'owner',submissions:0,pending:0,inProgress:0,completed:0}));
- await assertFails(getDoc(doc(publicDb,'forms/f/links/tracking')));
+ await assertFails(setDoc(doc(publicDb,ref.path),data(token)));
+ await assertFails(setDoc(doc(environment.authenticatedContext('other').firestore(),ref.path),{...data(token),ownerId:'other'}));
+ await assertSucceeds(setDoc(ref,data(token)));
+ await assertSucceeds(setDoc(doc(owner,'forms/f/links/invitation'),{ownerId:'owner',token}));
+ assert.equal((await getDoc(doc(owner,'forms/f/links/invitation'))).data().token,token);
+ await assertFails(getDoc(doc(publicDb,'forms/f/links/invitation')));
+ await assertFails(getDoc(doc(environment.authenticatedContext('other').firestore(),'forms/f/links/invitation')));
+ await assertSucceeds(setDoc(doc(owner,'forms/f/invitations',otherToken),data(otherToken)));
+ await assertFails(updateDoc(doc(publicDb,ref.path),{used:true}));
+ await assertFails(response(publicDb,p,values));
+ const invalid=[...values];invalid[2]='invalid';
+ await assertFails(response(publicDb,p,invalid,undefined,token));
+ assert.equal((await getDoc(ref)).data().used,false);
+ const attempts=await Promise.allSettled([
+   response(publicDb,p,values,'00000000-0000-4000-8000-000000000001',token),
+   response(publicDb,p,values,'00000000-0000-4000-8000-000000000002',token)
+ ]);
+ assert.equal(attempts.filter(x=>x.status==='fulfilled').length,1);
+ assert.equal((await getDoc(ref)).data().used,true);
+ await assertFails(setDoc(ref,data(token)));
+ await assertFails(response(publicDb,p,values,'00000000-0000-4000-8000-000000000003',token));
  await assertFails(getDoc(doc(publicDb,'forms/f/links/trackingSummary')));
- await assertFails(getDoc(doc(environment.authenticatedContext('other').firestore(),'forms/f/links/tracking')));
- await assertFails(getDoc(doc(environment.authenticatedContext('other').firestore(),'forms/f/links/trackingSummary')));
- await assertFails(setDoc(doc(publicDb,'forms/f/links/trackingSummary'),{ownerId:'owner',submissions:1,pending:0,inProgress:0,completed:0}));
+ // A later publication invalidates old invitations; the owner may carry an unused one forward.
+ const republish=writeBatch(owner);
+ republish.update(doc(owner,'forms/f'),{publishedVersion:2});
+ republish.update(doc(owner,'publishedForms/f'),{version:2});
+ await assertSucceeds(republish.commit());
+ await assertFails(response(publicDb,{...p,version:2},values,'00000000-0000-4000-8000-000000000004',otherToken));
+ await assertSucceeds(updateDoc(doc(owner,'forms/f/invitations',otherToken),{version:2}));
+ await assertSucceeds(response(publicDb,{...p,version:2},values,'00000000-0000-4000-8000-000000000004',otherToken));
 });
 
 test('ten short-text questions can be submitted',async()=>{

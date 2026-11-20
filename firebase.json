@@ -25,6 +25,7 @@
       "**/node_modules/**"
     ],
     "rewrites": [
+      {"source": "/i/**", "destination": "/index.html"},
       {
         "source": "/f/**",
         "destination": "/index.html"

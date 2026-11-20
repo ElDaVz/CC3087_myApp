@@ -51,7 +51,8 @@ service cloud.firestore {
       let fields = d.fields;
       let count = fields.size();
       return d.keys().hasAll(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt'])
-        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt','firstFieldCount','firstTemplateType','cover','business'])
+        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt','firstFieldCount','firstTemplateType','cover','business','responseAccess'])
+        && d.get('responseAccess','OPEN') in ['OPEN','SINGLE_USE']
         && validCover(d.get('cover', null)) && validBusiness(d.get('business', null))
         && owns(d) && f.ownerId == d.ownerId && d.active is bool && d.version is int && d.version > 0
         && d.fingerprint is string && d.templateType is string && d.publishedAt is timestamp && d.firstPublishedAt is timestamp
@@ -105,13 +106,23 @@ service cloud.firestore {
           : t in ['MULTIPLE_CHOICE','CHECKBOX_GROUP','DROPDOWN'] ? validChoices(f,v)
           : validText(f,v));
     }
+    function validInvitationResponse(id, responseId, d, p) {
+      let token = d.get('invitationToken','');
+      let path = /databases/$(database)/documents/forms/$(id)/invitations/$(token);
+      return token.matches('^[A-Za-z0-9_-]{20,64}$')
+        && get(path).data.active == true && get(path).data.used == false
+        && get(path).data.version == p.version
+        && getAfter(path).data.used == true && getAfter(path).data.responseId == responseId;
+    }
     function validResponse(id, responseId) {
       let d = request.resource.data;
       let p = get(publicPath(id)).data;
       let receipt = getAfter(/databases/$(database)/documents/publishedForms/$(id)/receipts/$(responseId)).data;
       return live(id,p) && responseId.matches('^[a-f0-9-]{36}$')
         && d.keys().hasAll(['ownerId','formId','attemptId','title','fields','version','submittedAt','status','answers'])
-        && d.keys().hasOnly(['ownerId','formId','attemptId','title','fields','version','submittedAt','status','answers'])
+        && d.keys().hasOnly(['ownerId','formId','attemptId','title','fields','version','submittedAt','status','answers','invitationToken'])
+        && (p.get('responseAccess','OPEN') == 'SINGLE_USE'
+          ? validInvitationResponse(id,responseId,d,p) : !d.keys().hasAny(['invitationToken']))
         && d.ownerId == p.ownerId && d.formId == id && d.attemptId == responseId && d.title == p.title
         && d.fields == p.fields && d.version == p.version && d.submittedAt == request.time && d.status == 'PENDING'
         && receipt.responseId == responseId && receipt.formId == id && receipt.version == p.version
@@ -166,33 +177,32 @@ service cloud.firestore {
     match /forms/{id}/invitations/{token} {
       allow get: if true;
       allow list, delete: if false;
-      allow create: if signedIn() && owns(request.resource.data)
-        && request.resource.data.keys().hasOnly(['ownerId','token','active','used'])
-        && request.resource.data.token == token
-        && token.matches('^[A-Za-z0-9_-]{20,64}$')
-        && request.resource.data.active == true && request.resource.data.used == false;
-      // The only permitted mutation is the one-way, atomic single-use claim.
-      allow update: if resource.data.active == true && resource.data.used == false
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used'])
-        && request.resource.data.used == true;
+      function ownerInvitation() {
+        let d = request.resource.data;
+        let p = getAfter(publicPath(id)).data;
+        return signedIn() && owns(getAfter(formPath(id)).data) && owns(d)
+          && d.keys().hasAll(['ownerId','token','active','used','version'])
+          && d.keys().hasOnly(['ownerId','token','active','used','version'])
+          && d.token == token && token.matches('^[A-Za-z0-9_-]{20,64}$')
+          && d.active == true && d.used == false && d.version == p.version
+          && p.active == true && p.get('responseAccess','OPEN') == 'SINGLE_USE';
+      }
+      allow create: if ownerInvitation();
+      allow update: if (resource.data.used == false && resource.data.active == true && ownerInvitation())
+        || (resource.data.active == true && resource.data.used == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used','responseId'])
+          && request.resource.data.used == true
+          && request.resource.data.responseId.matches('^[a-f0-9-]{36}$')
+          && getAfter(/databases/$(database)/documents/forms/$(id)/responses/$(request.resource.data.responseId)).data.invitationToken == token
+          && getAfter(/databases/$(database)/documents/forms/$(id)/responses/$(request.resource.data.responseId)).data.version == resource.data.version);
     }
-    match /forms/{id}/links/tracking {
-      allow read: if signedIn() && owns(resource.data);
-      allow create, update: if signedIn() && owns(request.resource.data)
-        && request.resource.data.keys().hasOnly(['ownerId','token','active'])
+    match /forms/{id}/links/invitation {
+      allow get: if signedIn() && owns(get(formPath(id)).data);
+      allow create, update: if signedIn() && owns(getAfter(formPath(id)).data)
+        && owns(request.resource.data) && request.resource.data.keys().hasOnly(['ownerId','token'])
         && request.resource.data.token.matches('^[A-Za-z0-9_-]{20,64}$')
-        && request.resource.data.active == true;
-      allow delete: if false;
-    }
-    match /forms/{id}/links/trackingSummary {
-      allow read: if signedIn() && owns(resource.data);
-      allow create, update: if signedIn() && owns(request.resource.data)
-        && request.resource.data.keys().hasOnly(['ownerId','submissions','pending','inProgress','completed'])
-        && request.resource.data.submissions is int && request.resource.data.submissions >= 0
-        && request.resource.data.pending is int && request.resource.data.pending >= 0
-        && request.resource.data.inProgress is int && request.resource.data.inProgress >= 0
-        && request.resource.data.completed is int && request.resource.data.completed >= 0;
-      allow delete: if false;
+        && getAfter(/databases/$(database)/documents/forms/$(id)/invitations/$(request.resource.data.token)).data.ownerId == request.auth.uid;
+      allow list, delete: if false;
     }
     match /publishedForms/{id} {
       allow get: if (resource != null && live(id,resource.data)) || (signedIn() && owns(get(formPath(id)).data));

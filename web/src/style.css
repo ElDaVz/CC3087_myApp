@@ -18,11 +18,10 @@ button, input, select, textarea, label { -webkit-tap-highlight-color: transparen
 button { touch-action: manipulation; }
 main { max-width: 760px; margin: 0 auto; }
 .site-header { min-height: 104px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
-.site-context { min-width: 0; flex: 1; overflow-wrap: anywhere; color: var(--muted); font-size: .8rem; font-weight: 500; }
 .business-identity { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
-.business-identity img { display: block; flex: none; width: 40px; height: 40px; border-radius: 11px; object-fit: cover; background: #f1ecf8; }
+.business-identity img { display: block; flex: none; width: 40px; height: 40px; border-radius: 11px; object-fit: contain; }
 .business-name { min-width: 0; overflow-wrap: anywhere; color: var(--primary-dark); font-size: .82rem; font-weight: 650; }
-.brand { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 750; letter-spacing: -.04em; }
+.brand { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 750; letter-spacing: -.04em; }
 .brand img { display: block; flex: none; width: 40px; height: 40px; border-radius: 11px; }
 .page-content { padding-bottom: 32px; }
 .form-header { background: white; border: 1px solid var(--border); border-radius: 22px; overflow: hidden; margin-bottom: 20px; }
@@ -100,7 +99,6 @@ h1:focus { outline: none; }
 @media (max-width: 540px) {
   body { padding: 0 16px; }
   .site-header { min-height: 82px; gap: 12px; }
-  .site-context { font-size: .7rem; max-width: 110px; line-height: 1.6; }
   .business-identity { gap: 8px; }
   .business-identity img { width: 36px; height: 36px; }
   .business-name { font-size: .72rem; }
