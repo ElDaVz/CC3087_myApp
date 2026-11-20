@@ -1,6 +1,8 @@
 package com.uvg.cc3087.myapp.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
+import com.uvg.cc3087.myapp.data.model.OwnerProfile
 import com.uvg.cc3087.myapp.data.model.UserSession
 import com.uvg.cc3087.myapp.data.repository.*
 import com.uvg.cc3087.myapp.ui.components.GuestImportNotice
@@ -33,7 +36,13 @@ import java.util.Date
 fun AccountScreen(session: UserSession,
     account: AccountUiState, importState: GuestImportState, syncState: AccountSyncState,
     onBack: () -> Unit, onRetryImport: () -> Unit, onSignOut: () -> Unit, onSync: () -> Unit,
-    onConfirmSignOut: () -> Unit = {}, onDismissSignOut: () -> Unit = {}) {
+    onConfirmSignOut: () -> Unit = {}, onDismissSignOut: () -> Unit = {},
+    profile: OwnerProfile = OwnerProfile(session.userId),
+    onProfileChange: ((OwnerProfile) -> OwnerProfile) -> Unit = {},
+    onLogoPick: (String) -> Unit = {}, onLogoRemove: () -> Unit = {}) {
+    val pickLogo = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) onLogoPick(uri.toString())
+    }
     BackHandler { if (!account.busy) onBack() }
     if (account.confirmSignOut) AlertDialog(onDismissRequest = onDismissSignOut,
         title = { Text(stringResource(R.string.account_sign_out_title)) },
@@ -55,6 +64,7 @@ fun AccountScreen(session: UserSession,
                         Text(session.email, style = MaterialTheme.typography.titleLarge)
                     }
                 }
+                ProfileCard(profile, onProfileChange, { pickLogo.launch("image/*") }, onLogoRemove, account.busy)
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp).semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(Icons.Outlined.CloudSync, null, tint = MaterialTheme.colorScheme.primary)
@@ -94,6 +104,53 @@ fun AccountScreen(session: UserSession,
                     Text(stringResource(R.string.auth_sign_out))
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileCard(
+    profile: OwnerProfile,
+    onChange: ((OwnerProfile) -> OwnerProfile) -> Unit,
+    onPickLogo: () -> Unit,
+    onRemoveLogo: () -> Unit,
+    busy: Boolean
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.profile_title), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.profile_private_note), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.profile_personal_section), style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary)
+            OutlinedTextField(profile.personalName, { value -> onChange { it.copy(personalName = value) } },
+                label = { Text(stringResource(R.string.profile_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                enabled = !busy)
+            OutlinedTextField(profile.personalEmail, { value -> onChange { it.copy(personalEmail = value) } },
+                label = { Text(stringResource(R.string.profile_email)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                enabled = !busy)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Text(stringResource(R.string.profile_business_section), style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.profile_business_note), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedTextField(profile.businessName, { value -> onChange { it.copy(businessName = value) } },
+                label = { Text(stringResource(R.string.profile_business_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                enabled = !busy)
+            OutlinedTextField(profile.businessEmail, { value -> onChange { it.copy(businessEmail = value) } },
+                label = { Text(stringResource(R.string.profile_business_email)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                enabled = !busy)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onPickLogo, enabled = !busy) {
+                    Text(stringResource(if (profile.logoPath == null) R.string.profile_logo_add else R.string.profile_logo_replace))
+                }
+                if (profile.logoPath != null) TextButton(onClick = onRemoveLogo, enabled = !busy) {
+                    Text(stringResource(R.string.profile_logo_remove))
+                }
+            }
+            Text(stringResource(R.string.profile_logo_note), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
