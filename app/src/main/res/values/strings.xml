@@ -21,7 +21,6 @@
     <string name="search_selected">Search selected</string>
     <string name="more_options_selected">More options selected</string>
     <string name="forms_selected">Forms selected</string>
-    <string name="settings_selected">Settings selected</string>
     <string name="start_from_scratch">Start from Scratch</string>
     <string name="blank_form">Blank Form</string>
     <string name="recommended_templates">Recommended Templates</string>
@@ -407,4 +406,13 @@
     </plurals>
     <string name="qa_trigger_test_crash">QA DEMO: trigger test crash</string>
     <string name="field_analytics_more_categories">Additional categories not shown: %1$d</string>
+    <string name="settings_shortcuts">Your activity</string>
+    <string name="settings_statistics">Statistics</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance_device">Applies to this device, including guest mode and all accounts.</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_read_error">Could not load your appearance preference. The previous theme is retained; on startup, the system theme is used.</string>
+    <string name="theme_save_error">Could not save appearance. Your previous choice is unchanged.</string>
 </resources>

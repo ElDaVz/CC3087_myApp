@@ -21,7 +21,7 @@ internal fun ResponsesRoute(
     state: ResponseDashboardUiState, status: InboxFilter, list: LazyListState,
     onForm: (String?) -> Unit, onPeriod: (ResponsePeriod) -> Unit, onStatus: (InboxFilter) -> Unit,
     onOpen: (RequestSummary) -> Unit, onBack: () -> Unit, onForms: () -> Unit, onRefresh: () -> Unit,
-    syncMessage: String?, isDemo: Boolean
+    syncMessage: String?, isDemo: Boolean, onSettings: () -> Unit
 ) {
     // solo guardamos este booleano de presentación, no textos ni respuestas del cliente
     var onlyUnread by rememberSaveable { mutableStateOf(false) }
@@ -51,6 +51,7 @@ internal fun ResponsesRoute(
         onStatusFilter = { onStatus(InboxFilter.fromKey(it)) },
         hasUnknownStatus = data.unknownStatusCount > 0,
         onForms = onForms,
+        onSettingsClick = onSettings,
         onlyUnread = onlyUnread,
         onOnlyUnreadChange = {
             onlyUnread = it

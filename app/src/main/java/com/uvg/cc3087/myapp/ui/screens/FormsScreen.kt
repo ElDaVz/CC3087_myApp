@@ -76,6 +76,7 @@ fun Forms(
     unsavedDraftId: String? = null,
     onResponsesClick: () -> Unit = {},
     onAccountClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
     syncMessage: String? = null,
     hasUnreadResponses: Boolean = false,
     onDeleteFormClick: (FormSummary) -> Unit = {},
@@ -152,7 +153,7 @@ fun Forms(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            FormsBottomBar(onMessage = ::showMessage, onResponsesClick = onResponsesClick, hasUnreadResponses = hasUnreadResponses)
+            FormsBottomBar(onMessage = ::showMessage, onResponsesClick = onResponsesClick, hasUnreadResponses = hasUnreadResponses, onSettingsClick = onSettingsClick)
         }
     ) { innerPadding ->
         LazyColumn(
@@ -275,7 +276,8 @@ internal fun FormsBottomBar(
     onResponsesClick: () -> Unit,
     onFormsClick: () -> Unit = { onMessage(R.string.forms_selected) },
     responsesSelected: Boolean = false,
-    hasUnreadResponses: Boolean = false
+    hasUnreadResponses: Boolean = false,
+    onSettingsClick: (() -> Unit)? = null
 ) {
     val unreadDescription = stringResource(R.string.dashboard_new_responses)
     NavigationBar {
@@ -308,7 +310,8 @@ internal fun FormsBottomBar(
         )
         NavigationBarItem(
             selected = false,
-            onClick = { onMessage(R.string.settings_selected) },
+            onClick = { onSettingsClick?.invoke() },
+            enabled = onSettingsClick != null,
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Settings,

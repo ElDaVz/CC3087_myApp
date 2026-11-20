@@ -12,7 +12,8 @@ class AppRouteTest {
             AppRoute.Forms, AppRoute.ChooseTemplate, AppRoute.Editor("draft-a"),
             AppRoute.Preview("draft-a"), AppRoute.SaveShare("draft-a"), AppRoute.Dashboard,
             AppRoute.Responses(InboxFilter.COMPLETED),
-            AppRoute.RequestDetail("form-b", "response-b"), AppRoute.Account
+            AppRoute.RequestDetail("form-b", "response-b"), AppRoute.Account,
+            AppRoute.Settings, AppRoute.Statistics
         )
         assertEquals(routes, Json.decodeFromString<List<AppRoute>>(Json.encodeToString(routes)))
     }
