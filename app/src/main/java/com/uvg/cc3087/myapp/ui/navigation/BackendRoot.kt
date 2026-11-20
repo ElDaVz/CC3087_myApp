@@ -77,6 +77,9 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                 guestImportNotice = { GuestImportNotice(importState, accountModel::retryImport) },
                 analytics = services.analytics, coverStorage = covers, syncMessage = message,
                 businessLogoPath = profile.logoPath,
+                ownerId = uid ?: "guest", formListPreferences = services.formListPreferences,
+                syncState = if (uid == null) null else syncState,
+                onSyncNow = if (uid == null) null else accountModel::requestSync,
                 accountContent = { goBack ->
                     if (uid == null) AuthScreen(authUi, services.auth.configured,
                         authModel::email, authModel::password, authModel::confirmation, authModel::mode, authModel::submit,

@@ -1,6 +1,7 @@
 package com.uvg.cc3087.myapp.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
@@ -24,6 +25,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -35,8 +37,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Description
@@ -48,6 +52,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -59,6 +66,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -70,14 +78,18 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormSampleData
 import com.uvg.cc3087.myapp.data.model.FormSummary
+import com.uvg.cc3087.myapp.data.repository.AccountSyncPhase
+import com.uvg.cc3087.myapp.data.repository.AccountSyncState
 import com.uvg.cc3087.myapp.ui.components.FormListItem
 import com.uvg.cc3087.myapp.ui.state.FormFilter
+import com.uvg.cc3087.myapp.ui.state.FormSortOrder
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
@@ -109,7 +121,11 @@ fun Forms(
     onClearSearch: () -> Unit = {},
     onCloseSearch: () -> Unit = {},
     onResetSearchAndFilter: () -> Unit = {},
-    businessLogoPath: String? = null
+    businessLogoPath: String? = null,
+    onSortSelected: (FormSortOrder) -> Unit = {},
+    syncState: AccountSyncState? = null,
+    onSyncNow: (() -> Unit)? = null,
+    onStatisticsClick: () -> Unit = {}
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -120,6 +136,8 @@ fun Forms(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var requestSearchFocus by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    val previousSyncPhase = remember { mutableStateOf(syncState?.phase) }
     fun closeSearch() {
         keyboard?.hide()
         focusManager.clearFocus()
@@ -142,6 +160,21 @@ fun Forms(
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(resources.getString(messageResId, *formatArgs))
         }
+    }
+
+    // Manual sync reports its final result once; the top bar keeps the live state.
+    LaunchedEffect(syncState?.phase, syncState?.lastSuccessfulCheck) {
+        val phase = syncState?.phase
+        val previous = previousSyncPhase.value
+        if (previous != null && phase != null && phase != previous) {
+            val result = when (phase) {
+                AccountSyncPhase.UP_TO_DATE -> R.string.account_sync_checked
+                AccountSyncPhase.ERROR -> R.string.sync_error
+                else -> null
+            }
+            result?.let(::showMessage)
+        }
+        previousSyncPhase.value = phase
     }
 
     LaunchedEffect(uiState.deletion.completed) {
@@ -192,10 +225,44 @@ fun Forms(
                             contentDescription = stringResource(R.string.search_forms)
                         )
                     }
-                    IconButton(onClick = { showMessage(R.string.more_options_selected) }) {
-                        Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = stringResource(R.string.more_options)
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = stringResource(R.string.more_options)
+                            )
+                        }
+                        FormsOverflowMenu(
+                            expanded = menuExpanded,
+                            onDismiss = { menuExpanded = false },
+                            selectedSort = uiState.selectedSort,
+                            onSortSelected = { order ->
+                                onSortSelected(order)
+                                menuExpanded = false
+                            },
+                            syncState = syncState,
+                            onSyncNow = onSyncNow?.let { action ->
+                                {
+                                    action()
+                                    showMessage(R.string.sync_requested)
+                                    menuExpanded = false
+                                }
+                            },
+                            onStatisticsClick = {
+                                onStatisticsClick()
+                                menuExpanded = false
+                            }
+                        )
+                    }
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape,
+                        modifier = Modifier.size(32.dp).testTag("formlink-brand")
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_launcher_foreground),
+                            contentDescription = null,
+                            modifier = Modifier.padding(6.dp)
                         )
                     }
                 }
@@ -303,6 +370,65 @@ fun Forms(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FormsOverflowMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    selectedSort: FormSortOrder,
+    onSortSelected: (FormSortOrder) -> Unit,
+    syncState: AccountSyncState?,
+    onSyncNow: (() -> Unit)?,
+    onStatisticsClick: () -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("forms-overflow-menu")
+    ) {
+        Text(
+            text = stringResource(R.string.sort_forms),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        FormSortOrder.entries.forEach { order ->
+            DropdownMenuItem(
+                text = { Text(stringResource(order.label())) },
+                leadingIcon = {
+                    if (order == selectedSort) Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                onClick = { onSortSelected(order) },
+                modifier = Modifier.testTag("forms-sort-${order.name}")
+            )
+        }
+        HorizontalDivider()
+        if (onSyncNow != null) DropdownMenuItem(
+            text = { Text(stringResource(R.string.account_sync_now)) },
+            enabled = syncState?.phase != AccountSyncPhase.SYNCING,
+            onClick = { onSyncNow() },
+            modifier = Modifier.testTag("forms-sync-now")
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.settings_statistics)) },
+            onClick = onStatisticsClick,
+            modifier = Modifier.testTag("forms-statistics")
+        )
+    }
+}
+
+@StringRes
+private fun FormSortOrder.label() = when (this) {
+    FormSortOrder.RECENT_FIRST -> R.string.sort_recent_first
+    FormSortOrder.OLDEST_FIRST -> R.string.sort_oldest_first
+    FormSortOrder.MOST_RESPONSES -> R.string.sort_most_responses
+    FormSortOrder.FEWEST_RESPONSES -> R.string.sort_fewest_responses
 }
 
 // dejamos los controles separados para que la pantalla principal sea fácil de leer
