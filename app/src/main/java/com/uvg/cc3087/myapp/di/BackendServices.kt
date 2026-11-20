@@ -52,10 +52,15 @@ class BackendServices(private val context: Context, private val database: FormLi
             com.uvg.cc3087.myapp.data.remote.CloudinaryCoverUploader(BuildConfig.CLOUDINARY_CLOUD_NAME, BuildConfig.CLOUDINARY_UPLOAD_PRESET)
         else null) } }
     val guestImports: GuestImportRepository = GuestDraftImporter(guestImportStore, { auth.state.value.userId }, ::schedule)
+    val logoStorage = PrivateLogoStorage(context)
+    val profiles: ProfileRepository by lazy {
+        RoomProfileRepository(database, logoStorage, client) { auth.state.value.userId }
+    }
     private val accountPass = AccountSyncPass({ auth.state.value.userId },
         forms = { owner -> sync?.sync(owner) ?: SyncResult.RETRY },
         publications = { owner -> checkNotNull(publisher).refresh(owner) },
-        responses = { owner -> checkNotNull(requests(owner)).sync() })
+        responses = { owner -> checkNotNull(requests(owner)).sync() },
+        profiles = { owner -> profiles.sync(owner) })
     val accountSync = DefaultAccountSyncRepository(connection.connected, pendingChanges::observe, pendingChanges::snapshot,
         { auth.state.value.userId }, ::schedule, synchronize = accountPass::run)
     private val scheduler = BoundedSyncScheduler(

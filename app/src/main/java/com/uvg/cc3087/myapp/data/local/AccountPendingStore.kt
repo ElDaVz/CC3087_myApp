@@ -8,6 +8,7 @@ class AccountPendingStore(private val db: FormLinkDatabase) {
     suspend fun snapshot(owner: String): AccountPendingChanges = db.withTransaction {
         val forms = db.drafts().owned(owner).filter { it.form.revision != it.form.syncedRevision }
         AccountPendingChanges(forms.count { !it.form.deleted }, forms.count { it.form.deleted },
-            db.cloud().requests(owner).count { it.statusRevision != it.syncedStatusRevision })
+            db.cloud().requests(owner).count { it.statusRevision != it.syncedStatusRevision },
+            db.profiles().pending(owner))
     }
 }

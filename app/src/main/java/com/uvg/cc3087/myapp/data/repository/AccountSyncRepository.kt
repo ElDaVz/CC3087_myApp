@@ -6,8 +6,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 enum class AccountSyncPhase { UNCHECKED, QUEUED, WAITING_CONNECTION, SYNCING, UP_TO_DATE, ERROR }
-data class AccountPendingChanges(val drafts: Int = 0, val deletions: Int = 0, val responseStatuses: Int = 0) {
-    val total get() = drafts + deletions + responseStatuses
+data class AccountPendingChanges(
+    val drafts: Int = 0, val deletions: Int = 0, val responseStatuses: Int = 0, val profiles: Int = 0
+) {
+    val total get() = drafts + deletions + responseStatuses + profiles
 }
 data class AccountSyncState(
     val phase: AccountSyncPhase = AccountSyncPhase.UNCHECKED,
@@ -24,7 +26,8 @@ class AccountSyncPass(
     private val currentOwner: () -> String?,
     private val forms: suspend (String) -> SyncResult,
     private val publications: suspend (String) -> Unit,
-    private val responses: suspend (String) -> Unit
+    private val responses: suspend (String) -> Unit,
+    private val profiles: suspend (String) -> Unit = {}
 ) {
     suspend fun run(owner: String): SyncResult {
         if (currentOwner() != owner) return SyncResult.SESSION_CHANGED
@@ -32,6 +35,8 @@ class AccountSyncPass(
         if (result != SyncResult.SUCCESS) return result
         if (currentOwner() != owner) return SyncResult.SESSION_CHANGED
         publications(owner)
+        if (currentOwner() != owner) return SyncResult.SESSION_CHANGED
+        profiles(owner)
         if (currentOwner() != owner) return SyncResult.SESSION_CHANGED
         responses(owner)
         return if (currentOwner() == owner) SyncResult.SUCCESS else SyncResult.SESSION_CHANGED
