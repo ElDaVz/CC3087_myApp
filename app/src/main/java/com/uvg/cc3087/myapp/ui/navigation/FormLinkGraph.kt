@@ -55,7 +55,8 @@ internal fun FormLinkGraph(
     requestsAreDemo: Boolean,
     syncMessage: String?,
     guestImportNotice: @Composable () -> Unit,
-    accountContent: (@Composable (() -> Unit) -> Unit)?
+    accountContent: (@Composable (() -> Unit) -> Unit)?,
+    businessLogoPath: String? = null
 ) {
     val backStack = rememberNavBackStack(AppRoute.Forms)
     val navigator = remember(backStack) { AppNavigator(backStack) }
@@ -162,6 +163,7 @@ internal fun FormLinkGraph(
                     onConfirmDeletion = forms::confirmDeletion,
                     onDismissDeletion = forms::dismissDeletion,
                     onConsumeDeletionCompleted = forms::consumeDeletionCompleted,
+                    businessLogoPath = businessLogoPath,
                     unsavedDraftId = editorState.takeIf {
                         it.saveStatus != DraftSaveStatus.SAVED
                     }?.draftId,

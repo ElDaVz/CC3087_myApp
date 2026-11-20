@@ -12,14 +12,16 @@ import org.json.JSONObject
 import java.time.Instant
 import java.security.MessageDigest
 
-fun contentFingerprint(form: FormDraft, coverHash: String? = null): String = MessageDigest.getInstance("SHA-256")
-    .digest((form.title + "\u0000" + form.fields.toString() + (coverHash?.let { "\u0000cover:$it" } ?: "")).toByteArray()).joinToString("") { "%02x".format(it) }
+fun contentFingerprint(form: FormDraft, coverHash: String? = null, businessHash: String? = null): String = MessageDigest.getInstance("SHA-256")
+    .digest((form.title + "\u0000" + form.fields.toString() + (coverHash?.let { "\u0000cover:$it" } ?: "")
+        + (businessHash?.let { "\u0000business:$it" } ?: "")).toByteArray()).joinToString("") { "%02x".format(it) }
 
 class RestFormPublisher(private val client: FirestoreRest, private val source: RemoteFormSource,
     private val database: FormLinkDatabase, private val currentOwner: () -> String?,
     private val exclusive: suspend (suspend () -> FormPublication) -> FormPublication,
     private val analytics: com.uvg.cc3087.myapp.domain.telemetry.ProductAnalytics = com.uvg.cc3087.myapp.domain.telemetry.NoProductAnalytics,
-    private val covers: CoverStorage? = null, private val uploader: CoverUploader? = null) : FormPublisher {
+    private val covers: CoverStorage? = null, private val uploader: CoverUploader? = null,
+    private val profiles: ProfileRepository? = null, private val logoStorage: PrivateLogoStorage? = null) : FormPublisher {
     private fun checkSession(owner: String) { check(currentOwner() == owner) { "Session changed" } }
     private fun asset(row: PublicationEntity): CoverAsset? = row.coverUrl?.let {
         CoverAsset.fromWire(mapOf("url" to it, "publicId" to row.coverPublicId, "hash" to row.coverHash))
@@ -30,6 +32,30 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
         try { return checkNotNull(covers).prepareUpload(checkNotNull(form.coverPath)) }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
         catch (_: Exception) { throw PublicationException(PublicationError.COVER_PREPARATION_FAILED) }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun previousBusiness(oldPublic: Map<String, Any?>?): CoverAsset? =
+        CoverAsset.fromWire((oldPublic?.get("business") as? Map<String, Any?>)?.get("logo"))
+
+    /** Logo upload failure keeps the previous public identity and never blocks form publication. */
+    private suspend fun businessLogo(owner: String, previous: CoverAsset?): CoverAsset? {
+        val path = profiles?.get(owner)?.logoPath ?: return null
+        val prepared = try { checkNotNull(logoStorage).prepareUpload(path) }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { return previous }
+        checkSession(owner)
+        val cached = database.cloud().uploadedCover(owner, "profile-logo", prepared.hash)
+        if (cached != null) return CoverAsset.fromWire(mapOf("url" to cached.url, "publicId" to cached.publicId, "hash" to cached.hash))
+        val upload = uploader ?: return previous
+        return try {
+            val uploaded = upload.upload(prepared)
+            checkSession(owner)
+            check(uploaded.hash == prepared.hash)
+            database.cloud().saveCoverUpload(CoverUploadEntity(owner, "profile-logo", prepared.hash, uploaded.url, uploaded.publicId))
+            uploaded
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { previous }
     }
     override suspend fun publication(owner: String, form: FormDraft): FormPublication? {
         val row = database.cloud().publication(owner, form.id) ?: return null
@@ -76,7 +102,9 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
             else -> previous
         }
         checkSession(owner)
-        val fingerprint = contentFingerprint(form, selected?.hash)
+        val business = businessLogo(owner, previousBusiness(oldPublic))
+        val businessHash = business?.hash
+        val fingerprint = contentFingerprint(form, selected?.hash, businessHash)
         if (oldPublic?.get("fingerprint") !=
             fingerprint || oldPublic["active"] != true) {
             val version = ((oldPublic?.get("version") as? Number)?.toLong() ?: 0L) + 1
@@ -84,7 +112,10 @@ class RestFormPublisher(private val client: FirestoreRest, private val source: R
                 mapOf("optionIds" to field.options.map { it.id }) }
             val publicValues = linkedMapOf<String, Any?>("ownerId" to owner, "title" to form.title,
                 "fields" to fields, "active" to true, "version" to version, "fingerprint" to fingerprint,
-                "templateType" to (form.templateType ?: "LEGACY"), "cover" to selected?.toWire())
+                "templateType" to (form.templateType ?: "LEGACY"), "cover" to selected?.toWire(),
+                "business" to business?.let { logo ->
+                    mapOf("name" to (profiles?.get(owner)?.businessName?.trim().orEmpty()), "logo" to logo.toWire())
+                })
             if (oldPublic == null) {
                 publicValues["firstFieldCount"] = form.fields.size
                 publicValues["firstTemplateType"] = form.templateType ?: "LEGACY"

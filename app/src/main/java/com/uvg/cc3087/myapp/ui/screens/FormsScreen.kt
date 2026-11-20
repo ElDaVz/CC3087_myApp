@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -107,7 +108,8 @@ fun Forms(
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     onCloseSearch: () -> Unit = {},
-    onResetSearchAndFilter: () -> Unit = {}
+    onResetSearchAndFilter: () -> Unit = {},
+    businessLogoPath: String? = null
 ) {
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -247,7 +249,8 @@ fun Forms(
                     FormsControls(
                         selectedFilter = uiState.selectedFilter,
                         onFilterSelected = onFilterSelected,
-                        onNewFormClick = onNewFormClick
+                        onNewFormClick = onNewFormClick,
+                        businessLogoPath = businessLogoPath
                     )
                 }
 
@@ -308,7 +311,8 @@ fun Forms(
 private fun FormsControls(
     selectedFilter: FormFilter,
     onFilterSelected: (FormFilter) -> Unit,
-    onNewFormClick: () -> Unit
+    onNewFormClick: () -> Unit,
+    businessLogoPath: String? = null
 ) {
     Column(
         modifier = Modifier
@@ -321,10 +325,18 @@ private fun FormsControls(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.my_forms),
-                style = MaterialTheme.typography.headlineSmall
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                com.uvg.cc3087.myapp.ui.components.BusinessLogoImage(
+                    businessLogoPath, stringResource(R.string.profile_business_name), Modifier.size(40.dp)
+                )
+                Text(
+                    text = stringResource(R.string.my_forms),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            }
 
             Button(
                 onClick = onNewFormClick,

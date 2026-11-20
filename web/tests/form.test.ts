@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {coverImageUrl,validate,duration,type Field} from '../src/form';
+import {businessLogoUrl,businessName,coverImageUrl,validate,duration,type Field} from '../src/form';
 const field=(type:string,required=true):Field=>({id:'q',label:'Pregunta',description:'',type,required,optionIds:['a','b'],config:{placeholder:'',allowMultipleAnswers:false,includeTime:false,disallowPastDates:false,allowDecimals:false,minimum:'1',maximum:'10',unit:'',options:[{id:'a',label:'A'},{id:'b',label:'B'}]}});
 describe('published answers',()=>{
  it('requires an answer without requiring optional fields',()=>{expect(validate(field('SHORT_TEXT'),'')).toBeTruthy();expect(validate(field('SHORT_TEXT',false),'')).toBeNull();});
@@ -19,4 +19,18 @@ describe('public cover URLs',()=>{
    expect(coverImageUrl({...asset,url})).toBeNull();
   expect(coverImageUrl({...asset,publicId:'another'})).toBeNull();
  });
+});
+
+describe('optional business identity',()=>{
+  const asset={url:'https://res.cloudinary.com/uxrkjzti/image/upload/logo.png',publicId:'logo',hash:'b'.repeat(64)};
+  it('has no business element without a valid logo',()=>{
+   expect(businessLogoUrl(undefined)).toBeNull();
+   expect(businessLogoUrl({name:'Tienda'})).toBeNull();
+   expect(businessLogoUrl({name:'Tienda',logo:{...asset,url:asset.url+'?x=1'}})).toBeNull();
+  });
+  it('accepts only the configured cloud and keeps names bounded',()=>{
+   expect(businessLogoUrl({name:'Tienda',logo:asset})).toBe(asset.url);
+   expect(businessName({name:'  Tienda  ',logo:asset})).toBe('Tienda');
+   expect(businessName({name:'x'.repeat(200),logo:asset})).toHaveLength(100);
+  });
 });

@@ -76,6 +76,7 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
             FormLinkRoute(forms, templates, responseRepository,
                 guestImportNotice = { GuestImportNotice(importState, accountModel::retryImport) },
                 analytics = services.analytics, coverStorage = covers, syncMessage = message,
+                businessLogoPath = profile.logoPath,
                 accountContent = { goBack ->
                     if (uid == null) AuthScreen(authUi, services.auth.configured,
                         authModel::email, authModel::password, authModel::confirmation, authModel::mode, authModel::submit,

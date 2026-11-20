@@ -76,7 +76,8 @@ internal fun FormLinkRoute(
     syncMessage: String? = null,
     analytics: ProductAnalytics = NoProductAnalytics,
     guestImportNotice: @Composable () -> Unit = {},
-    accountContent: (@Composable (() -> Unit) -> Unit)? = null
+    accountContent: (@Composable (() -> Unit) -> Unit)? = null,
+    businessLogoPath: String? = null
 ) {
     // el editor y los filtros pertenecen a la sesión cifrada, no a una pantalla temporal
     val forms: FormsViewModel = viewModel(factory = FormsViewModel.factory(formRepository))
@@ -95,7 +96,7 @@ internal fun FormLinkRoute(
         }
     }
     FormLinkGraph(forms, templates, editor, dashboard, formRepository, requestRepository,
-        requestsAreDemo, syncMessage, guestImportNotice, accountContent)
+        requestsAreDemo, syncMessage, guestImportNotice, accountContent, businessLogoPath)
 }
 
 @Preview(showBackground = true, showSystemUi = true)
