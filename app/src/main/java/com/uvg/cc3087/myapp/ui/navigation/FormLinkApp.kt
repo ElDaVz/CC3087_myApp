@@ -25,15 +25,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.FormEditorSampleData
 import com.uvg.cc3087.myapp.data.FormSampleData
+import com.uvg.cc3087.myapp.data.repository.AccountSyncState
 import com.uvg.cc3087.myapp.data.repository.CoverStorage
+import com.uvg.cc3087.myapp.data.repository.FormListPreferences
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.data.repository.RequestRepository
+import com.uvg.cc3087.myapp.data.repository.UnavailableFormListPreferences
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.data.repository.UnavailableRequestRepository
 import com.uvg.cc3087.myapp.di.AppContainer
 import com.uvg.cc3087.myapp.domain.telemetry.NoProductAnalytics
 import com.uvg.cc3087.myapp.domain.telemetry.ProductAnalytics
 import com.uvg.cc3087.myapp.ui.screens.Forms
+import com.uvg.cc3087.myapp.ui.state.FormSortOrder
 import com.uvg.cc3087.myapp.ui.state.FormsLoadStatus
 import com.uvg.cc3087.myapp.ui.state.FormsUiState
 import com.uvg.cc3087.myapp.ui.theme.MyappTheme
@@ -77,10 +81,16 @@ internal fun FormLinkRoute(
     analytics: ProductAnalytics = NoProductAnalytics,
     guestImportNotice: @Composable () -> Unit = {},
     accountContent: (@Composable (() -> Unit) -> Unit)? = null,
-    businessLogoPath: String? = null
+    businessLogoPath: String? = null,
+    ownerId: String = "guest",
+    formListPreferences: FormListPreferences = UnavailableFormListPreferences,
+    syncState: AccountSyncState? = null,
+    onSyncNow: (() -> Unit)? = null
 ) {
     // el editor y los filtros pertenecen a la sesión cifrada, no a una pantalla temporal
-    val forms: FormsViewModel = viewModel(factory = FormsViewModel.factory(formRepository))
+    val forms: FormsViewModel = viewModel(
+        factory = FormsViewModel.factory(formRepository, formListPreferences, ownerId)
+    )
     val templates: ChooseTemplateViewModel = viewModel(factory = ChooseTemplateViewModel.factory(templateRepository))
     val editor: EditFormViewModel = viewModel(
         factory = EditFormViewModel.factory(templateRepository, formRepository, coverStorage, analytics)
@@ -96,7 +106,8 @@ internal fun FormLinkRoute(
         }
     }
     FormLinkGraph(forms, templates, editor, dashboard, formRepository, requestRepository,
-        requestsAreDemo, syncMessage, guestImportNotice, accountContent, businessLogoPath)
+        requestsAreDemo, syncMessage, guestImportNotice, accountContent, businessLogoPath,
+        forms::selectSortOrder, syncState, onSyncNow)
 }
 
 @Preview(showBackground = true, showSystemUi = true)

@@ -427,6 +427,12 @@
     <string name="forms_search_empty">No hay formularios que coincidan con tu búsqueda</string>
     <string name="form_status_published">Publicado</string>
     <string name="form_status_archived">Archivado</string>
+    <string name="sort_forms">Ordenar formularios</string>
+    <string name="sort_recent_first">Más recientes primero</string>
+    <string name="sort_oldest_first">Más antiguos primero</string>
+    <string name="sort_most_responses">Más respuestas primero</string>
+    <string name="sort_fewest_responses">Menos respuestas primero</string>
+    <string name="sync_requested">Sincronización solicitada</string>
     <string name="profile_title">Perfil de contacto</string>
     <string name="profile_private_note">Estos contactos son privados e independientes del correo con el que inicias sesión.</string>
     <string name="profile_personal_section">Contacto personal</string>

@@ -47,6 +47,7 @@ class BackendServices(private val context: Context, private val database: FormLi
     private val cancelledOwners = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     val sync = remote?.let { FormSyncEngine(local, it) { auth.state.value.userId } }
     val logoStorage = PrivateLogoStorage(context)
+    val formListPreferences: FormListPreferences = DataStoreFormListPreferences.create(context)
     val publisher by lazy { client?.let { com.uvg.cc3087.myapp.data.remote.RestFormPublisher(it, checkNotNull(remote), database,
         { auth.state.value.userId }, { block -> checkNotNull(sync).exclusive(block) }, analytics, covers,
         if (BuildConfig.CLOUDINARY_UPLOADS_ENABLED)

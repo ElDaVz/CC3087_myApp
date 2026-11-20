@@ -45,7 +45,8 @@ class AccountSyncIntegrationTest {
             val requests = CloudRequestRepository(db, client, owner, { auth.state.value.userId }, {})
             val pending = AccountPendingStore(db)
             val online = MutableStateFlow(true)
-            val pass = AccountSyncPass({ auth.state.value.userId }, engine::sync, publisher::refresh) { requests.sync() }
+            val pass = AccountSyncPass({ auth.state.value.userId },
+                forms = engine::sync, publications = publisher::refresh, responses = { requests.sync() })
             val account = DefaultAccountSyncRepository(online, pending::observe, pending::snapshot,
                 { auth.state.value.userId }, {}, synchronize = pass::run)
             assertEquals(AccountPendingChanges(drafts = 1), pending.snapshot(owner))

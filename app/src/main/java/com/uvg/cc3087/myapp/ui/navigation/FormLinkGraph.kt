@@ -19,6 +19,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.uvg.cc3087.myapp.R
 import com.uvg.cc3087.myapp.data.model.FormTemplate
+import com.uvg.cc3087.myapp.data.repository.AccountSyncState
 import com.uvg.cc3087.myapp.data.repository.FormRepository
 import com.uvg.cc3087.myapp.data.repository.RequestRepository
 import com.uvg.cc3087.myapp.ui.resources.copyFormLink
@@ -31,6 +32,7 @@ import com.uvg.cc3087.myapp.ui.screens.SaveShareScreen
 import com.uvg.cc3087.myapp.ui.screens.SettingsScreen
 import com.uvg.cc3087.myapp.ui.theme.LocalAppearance
 import com.uvg.cc3087.myapp.ui.state.DraftSaveStatus
+import com.uvg.cc3087.myapp.ui.state.FormSortOrder
 import com.uvg.cc3087.myapp.ui.viewmodel.ChooseTemplateViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.EditFormViewModel
 import com.uvg.cc3087.myapp.ui.viewmodel.FormsViewModel
@@ -56,7 +58,10 @@ internal fun FormLinkGraph(
     syncMessage: String?,
     guestImportNotice: @Composable () -> Unit,
     accountContent: (@Composable (() -> Unit) -> Unit)?,
-    businessLogoPath: String? = null
+    businessLogoPath: String? = null,
+    onSortSelected: (FormSortOrder) -> Unit = {},
+    syncState: AccountSyncState? = null,
+    onSyncNow: (() -> Unit)? = null
 ) {
     val backStack = rememberNavBackStack(AppRoute.Forms)
     val navigator = remember(backStack) { AppNavigator(backStack) }
@@ -164,6 +169,10 @@ internal fun FormLinkGraph(
                     onDismissDeletion = forms::dismissDeletion,
                     onConsumeDeletionCompleted = forms::consumeDeletionCompleted,
                     businessLogoPath = businessLogoPath,
+                    onSortSelected = onSortSelected,
+                    syncState = syncState,
+                    onSyncNow = onSyncNow,
+                    onStatisticsClick = { navigator.navigate(AppRoute.Statistics) },
                     unsavedDraftId = editorState.takeIf {
                         it.saveStatus != DraftSaveStatus.SAVED
                     }?.draftId,

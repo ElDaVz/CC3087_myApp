@@ -421,6 +421,12 @@
     <string name="forms_search_empty">No forms match your search</string>
     <string name="form_status_published">Published</string>
     <string name="form_status_archived">Archived</string>
+    <string name="sort_forms">Sort forms</string>
+    <string name="sort_recent_first">Most recent first</string>
+    <string name="sort_oldest_first">Oldest first</string>
+    <string name="sort_most_responses">Most responses first</string>
+    <string name="sort_fewest_responses">Fewest responses first</string>
+    <string name="sync_requested">Sync requested</string>
     <string name="profile_title">Contact profile</string>
     <string name="profile_private_note">These contacts are private and independent of your sign-in email.</string>
     <string name="profile_personal_section">Personal contact</string>
