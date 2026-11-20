@@ -26,7 +26,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p ci-logs
-          ./gradlew compileDebugKotlin testDebugUnitTest lintDebug assembleDebug --stacktrace --console=plain --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee ci-logs/android-build.log
+          # Configuration cache is a local optimization; CI keeps dependency caching via setup-gradle.
+          ./gradlew compileDebugKotlin testDebugUnitTest lintDebug assembleDebug --no-configuration-cache --stacktrace --console=plain --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee ci-logs/android-build.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -34,6 +35,8 @@ jobs:
           path: |
             app/build/reports/
             app/build/test-results/
+            build/reports/configuration-cache/
+            build/reports/problems/
             ci-logs/
   web-and-rules:
     # Playwright 1.58.2 does not support Ubuntu 26.04, which ubuntu-latest may resolve to.
@@ -93,7 +96,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p ci-logs
-          ./gradlew assembleDebug assembleDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-daemon --stacktrace --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee ci-logs/instrumented-build.log
+          ./gradlew assembleDebug assembleDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-daemon --no-configuration-cache --stacktrace --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee ci-logs/instrumented-build.log
       - name: Cache Firebase emulator binaries
         uses: actions/cache@v4
         with:
@@ -115,7 +118,7 @@ jobs:
           ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader -no-snapshot -no-audio -no-boot-anim
           disable-animations: true
-          script: backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore "./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --stacktrace --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process"
+          script: backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore "./gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-configuration-cache --stacktrace --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -123,6 +126,8 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            build/reports/configuration-cache/
+            build/reports/problems/
             ci-logs/
             firebase-debug.log
             firestore-debug.log
