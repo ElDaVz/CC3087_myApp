@@ -4,7 +4,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.room.Room
-import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.local.FormLinkDatabase
 import com.uvg.cc3087.myapp.data.model.*
@@ -44,8 +43,7 @@ class LocalRequestFlowTest {
             .performScrollTo().assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Vista previa").performClick()
         compose.onNodeWithTag("answer-name").performTextInput("Solo una prueba")
-        // Finish the IME interaction before scrolling and tapping a moving footer.
-        closeSoftKeyboard()
+        // Compose scroll/click actions work without Espresso trying to focus the headless window.
         compose.onNodeWithTag("answer-name").assertTextContains("Solo una prueba")
         compose.onNodeWithText("Probar envío").performScrollTo().assertIsDisplayed().performClick()
         val confirmation = "Respuesta de prueba completada. No se envió ningún dato."

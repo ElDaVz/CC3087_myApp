@@ -3,7 +3,6 @@ package com.uvg.cc3087.myapp
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
@@ -28,7 +27,7 @@ class AccountScreenTest {
         val sync = mutableStateOf(AccountSyncState())
         var checks = 0
         var backs = 0
-        compose.setContent { AccountScreenTestTheme {
+        compose.setContent { SpanishTestTheme {
             AccountScreen(UserSession("a", "account@example.com"), AccountUiState(), GuestImportState(), sync.value,
                 { backs++ }, {}, {}, { checks++ })
         } }
@@ -48,7 +47,7 @@ class AccountScreenTest {
     @Test fun signOutDialogCanCancelOrContinue() {
         var cancelled = 0
         var confirmed = 0
-        compose.setContent { AccountScreenTestTheme {
+        compose.setContent { SpanishTestTheme {
             AccountScreen(UserSession("a", "account@example.com"), AccountUiState(confirmSignOut = true), GuestImportState(), AccountSyncState(),
                 {}, {}, {}, {}, { confirmed++ }, { cancelled++ })
         } }
@@ -59,7 +58,7 @@ class AccountScreenTest {
     @Test fun contactEmailsAcceptPartialTextAndSaveWhenEditingEnds() {
         var profile by mutableStateOf(OwnerProfile("a"))
         val saved = mutableListOf<OwnerProfile>()
-        compose.setContent { AccountScreenTestTheme {
+        compose.setContent { SpanishTestTheme {
             AccountScreen(UserSession("a", "account@example.com"), AccountUiState(), GuestImportState(), AccountSyncState(),
                 {}, {}, {}, {},
                 profile = profile,
@@ -106,7 +105,7 @@ class AccountScreenTest {
 
     @Test fun lightDarkAndLargeTextRemainScrollable() {
         val variant = mutableIntStateOf(0)
-        compose.setContent { AccountScreenTestTheme {
+        compose.setContent { SpanishTestTheme {
             val config = Configuration(LocalConfiguration.current).apply {
                 uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
                     if (variant.intValue == 1) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
@@ -125,14 +124,6 @@ class AccountScreenTest {
             capture("account-$name-top")
             compose.onNodeWithText("Cerrar sesión").performScrollTo().assertIsDisplayed()
             capture("account-$name-bottom")
-        }
-    }
-    @Composable
-    private fun AccountScreenTestTheme(content: @Composable () -> Unit) {
-        SpanishTestTheme {
-            CompositionLocalProvider(LocalActivityResultRegistryOwner provides compose.activity) {
-                content()
-            }
         }
     }
 

@@ -1,5 +1,6 @@
 package com.uvg.cc3087.myapp
 
+import android.content.ContextWrapper
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.uvg.cc3087.myapp.data.local.*
@@ -14,13 +15,25 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
+import org.junit.After
 import org.junit.Test
+import java.io.File
 import java.util.UUID
 
 class PublishedRequestFlowTest {
+    private val context by lazy {
+        object : ContextWrapper(InstrumentationRegistry.getInstrumentation().targetContext) {
+            private val directory = File(cacheDir, "publication-auth-${UUID.randomUUID()}").apply { mkdirs() }
+            override fun getNoBackupFilesDir() = directory
+        }
+    }
+
+    @After fun removeTestSession() {
+        context.noBackupFilesDir.deleteRecursively()
+    }
+
     @Test fun publishPublicSubmitSynchronizeReopenAndArchivePreservesSnapshots() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("backendEmulators") == "true")
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
         val http = FirebaseHttp(true)
         val auth = RestAuthRepository("demo-api-key", DeviceCipher(context), http, true)
         auth.state.first { it !is AuthState.Initializing }; auth.signOut()

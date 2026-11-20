@@ -63,7 +63,7 @@ class FormsSearchTest {
             shell("settings put secure show_ime_with_hard_keyboard 1")
             launchApp()
             compose.onNodeWithContentDescription("Buscar formularios").performClick()
-            search().performTextInput("pedido")
+            search().performClick().performTextInput("pedido")
             waitForIme(true)
             deviceBack()
             waitForIme(false)

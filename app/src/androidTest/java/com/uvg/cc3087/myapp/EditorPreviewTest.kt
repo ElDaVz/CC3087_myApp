@@ -9,8 +9,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.espresso.Espresso.pressBack
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.uvg.cc3087.myapp.data.model.*
 import com.uvg.cc3087.myapp.data.repository.TemplateRepository
 import com.uvg.cc3087.myapp.data.repository.SampleFormRepository
@@ -34,7 +35,7 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 
 class EditorPreviewTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun publishedCoverWarningDoesNotBlockEditingTheTitle() {
         val state = mutableStateOf(EditFormUiState(
@@ -81,7 +82,8 @@ class EditorPreviewTest {
         compose.onNodeWithText("Nombre").assertExists()
         compose.onNodeWithText("Ana").assertDoesNotExist()
         compose.onNodeWithContentDescription("Vista previa").performClick()
-        pressBack()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
         compose.onNodeWithText("Editar formulario").assertExists()
     }
 
@@ -209,6 +211,8 @@ class EditorPreviewTest {
 @Composable
 internal fun SpanishTestTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
+    // Resolve the Activity owner before createConfigurationContext hides it.
+    val registryOwner = checkNotNull(LocalActivityResultRegistryOwner.current)
     val originalConfiguration = LocalConfiguration.current
     val configuration = remember(originalConfiguration) {
         Configuration(originalConfiguration).apply { setLocale(Locale.forLanguageTag("es")) }
@@ -220,6 +224,7 @@ internal fun SpanishTestTheme(content: @Composable () -> Unit) {
         localizedContext.resources
     }
     CompositionLocalProvider(
+        LocalActivityResultRegistryOwner provides registryOwner,
         LocalContext provides localizedContext,
         LocalResources provides resources,
         LocalConfiguration provides configuration
