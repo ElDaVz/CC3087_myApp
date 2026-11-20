@@ -28,7 +28,7 @@ import com.uvg.cc3087.myapp.ui.components.accountSyncMessage
 internal fun BackendRoot(services: BackendServices, templates: TemplateRepository,
     requests: RequestRepository, covers: CoverStorage) {
     val authState by services.auth.state.collectAsStateWithLifecycle()
-    val authModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(services.auth))
+    val authModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(services.auth, services.googleSignIn))
     val authUi by authModel.uiState.collectAsStateWithLifecycle()
     val uid = authState.userId
     LaunchedEffect(authState) {
@@ -83,6 +83,7 @@ internal fun BackendRoot(services: BackendServices, templates: TemplateRepositor
                 accountContent = { goBack ->
                     if (uid == null) AuthScreen(authUi, services.auth.configured,
                         authModel::email, authModel::password, authModel::confirmation, authModel::mode, authModel::submit,
+                        googleAvailable = authModel.googleAvailable, onGoogle = authModel::googleSignIn,
                         onBack = {
                             if (authUi.mode != AuthMode.LOGIN) authModel.mode(AuthMode.LOGIN)
                             else { goBack(); authModel.clearCredentials() }

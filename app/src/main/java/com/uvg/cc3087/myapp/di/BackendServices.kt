@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.collectLatest
+import com.uvg.cc3087.myapp.data.auth.CredentialManagerGoogleProvider
 import com.uvg.cc3087.myapp.data.model.AuthState
 import com.uvg.cc3087.myapp.BuildConfig
 import com.uvg.cc3087.myapp.data.local.*
@@ -29,6 +30,9 @@ class BackendServices(private val context: Context, private val database: FormLi
     private val guestImportStore = RoomGuestImportStore(database)
     val auth = RestAuthRepository(firebase?.options?.apiKey, deviceCipher, http, BuildConfig.FIREBASE_EMULATORS,
         guestImports = guestImportStore)
+    val googleSignIn: GoogleCredentialProvider = CredentialManagerGoogleProvider(
+        context, com.uvg.cc3087.myapp.BuildConfig.GOOGLE_WEB_CLIENT_ID.takeIf { it.isNotBlank() }
+    )
     val local: LocalFormStore = RoomFormStore(database, covers)
     val client = firebase?.let { com.uvg.cc3087.myapp.data.remote.http.FirestoreRest(it.options.projectId!!, auth, http, BuildConfig.FIREBASE_EMULATORS) }
     private val remote = client?.let { com.uvg.cc3087.myapp.data.remote.RestFormSource(it) }

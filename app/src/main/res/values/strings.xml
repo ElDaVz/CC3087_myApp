@@ -432,6 +432,7 @@
     <string name="tracking_link_notice">Private tracking link: only you can open it. It never shows answers.</string>
     <string name="share_tracking_link">Share tracking link</string>
     <string name="share_error">No app is available to share this link</string>
+    <string name="auth_google">Continue with Google</string>
     <string name="profile_title">Contact profile</string>
     <string name="profile_private_note">These contacts are private and independent of your sign-in email.</string>
     <string name="profile_personal_section">Personal contact</string>
