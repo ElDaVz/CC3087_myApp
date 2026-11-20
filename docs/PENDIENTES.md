@@ -1,25 +1,26 @@
 # Pendientes de FormLink
 
-Entregas propuestas de alcance moderado, ordenadas para poder completarlas por grupo. Cada grupo tendrá una rama propia y commits por tarea pequeña; los grupos dependientes se iniciarán desde `main` cuando su base esté integrada. Las tareas con [x] están implementadas en la rama indicada; las tareas con [ ] siguen pendientes. Implementación, integración y verificación se registran por separado. Cada actualización debe marcar lo completado y dividir las tareas parciales, conservando sus pendientes.
+Entregas pequeñas, una tarea por rama y commits por cambios relacionados. Las tareas dependientes comienzan desde `main` cuando su base esté integrada. Las tareas con [x] están implementadas en la rama indicada; las tareas con [ ] siguen pendientes. Implementación, integración y verificación se registran por separado. Cada actualización debe marcar lo completado y dividir las tareas parciales, conservando sus pendientes.
 
 ## Estado de integración (2026-11-19)
 
 - **Implementado en main:** dashboard, lectura local de respuestas, autenticación y recuperación por correo, eliminación con confirmación, Cuenta, sincronización e incorporación automática con reservas de Room v9. La PR #33 se integró; su fix de cierre de sesión pasó los tres jobs de GitHub Actions.
 - **Limpieza integrada en main:** la PR #34 integró `refactor/remove-unused-paths`, retirando rutas antiguas y trasladando sus pruebas útiles al código de producción.
-- **Implementado en esta rama:** `mejoras-navegacion-respuestas` incluye navegación tipada con Navigation 3, mejoras de dashboard/bandeja/detalle, estadísticas por componente y fixes de portadas, estados desconocidos, plurales y Lint. Su integración y el CI posterior a la corrección instrumentada siguen pendientes.
+- **Navegación integrada en main:** la base actual ya contiene Navigation 3, mejoras de dashboard/bandeja/detalle, estadísticas por componente y la corrección de sincronización de las pruebas de borradores. Este estado se comprobó en el checkout; no acredita por sí solo un resultado de GitHub Actions.
+- **Implementado en `feature/settings-appearance`:** Configuración con accesos a Cuenta y Estadísticas y apariencia Sistema/Claro/Oscuro persistente por dispositivo. Pendiente de integración y revisión humana; evidencia local al final.
 - **Archivos locales retirados:** los archivos npm sin consumidores de la raíz y la copia antigua de Pendientes se eliminaron durante la limpieza; nunca estuvieron versionados. Los esquemas Room y las configuraciones necesarias se conservan.
 - **Pendiente:** búsqueda/orden/fijados de formularios, búsqueda textual de respuestas, exportación, Google y las mejoras restantes sin marcar.
 
-Cuenta y limpieza ya están integradas. Búsqueda y organización en `feature/forms-search-organization` sigue siendo la siguiente feature acordada. Navegación está implementada en esta rama; Google permanece pendiente. No crear checkouts temporales ni fusionar PRs sin petición del usuario.
+Cuenta, limpieza y navegación ya están integradas. La prioridad actual acordada es resolver Configuración y apariencia en una entrega y continuar con búsqueda, ordenación, fijados y el menú vacío de Plantillas como tareas separadas. Google permanece pendiente. Cada tarea tendrá su rama desde main cuando su base esté integrada; commits por cambios relacionados y descripción de PR para que el usuario la cree y evalúe. No crear checkouts temporales, publicar ramas ni crear o fusionar PRs sin petición del usuario.
 
 ## Experiencia de respuestas y estadísticas por componentes
 
-- [x] Mejorar bandeja y detalle: jerarquía, filtros por formulario/período/estado y sin revisar, estados vacíos, controles accesibles y navegación conservando lectura e instantáneas. Implementado en `mejoras-navegacion-respuestas`; TalkBack y revisión humana siguen sin acreditarse.
+- [x] Mejorar bandeja y detalle: jerarquía, filtros por formulario/período/estado y sin revisar, estados vacíos, controles accesibles y navegación conservando lectura e instantáneas. Integrado en main; TalkBack y revisión humana siguen sin acreditarse.
 - [ ] Añadir búsqueda textual a la bandeja de respuestas.
 - [x] Añadir estadísticas por pregunta/componente con agregación adecuada a cada tipo, valores ausentes y filtros consistentes; no registrar respuestas en Analytics.
 - [x] Cubrir con pruebas conjuntos vacíos, versiones de snapshots independientes de la edición/eliminación del formulario y separación de propietarios. Las estadísticas usan respuestas históricas, sin registrar su contenido en Analytics; ejecución de esta revisión documentada al final.
 - [ ] Definir e implementar exportación de formularios/respuestas; seguimiento compartido con el grupo 8.
-- [x] Migrar a rutas tipadas y Navigation 3, con restauración del destino y regreso al origen. Implementado en esta rama; no completa el regreso a Mis formularios después de publicar del grupo 4.
+- [x] Migrar a rutas tipadas y Navigation 3, con restauración del destino y regreso al origen. Integrado en main; no completa el regreso a Mis formularios después de publicar del grupo 4.
 
 ## Entrega de Cuenta integrada
 
@@ -27,21 +28,17 @@ La PR #33 integró `feature/account-sync-clarity`: Cuenta, sincronización e inc
 
 ## Prioridad de ejecución acordada
 
-Las prioridades del usuario son dashboard, Google, botones de Mis formularios y cuenta con sincronización/importación, sin orden entre ellas. Se propone esta secuencia por dependencias, manteniendo entregas pequeñas:
+Prioridad vigente: terminar una tarea antes de iniciar la siguiente. Las antiguas agrupaciones de alcance moderado se dividen para facilitar revisión.
 
-| Orden | Entrega | Motivo y límite |
+| Orden | Entrega | Estado y límite |
 |---|---|---|
-| 1 | Dashboard y respuestas nuevas (grupo 7) | Integrado en main; evidencia histórica al final. |
-| 2 | Importación automática con imágenes (grupo 1) | Integrada en main mediante PR #33. |
-| 3 | Cuenta y sincronización (grupo 2) | Integradas en main mediante PR #33. |
-| 4 | Limpieza con cobertura | Integrada en main mediante PR #34. |
-| 5 | Búsqueda, orden y fijados (grupo 5) | Siguiente feature acordada; limpieza ya integrada. |
-| 6 | Navegación tipada y Navigation 3 | Implementada en esta rama; integración y verificación final pendientes. |
-| 7 | Acceso con Google (grupo 10) | Reutilizar incorporación y separación de cuentas. |
-| 8 | Accesos de configuración (primera tarea del grupo 8) | Conecta perfil y estadísticas ya existentes; exportación tendrá su propia entrega. |
-| — | Eliminar desde más opciones (grupo 6) | Completa los botones tras definir conservación de datos y confirmación. |
+| 1 | Configuración y apariencia | Implementada en `feature/settings-appearance`; pendiente de integrar. Cuenta, Estadísticas y tema por dispositivo. |
+| 2 | Búsqueda de formularios | Próxima tarea: solo búsqueda, con las reglas del grupo 5. |
+| 3 | Ordenación en el menú superior | Rama independiente después de integrar búsqueda; reutilizar sus filtros. |
+| 4 | Fijados y menú por formulario | Rama independiente; conservar eliminación confirmada. |
+| 5 | Menú superior de Plantillas | Definir una utilidad concreta o retirarlo; no añadir acciones ficticias. |
 
-Después: identidad visual (grupo 3), regreso tras publicación (grupo 4), preferencias/exportación restantes (grupo 8) e identidad empresarial/Open Graph (grupo 9). El banner empresarial sigue siendo una propuesta opcional.
+Dashboard, importación automática, Cuenta, limpieza y navegación ya están en main. Google, identidad visual, regreso tras publicación, exportación e identidad empresarial conservan sus pendientes. Cada nueva entrega parte del main que contenga sus dependencias; no se crean ramas encadenadas por anticipado.
 
 Seguimiento histórico de CI de navegación: el log anterior muestra `RootViewWithoutFocusException` en `Espresso.pressBack()` en `RequestNavigationTest.selectedRequestSurvivesSavedStateRestoration` y `RestoredCoverUiTest.editorResolvesCovers`. La corrección se realizó en `fix/navigation-tests-window-focus` y está en la base de esta entrega. El job 135866579663 reportó después un fallo distinto: no existía el nodo `request-a/shared` al pulsarlo. Esta revisión desplaza explícitamente la LazyColumn antes de seleccionar filas y comprobar respuestas. No dar GitHub Actions por corregido hasta tener evidencia de una nueva ejecución.
 
@@ -78,7 +75,7 @@ Cuenta y autenticación: verificación local al final. Quedan revisión humana, 
 - [ ] Habilitar en el menú de más opciones la ordenación por fecha y por cantidad de respuestas, con dirección ascendente/descendente y etiquetas claras. Definir qué fecha se utiliza y derivar las cantidades de respuestas almacenadas.
 - [ ] Permitir fijar y desfijar formularios, mantener los fijados visibles al ordenar y conservar la preferencia por propietario, incluido invitado. El menú incluirá también la acción de eliminar del grupo 6.
 
-Decisiones acordadas para la siguiente feature (todavía sin implementar):
+Decisiones funcionales acordadas (todavía sin implementar; se repartirán entre búsqueda, ordenación y fijados):
 
 - Orden y fijados persistentes solo en este dispositivo, separados por invitado/cuenta; consulta restaurable dentro de la pantalla de su propietario. Los fijados no se transfieren automáticamente al importar.
 - Fecha = última modificación numérica. Orden predeterminado reciente primero; cuatro opciones combinando fecha/respuestas y ambas direcciones, con ID como desempate.
@@ -106,8 +103,10 @@ Decisiones implementadas: Respuestas abre resumen y acceso a bandeja completa; s
 
 ## 8. Configuración y exportación
 
-- [ ] Dar funcionalidad al botón de configuración mediante opciones agrupadas: ver perfil, abrir estadísticas y exportar, reutilizando las pantallas correspondientes.
-- [ ] Definir y ofrecer preferencias útiles de presentación, como apariencia y orden predeterminado, con persistencia por el alcance apropiado. Evitar controles sin comportamiento y mantener los textos en recursos de idioma.
+- [x] Conectar Configuración desde Mis formularios, Plantillas, Dashboard y Bandeja; abrir Cuenta o autenticación y Estadísticas reutilizando sus pantallas. Implementado en `feature/settings-appearance`, pendiente de integrar.
+- [x] Ofrecer apariencia Sistema (predeterminada), Claro y Oscuro, persistente por dispositivo para invitado y cuentas, con la paleta morada de FormLink. DataStore mediante repositorio y ViewModel independientes de la sesión; error/reintento sin perder la elección confirmada.
+- [ ] Añadir el orden predeterminado de formularios cuando se implemente la entrega de ordenación.
+- [ ] Añadir el acceso a exportación cuando exista una exportación funcional; no mostrar un botón vacío.
 - [ ] Definir el alcance y formato inicial de exportación de formularios/respuestas y permitir guardar o compartir el archivo con estados de progreso y error, respetando acceso del propietario.
 
 Dependencias: grupos 2 y 7 para los destinos de perfil y estadísticas; grupo 5 para reutilizar la preferencia de orden.
@@ -336,3 +335,31 @@ Por petición del usuario, este ajuste se guarda en un commit sin ejecutar prueb
 - [x] Buscar «Editar» con `useUnmergedTree = true` y desplazarlo a la vista antes de pulsarlo. `FormDraftFlowTest` espera la aparición de la acción tras la carga asíncrona de Room y reutiliza el acceso en creación/reapertura y edición fallida. Se ajusta el mismo selector en `LocalRequestFlowTest`.
 
 Se conserva la comprobación de que la edición fallida sobrevive al regreso y se guarda al reintentar. Cambio limitado a pruebas y seguimiento; sin ejecución de pruebas, push ni espera de CI, por petición del usuario.
+
+
+## Configuración y apariencia (2026-11-19)
+
+Implementado en `feature/settings-appearance`, desde el main que ya incluye navegación y la corrección de sincronización de pruebas. La rama contiene commits separados para persistencia/tema global, pantalla/navegación y documentación/evidencia. La creación y evaluación de la PR quedan a cargo del usuario.
+
+Configuración abre desde las barras inferiores de Mis formularios, Plantillas, Dashboard y Bandeja. Cuenta reutiliza autenticación para invitado y perfil para sesión iniciada. Estadísticas reutiliza el Dashboard mediante un destino restaurable propio para regresar a Configuración; Formularios siempre regresa a la raíz. Se conservan filtros, y el acceso repetido a Configuración reutiliza su destino existente.
+
+Apariencia ofrece Sistema, Claro y Oscuro con paleta morada uniforme. La preferencia se guarda en Preferences DataStore por dispositivo y permanece al cambiar de cuenta o cerrar sesión. El repositorio y su ViewModel viven fuera de la sesión; la UI no accede directamente a DataStore. El tema se aplica desde la raíz y las pantallas de producción heredan su selección. Las barras del sistema reciben el modo elegido. La carga inicial espera la preferencia; un fallo permite abrir la app y ofrece reintento en Configuración. Una escritura fallida conserva la selección confirmada. No hay cambios de Room, backend o publicación.
+
+Verificación local:
+
+- Compilación de Kotlin y de las instrumentadas correcta; **242 unitarias, cero fallos, errores u omisiones**. Incluyen cierre/reapertura real del archivo DataStore, valores desconocidos, configuración del sistema, fallos de lectura/escritura, reintento, confirmación de escritura y bloqueo de peticiones duplicadas.
+- **Lint sin errores, con 29 advertencias.**
+- **Suite completa en Pixel_9 Android 17/API 37 con Firebase Auth y Firestore locales: 134 pruebas, 133 correctas, cero fallos/errores y una omitida**: la subida real optativa a Cloudinary. La tanda enfocada de Ajustes/presentación/navegación también pasó: diez pruebas sin omisiones.
+- Las pruebas de Ajustes verifican sus cuatro orígenes, regreso, Cuenta, Estadísticas, acceso directo a Formularios y restauración. Comprueban selección inmediata, seguimiento del sistema, error/reintento y conservación de un borrador al cambiar tema. La sustitución del subárbol por propietario se comprueba en un arnés sintético; la suite completa ejecuta por separado los recorridos existentes de registro, inicio y cierre de sesión contra Firebase local.
+- Capturas sintéticas revisadas: [claro](evidence/settings/settings-light.png), [oscuro](evidence/settings/settings-dark.png) y [texto al 150 %](evidence/settings/settings-large-text-top.png). Las pruebas recorren los accesos y las tres opciones de tema. La prueba de presentación se ejecutó después directamente con el runner para conservar las imágenes antes de la desinstalación automática de Gradle.
+- Chequeo de seguridad del repositorio y `git diff --check` correctos.
+
+Durante la verificación ampliada, el daemon compartido de Gradle se cerró al iniciar las instrumentadas, después de completar compilación, unitarias y Lint. El runner canceló esa tanda tras tres pruebas. La ejecución posterior de todas las instrumentadas con `--no-daemon` terminó correctamente; no se cambió la configuración global de Gradle.
+
+Comando reproducible de la suite instrumentada (requiere un emulador Android conectado):
+
+```sh
+backend-tests/node_modules/.bin/firebase emulators:exec --project demo-formlink --only auth,firestore './gradlew connectedDebugAndroidTest -PfirebaseEmulators=true -Pandroid.testInstrumentationRunnerArguments.backendEmulators=true --no-daemon --console=plain --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process'
+```
+
+Pendiente: revisión humana, TalkBack, teclado físico y ejecución de CI de esta entrega. Búsqueda, ordenación, fijados, menú de Plantillas y exportación conservan sus tareas independientes. La web permanece sin cambios; sus pruebas no se repiten en esta entrega.
