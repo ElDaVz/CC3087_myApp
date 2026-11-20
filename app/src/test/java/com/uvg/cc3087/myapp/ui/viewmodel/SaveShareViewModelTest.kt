@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelStore
 import com.uvg.cc3087.myapp.data.model.FormDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldDraft
 import com.uvg.cc3087.myapp.data.model.FormFieldType
+import com.uvg.cc3087.myapp.data.model.FormStatus
+import com.uvg.cc3087.myapp.data.model.FormSummary
 import com.uvg.cc3087.myapp.data.repository.PublicationError
 import com.uvg.cc3087.myapp.data.repository.PublicationException
 import com.uvg.cc3087.myapp.testing.FakeFormRepository
@@ -43,6 +45,25 @@ class SaveShareViewModelTest {
         assertFalse(model.uiState.value.canShare)
         assertNull(model.uiState.value.publicLink)
         assertTrue(repository.savedDrafts.isEmpty())
+    }
+
+    @Test fun summaryObservesSavedResponsesAndArchivedStatus() = runTest {
+        val summaries = kotlinx.coroutines.flow.MutableStateFlow(
+            listOf(FormSummary("stored", "Pedido", 7, "19 nov", FormStatus.ARCHIVED, ""))
+        )
+        val repository = object : com.uvg.cc3087.myapp.data.repository.FormRepository by FakeFormRepository(listOf(draft)) {
+            override fun observeForms() = summaries
+        }
+        val model = model(repository)
+        model.openDraft(draft.id)
+        runCurrent()
+
+        assertEquals(7, model.uiState.value.responseCount)
+        assertEquals(FormStatus.ARCHIVED, model.uiState.value.formStatus)
+        summaries.value = listOf(FormSummary("stored", "Pedido", 9, "19 nov", FormStatus.ACTIVE, ""))
+        runCurrent()
+        assertEquals(9, model.uiState.value.responseCount)
+        assertEquals(FormStatus.ACTIVE, model.uiState.value.formStatus)
     }
 
     @Test fun aMissingDraftDoesNotShowASuccessReceipt() = runTest {

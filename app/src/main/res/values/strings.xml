@@ -419,4 +419,6 @@
     <string name="close_forms_search">Close search</string>
     <string name="reset_forms_search">Show all forms</string>
     <string name="forms_search_empty">No forms match your search</string>
+    <string name="form_status_published">Published</string>
+    <string name="form_status_archived">Archived</string>
 </resources>

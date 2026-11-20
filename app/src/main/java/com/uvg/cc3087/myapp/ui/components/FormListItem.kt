@@ -144,6 +144,11 @@ fun FormListItem(
 @Composable
 private fun StatusLabel(status: FormStatus) {
     val isActive = status == FormStatus.ACTIVE
+    val label = when (status) {
+        FormStatus.ACTIVE -> R.string.form_status_published
+        FormStatus.ARCHIVED -> R.string.form_status_archived
+        FormStatus.DRAFT -> R.string.draft
+    }
 
     // el color permite reconocer el estado sin agregar lógica visual a la pantalla
     val containerColor = if (isActive) {
@@ -163,7 +168,7 @@ private fun StatusLabel(status: FormStatus) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(
-            text = stringResource(if (isActive) R.string.active else R.string.draft),
+            text = stringResource(label),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall
         )
