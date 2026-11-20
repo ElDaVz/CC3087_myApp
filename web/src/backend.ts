@@ -24,7 +24,7 @@ export async function loadForm(db:ReturnType<typeof getFirestore>,id:string):Pro
  return form;
 }
 async function invitation(db:ReturnType<typeof getFirestore>,formId:string,token:string) {
-  const snapshot=await withTimeout(getDocFromServer(doc(db,'forms',formId,'links','invitations',token)));
+  const snapshot=await withTimeout(getDocFromServer(doc(db,'forms',formId,'invitations',token)));
   if(!snapshot.exists()||snapshot.data().active!==true||snapshot.data().used!==false)throw Error('UNAVAILABLE');
 }
 export async function loadInvitation(db:ReturnType<typeof getFirestore>,formId:string,token:string):Promise<PublishedForm> {
@@ -33,9 +33,9 @@ export async function loadInvitation(db:ReturnType<typeof getFirestore>,formId:s
 }
 export async function claimInvitation(db:ReturnType<typeof getFirestore>,formId:string,token:string) {
   await invitation(db,formId,token);
-  try { await withTimeout(updateDoc(doc(db,'forms',formId,'links','invitations',token),{used:true})); }
+  try { await withTimeout(updateDoc(doc(db,'forms',formId,'invitations',token),{used:true})); }
   catch { // Another tab consumed it first; the rules still allow only one successful claim.
-   const current=await withTimeout(getDocFromServer(doc(db,'forms',formId,'links','invitations',token)));
+   const current=await withTimeout(getDocFromServer(doc(db,'forms',formId,'invitations',token)));
    if(!current.exists()||current.data().used!==false)throw Error('UNAVAILABLE');
   }
 }
