@@ -18,6 +18,7 @@ object AppContainer {
         FormLinkDatabase.open(appContext)
     }
     val coverStorage by lazy { com.uvg.cc3087.myapp.data.local.PrivateCoverStorage(appContext) }
+    val appearanceRepository by lazy { com.uvg.cc3087.myapp.data.local.DataStoreAppearanceRepository.create(appContext) }
     private val sampleTemplates by lazy { SampleTemplateRepository() }
     @Synchronized
     fun initialize(context: Context) {
