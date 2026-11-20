@@ -1,7 +1,10 @@
 export type Field = { id:string; type:string; label:string; description:string; required:boolean; optionIds:string[];
  config:{ placeholder:string; allowMultipleAnswers:boolean; includeTime:boolean; disallowPastDates:boolean;
  allowDecimals:boolean; minimum:string; maximum:string; unit:string; options:{id:string;label:string}[] } };
-export type PublishedForm = {ownerId:string; title:string; fields:Field[]; version:number; active:boolean; templateType:string; cover?:{url:string;publicId:string;hash:string}|null};
+export type CloudImage = {url:string;publicId:string;hash:string};
+export type BusinessIdentity = {name?:string; logo?:CloudImage|null};
+export type PublishedForm = {ownerId:string; title:string; fields:Field[]; version:number; active:boolean; templateType:string;
+  cover?:CloudImage|null; business?:BusinessIdentity|null};
 export type Value = string | boolean | string[] | {date:Date|null; minute:number|null};
 export type Answer = {fieldId:string; value:Value};
 export function validate(f:Field, value:Value, now=new Date()):string|null {
@@ -49,4 +52,13 @@ export function coverImageUrl(cover: PublishedForm['cover']): string | null {
    !url.search && !url.hash && url.pathname.startsWith(prefix) &&
    ['jpg','jpeg','png','webp'].some(extension => path === `${cover.publicId}.${extension}`) ? cover.url : null;
  } catch { return null; }
+}
+
+// Business identity is optional: no logo means no business element on the public page.
+export function businessLogoUrl(business: PublishedForm['business']): string | null {
+  return business && typeof business === 'object' ? coverImageUrl(business.logo) : null;
+}
+export function businessName(business: PublishedForm['business']): string | null {
+  return business && typeof business === 'object' && typeof business.name === 'string'
+    ? business.name.trim().slice(0, 100) || null : null;
 }

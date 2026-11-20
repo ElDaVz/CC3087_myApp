@@ -13,6 +13,11 @@ service cloud.firestore {
         && c.url is string && c.url.size() <= 1024
         && c.url.matches('https://res[.]cloudinary[.]com/uxrkjzti/image/upload/(v[0-9]+/)?' + c.publicId + '[.](jpg|jpeg|png|webp)'));
     }
+    function validBusiness(b) {
+      return b == null || (b is map && b.keys().hasOnly(['name','logo'])
+        && b.get('name','') is string && b.get('name','').size() <= 100
+        && validCover(b.get('logo', null)));
+    }
     function validForm(id) {
       let d = request.resource.data;
       return d.keys().hasAll(['ownerId','title','status','fields','createdAt','updatedAt','publishedAt','version'])
@@ -46,8 +51,8 @@ service cloud.firestore {
       let fields = d.fields;
       let count = fields.size();
       return d.keys().hasAll(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt'])
-        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt','firstFieldCount','firstTemplateType','cover'])
-        && validCover(d.get('cover', null))
+        && d.keys().hasOnly(['ownerId','title','fields','active','version','fingerprint','templateType','publishedAt','firstPublishedAt','firstFieldCount','firstTemplateType','cover','business'])
+        && validCover(d.get('cover', null)) && validBusiness(d.get('business', null))
         && owns(d) && f.ownerId == d.ownerId && d.active is bool && d.version is int && d.version > 0
         && d.fingerprint is string && d.templateType is string && d.publishedAt is timestamp && d.firstPublishedAt is timestamp
         && d.title is string && d.title.size() > 0 && d.title.size() <= 200 && d.fields is list
@@ -174,6 +179,18 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/forms/$(id)/responses/$(responseId)).data.attemptId == responseId
           && getAfter(/databases/$(database)/documents/forms/$(id)/responses/$(responseId)).data.version == request.resource.data.version;
       }
+    }
+    match /profiles/{owner} {
+      // Private contact data; never readable by consumers or other accounts.
+      allow get: if signedIn() && request.auth.uid == owner;
+      allow list, delete: if false;
+      allow create, update: if signedIn() && request.auth.uid == owner
+        && request.resource.data.keys().hasOnly(['ownerId','personalName','personalEmail','businessName','businessEmail'])
+        && request.resource.data.ownerId == owner
+        && request.resource.data.personalName is string && request.resource.data.personalName.size() <= 100
+        && request.resource.data.personalEmail is string && request.resource.data.personalEmail.size() <= 120
+        && request.resource.data.businessName is string && request.resource.data.businessName.size() <= 100
+        && request.resource.data.businessEmail is string && request.resource.data.businessEmail.size() <= 120;
     }
     match /{document=**} { allow read, write: if false; }
   }

@@ -8,11 +8,13 @@ import com.uvg.cc3087.myapp.data.local.toModel
 import com.uvg.cc3087.myapp.data.model.OwnerProfile
 import com.uvg.cc3087.myapp.data.remote.http.FirestoreRest
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /** Contact data is owner-scoped. Compose never touches Room or Firestore directly. */
 interface ProfileRepository {
     fun observe(owner: String): Flow<OwnerProfile>
+    suspend fun get(owner: String): OwnerProfile = observe(owner).first()
     suspend fun save(owner: String, profile: OwnerProfile)
     suspend fun importLogo(owner: String, source: String)
     suspend fun removeLogo(owner: String)

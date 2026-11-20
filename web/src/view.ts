@@ -1,4 +1,4 @@
-import {coverImageUrl, validate, type Answer, type Field, type PublishedForm, type Value} from './form';
+import {businessLogoUrl, businessName, coverImageUrl, validate, type Answer, type Field, type PublishedForm, type Value} from './form';
 
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag);
@@ -7,9 +7,23 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, clas
   return element;
 }
 
-function shell(root: HTMLElement) {
+function shell(root: HTMLElement, form?: PublishedForm) {
   const brand = node('header', undefined, 'site-header');
   const context = node('span', 'Formulario de solicitud', 'site-context');
+  const logoUrl = form ? businessLogoUrl(form.business) : null;
+  if (logoUrl) {
+    const business = node('div', undefined, 'business-identity');
+    const image = node('img');
+    image.src = logoUrl;
+    image.alt = '';
+    image.width = 40;
+    image.height = 40;
+    image.referrerPolicy = 'no-referrer';
+    business.append(image);
+    const name = businessName(form!.business ?? null);
+    if (name) business.append(node('span', name, 'business-name'));
+    brand.replaceChild(business, context);
+  } else brand.append(context);
   const identity = node('div', undefined, 'brand');
   const logo = node('img');
   logo.src = '/formlink-logo.svg';
@@ -17,7 +31,7 @@ function shell(root: HTMLElement) {
   logo.width = 40;
   logo.height = 40;
   identity.append(logo, node('span', 'FormLink'));
-  brand.append(context, identity);
+  brand.append(identity);
   const content = node('div', undefined, 'page-content');
   root.replaceChildren(brand, content);
   return content;
@@ -178,7 +192,7 @@ function question(field: Field, index: number): {card: HTMLElement; reader: Read
 }
 
 export function render(root: HTMLElement, form: PublishedForm, send: (answers: Answer[]) => Promise<void>) {
-  const content = shell(root);
+  const content = shell(root, form);
   // A missing or unavailable public image keeps the existing branded fallback.
   const banner = node('div', undefined, 'form-banner');
   banner.setAttribute('aria-hidden', 'true');
